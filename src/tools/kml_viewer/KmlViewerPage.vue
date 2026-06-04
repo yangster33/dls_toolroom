@@ -1140,15 +1140,14 @@ function closeErrorDialog() {
 }
 </script>
 
-<style scoped>
-::deep(.leaflet-container) {
+<style>
+.leaflet-container {
   width: 100%;
   height: 100%;
   z-index: 1;
 }
 
-/* Google-style pin — remove leaflet default div icon styles */
-:deep(.kml-marker-icon) {
+.kml-marker-icon {
   background: transparent !important;
   border: none !important;
 }
