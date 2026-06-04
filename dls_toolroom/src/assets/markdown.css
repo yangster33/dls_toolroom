@@ -1,0 +1,112 @@
+/* 假设您将此内容保存为 markdown.css 并在入口文件（如 main.ts 或 App.vue）中导入 */
+@layer base {
+  /* 为主容器添加一个类，例如 .markdown，以确保样式只作用于此范围内 */
+  .markdown {
+    /* 基础字体和行高，与 DaisyUI 的 prose 类（typography 插件）风格保持一致 */
+    @apply text-base-content;
+    line-height: 1.75;
+  }
+
+  /* 标题 */
+  .markdown h1 {
+    @apply text-3xl font-bold mt-8 mb-4 pb-2 border-b border-base-300;
+  }
+  .markdown h2 {
+    @apply text-2xl font-semibold mt-6 mb-3;
+  }
+  .markdown h3 {
+    @apply text-xl font-semibold mt-5 mb-2;
+  }
+  .markdown h4 {
+    @apply text-lg font-medium mt-4 mb-2;
+  }
+  .markdown h5 {
+    @apply text-base font-medium mt-4 mb-2;
+  }
+  .markdown h6 {
+    @apply text-sm font-medium mt-4 mb-2 text-base-content/70;
+  }
+
+  /* 段落和换行 */
+  .markdown p {
+    @apply my-4;
+  }
+  .markdown br {
+    @apply my-2;
+  }
+
+  /* 链接 */
+  .markdown a {
+    @apply link link-primary underline-offset-2;
+  }
+
+  /* 列表 */
+  .markdown ul,
+  .markdown ol {
+    @apply my-4 pl-8;
+  }
+  .markdown ul {
+    @apply list-disc;
+  }
+  .markdown ol {
+    @apply list-decimal;
+  }
+  .markdown li {
+    @apply my-1;
+  }
+  .markdown li > ul,
+  .markdown li > ol {
+    @apply my-0;
+  }
+
+  /* 表格 */
+  .markdown table {
+    @apply table table-zebra my-6 w-full;
+  }
+  .markdown thead {
+    @apply border-b-2 border-base-300;
+  }
+  .markdown th {
+    @apply text-left font-semibold p-2;
+  }
+  .markdown td {
+    @apply p-2 border-b border-base-300;
+  }
+
+  /* 内联代码和代码块 */
+  .markdown :not(pre) > code {
+    @apply bg-base-300 text-error px-1.5 py-0.5 rounded text-sm font-mono break-words;
+  }
+  .markdown pre {
+    @apply bg-base-300 rounded-lg p-4 my-6 overflow-x-auto font-mono text-sm;
+  }
+  .markdown pre code {
+    @apply bg-transparent p-0;
+  }
+
+  /* 引用块 */
+  .markdown blockquote {
+    @apply border-l-4 border-primary pl-4 py-1 my-4 italic bg-base-200/30;
+  }
+
+  /* 水平分割线 */
+  .markdown hr {
+    @apply my-8 border-t border-base-300;
+  }
+
+  /* 图片 */
+  .markdown img {
+    @apply max-w-full h-auto my-6 rounded-box;
+  }
+
+  /* 强调 */
+  .markdown strong {
+    @apply font-semibold;
+  }
+  .markdown em {
+    @apply italic;
+  }
+  .markdown del {
+    @apply line-through;
+  }
+}

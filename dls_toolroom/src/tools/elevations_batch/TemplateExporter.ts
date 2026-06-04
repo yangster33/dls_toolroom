@@ -1,0 +1,1 @@
+export const ELEVATION_HEADERS = ['名称', '经度', '纬度']
