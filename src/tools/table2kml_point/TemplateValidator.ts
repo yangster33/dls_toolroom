@@ -28,7 +28,7 @@ export async function readAndValidateKmlTemplate(file: File): Promise<TableKmlRe
     const { readAndValidateTemplate } = await import('@/utils/TemplateReader')
 
     const templateResult = await readAndValidateTemplate(file, TEMPLATE_HEADERS, {
-      validateRow: (row) => validateKmlRow(row as unknown as any[]),
+      validateRow: (row) => validateKmlRow(row as any),
     })
 
     if (!templateResult.isValid) {

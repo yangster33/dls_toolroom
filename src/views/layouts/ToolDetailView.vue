@@ -28,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, defineAsyncComponent } from 'vue'
+import { computed, ref, defineAsyncComponent, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getToolById } from '@/tools/toolData'
 import DlsMainLayout from '@/components/layout/DlsMainLayout.vue'
@@ -61,7 +61,7 @@ const componentMap: Record<string, ReturnType<typeof defineAsyncComponent>> = {}
 for (const [path, loader] of Object.entries(pagesGlob)) {
   const match = path.match(/\/tools\/([^/]+)\/([^/]+)Page\.vue$/)
   if (match && match[1]) {
-    componentMap[match[1]] = defineAsyncComponent(loader)
+    componentMap[match[1]] = defineAsyncComponent(loader as () => Promise<{ default: Component }>)
   }
 }
 

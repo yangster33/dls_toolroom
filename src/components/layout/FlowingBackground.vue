@@ -74,11 +74,11 @@ const gradientStyle = computed(() => {
 })
 
 const defaultBlobs = computed<BlobConfig[]>(() => [
-  { size: 400, color: props.colors[0], top: -150, left: -150 },
-  { size: 350, color: props.colors[1], bottom: -100, right: -100 },
-  { size: 300, color: props.colors[2], top: '50%', right: '10%' },
-  { size: 250, color: props.colors[0], bottom: '20%', left: '15%' }
-])
+  { size: 400, color: props.colors[0]!, top: -150, left: -150 },
+  { size: 350, color: props.colors[1]!, bottom: -100, right: -100 },
+  { size: 300, color: props.colors[2]!, top: '50%', right: '10%' },
+  { size: 250, color: props.colors[0]!, bottom: '20%', left: '15%' },
+] as BlobConfig[])
 
 const computedBlobs = computed(() => {
   return props.blobs.length > 0 ? props.blobs : defaultBlobs.value

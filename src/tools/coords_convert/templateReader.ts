@@ -43,7 +43,7 @@ export async function readAndValidateCoordTemplate(
     const isXYMode = coordinateSystemType.includes('xy')
 
     const templateResult = await readGenericTemplate(file, COORD_CONVERT_HEADERS, {
-      validateRow: (row) => validateCoordRow(row as unknown as any[], isLngLatMode, isXYMode),
+      validateRow: (row) => validateCoordRow(row as any, isLngLatMode, isXYMode),
     })
 
     if (!templateResult.isValid) {
