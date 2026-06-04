@@ -65,7 +65,7 @@ for (const [path, loader] of Object.entries(pagesGlob)) {
     componentMap[match[1]] = defineAsyncComponent({
       loader: loader as () => Promise<{ default: Component }>,
       loadingComponent: ToolSkeleton,
-      delay: 200,
+      delay: 10,
     })
   }
 }
