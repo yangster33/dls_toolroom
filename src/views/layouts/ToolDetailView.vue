@@ -34,6 +34,7 @@ import { getToolById } from '@/tools/toolData'
 import DlsMainLayout from '@/components/layout/DlsMainLayout.vue'
 import { createToolNavItems } from '@/tools/createToolNavItems'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
+import ToolSkeleton from '@/components/common/ToolSkeleton.vue'
 import { logger } from '@/utils/logger'
 
 const route = useRoute()
@@ -61,7 +62,11 @@ const componentMap: Record<string, ReturnType<typeof defineAsyncComponent>> = {}
 for (const [path, loader] of Object.entries(pagesGlob)) {
   const match = path.match(/\/tools\/([^/]+)\/([^/]+)Page\.vue$/)
   if (match && match[1]) {
-    componentMap[match[1]] = defineAsyncComponent(loader as () => Promise<{ default: Component }>)
+    componentMap[match[1]] = defineAsyncComponent({
+      loader: loader as () => Promise<{ default: Component }>,
+      loadingComponent: ToolSkeleton,
+      delay: 200,
+    })
   }
 }
 
