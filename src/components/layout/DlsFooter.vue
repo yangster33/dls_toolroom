@@ -65,8 +65,19 @@
         <a class="link link-hover" href="/about">关于项目</a>
         <a class="link link-hover" href="/docs">使用文档</a>
         <a class="link link-hover" href="mailto:yangster33@outlook.com">联系我</a>
-        <a class="link link-hover" href="https://github.com" target="_blank" rel="noopener"
+        <a
+          class="link link-hover"
+          href="https://github.com/yangster33/dls_toolroom"
+          target="_blank"
+          rel="noopener"
           >GitHub</a
+        >
+        <a
+          class="link link-hover"
+          href="https://gitee.com/yangster/dls_toolroom"
+          target="_blank"
+          rel="noopener"
+          >gitee</a
         >
       </nav>
     </div>
