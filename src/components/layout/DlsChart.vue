@@ -225,9 +225,10 @@ const fetchMapData = async () => {
 
 async function loadChinaMap() {
   try {
-    await fetchMapData()
-    
-    const resp = await fetch('/map/china.json')
+    const [_, resp] = await Promise.all([
+      fetchMapData(),
+      fetch('/map/china.json'),
+    ])
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
     const geoJson = await resp.json()
 
