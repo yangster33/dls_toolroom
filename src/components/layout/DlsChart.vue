@@ -53,44 +53,7 @@ interface ProvinceData {
   oneYear: number
 }
 
-const mockProvinceData: ProvinceData[] = [
-  { name: '北京市', sevenDays: 71500, thirtyDays: 273500, oneYear: 3102000 },
-  { name: '天津市', sevenDays: 31500, thirtyDays: 121000, oneYear: 1385000 },
-  { name: '河北省', sevenDays: 42500, thirtyDays: 162000, oneYear: 1850000 },
-  { name: '山西省', sevenDays: 28600, thirtyDays: 109000, oneYear: 1240000 },
-  { name: '内蒙古自治区', sevenDays: 15200, thirtyDays: 58000, oneYear: 665000 },
-  { name: '辽宁省', sevenDays: 35800, thirtyDays: 137000, oneYear: 1560000 },
-  { name: '吉林省', sevenDays: 21300, thirtyDays: 81500, oneYear: 930000 },
-  { name: '黑龙江省', sevenDays: 24800, thirtyDays: 95000, oneYear: 1080000 },
-  { name: '上海市', sevenDays: 68500, thirtyDays: 261000, oneYear: 2980000 },
-  { name: '江苏省', sevenDays: 82500, thirtyDays: 315000, oneYear: 3580000 },
-  { name: '浙江省', sevenDays: 75800, thirtyDays: 289000, oneYear: 3300000 },
-  { name: '安徽省', sevenDays: 42500, thirtyDays: 162000, oneYear: 1850000 },
-  { name: '福建省', sevenDays: 39800, thirtyDays: 152000, oneYear: 1730000 },
-  { name: '江西省', sevenDays: 31200, thirtyDays: 119000, oneYear: 1360000 },
-  { name: '山东省', sevenDays: 65200, thirtyDays: 248000, oneYear: 2830000 },
-  { name: '河南省', sevenDays: 52300, thirtyDays: 199000, oneYear: 2270000 },
-  { name: '湖北省', sevenDays: 46800, thirtyDays: 178000, oneYear: 2030000 },
-  { name: '湖南省', sevenDays: 43500, thirtyDays: 166000, oneYear: 1890000 },
-  { name: '广东省', sevenDays: 98500, thirtyDays: 376000, oneYear: 4280000 },
-  { name: '广西壮族自治区', sevenDays: 28600, thirtyDays: 109000, oneYear: 1240000 },
-  { name: '海南省', sevenDays: 12300, thirtyDays: 47000, oneYear: 535000 },
-  { name: '重庆市', sevenDays: 38500, thirtyDays: 147000, oneYear: 1680000 },
-  { name: '四川省', sevenDays: 56800, thirtyDays: 217000, oneYear: 2470000 },
-  { name: '贵州省', sevenDays: 22500, thirtyDays: 86000, oneYear: 980000 },
-  { name: '云南省', sevenDays: 27400, thirtyDays: 104000, oneYear: 1190000 },
-  { name: '西藏自治区', sevenDays: 3200, thirtyDays: 12200, oneYear: 139000 },
-  { name: '陕西省', sevenDays: 41800, thirtyDays: 159000, oneYear: 1820000 },
-  { name: '甘肃省', sevenDays: 17300, thirtyDays: 66000, oneYear: 755000 },
-  { name: '青海省', sevenDays: 6800, thirtyDays: 26000, oneYear: 296000 },
-  { name: '宁夏回族自治区', sevenDays: 8500, thirtyDays: 32500, oneYear: 370000 },
-  { name: '新疆维吾尔自治区', sevenDays: 18500, thirtyDays: 70500, oneYear: 805000 },
-  { name: '台湾省', sevenDays: 12500, thirtyDays: 47800, oneYear: 545000 },
-  { name: '香港特别行政区', sevenDays: 15200, thirtyDays: 58000, oneYear: 665000 },
-  { name: '澳门特别行政区', sevenDays: 3200, thirtyDays: 12200, oneYear: 139000 },
-]
-
-const currentProvinceData = ref<ProvinceData[]>(mockProvinceData)
+const currentProvinceData = ref<ProvinceData[]>([])
 
 function buildMapColors(): string[] {
   const primaryParts = parseOklch(primary.value)
@@ -118,7 +81,10 @@ function buildMapColors(): string[] {
 
 const nameToData = computed(() => new Map(currentProvinceData.value.map((d) => [d.name, d])))
 
-const getMaxValue = computed(() => Math.max(...currentProvinceData.value.map((item) => item.oneYear)))
+const getMaxValue = computed(() => {
+  if (currentProvinceData.value.length === 0) return 1
+  return Math.max(...currentProvinceData.value.map((item) => item.oneYear))
+})
 
 const generateChartOption = (): EChartsOption => {
   const maxValue = getMaxValue.value
@@ -244,21 +210,16 @@ const sendAnalytics = () => {
 }
 
 const fetchMapData = async () => {
-  if (!props.toolId) {
-    currentProvinceData.value = mockProvinceData
-    return
-  }
+  if (!props.toolId) return
 
   try {
     const res = await fetch(`/api/map-data?tool_id=${props.toolId}`)
     const data = await res.json()
-    if (data.code === 0 && data.data.length > 0) {
+    if (data.code === 0) {
       currentProvinceData.value = data.data
-    } else {
-      currentProvinceData.value = mockProvinceData
     }
-  } catch (error) {
-    currentProvinceData.value = mockProvinceData
+  } catch {
+    // 请求失败保持空数据
   }
 }
 
