@@ -81,8 +81,12 @@ router.afterEach((to) => {
     referrer,
   })
 
-  // TODO: 将来可以扩展为发送到服务器
-  // sendPageVisitToServer({ pageName, path: pagePath, toolId, timestamp, userAgent, referrer })
+  // 发送页面访问统计到后端
+  fetch(`/api/page-stats/${toolId || (pageName as string) || 'index'}/view`, {
+    method: 'POST',
+  }).catch(() => {
+    /* 静默失败，不影响页面功能 */
+  })
 })
 
 export default router

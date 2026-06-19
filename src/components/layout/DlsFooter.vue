@@ -85,7 +85,7 @@
       <p class="text-sm">© {{ currentYear }} 大龙山工具间 | 纯前端工具聚合网站</p>
       <p class="text-xs mt-2 opacity-70">
         <a class="link link-hover" href="https://beian.miit.gov.cn" target="_blank" rel="noopener">
-          暂无备案
+          渝ICP备2026013128号
         </a>
       </p>
     </div>

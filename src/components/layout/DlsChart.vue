@@ -258,7 +258,6 @@ const fetchMapData = async () => {
       currentProvinceData.value = mockProvinceData
     }
   } catch (error) {
-    logger.error('Failed to fetch map data:', error)
     currentProvinceData.value = mockProvinceData
   }
 }
