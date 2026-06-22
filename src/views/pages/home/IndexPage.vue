@@ -68,6 +68,16 @@ import { PhToolbox, PhArrowRight } from '@phosphor-icons/vue'
 import { toolConfigs } from '@/tools/toolData'
 import { useRouter } from 'vue-router'
 import { useCountUp } from '@/composables/useCountUp'
+import { useSeo, useSiteSchema } from '@/composables/useSeo'
+
+useSeo({
+  title: '大龙山工具间',
+  description:
+    '一站式地理空间数据处理与转换工具集，22+ 在线工具：坐标转换、距离测算、地址解析、GIS 文件互转、高程查询、地震/天气查询等，浏览器直接使用，免安装。',
+  path: '/',
+  keywords: ['地理空间工具', '坐标转换', 'GIS', 'KML', 'SHP', '在线工具', '大龙山工具间'],
+})
+useSiteSchema()
 
 const router = useRouter()
 

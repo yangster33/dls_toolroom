@@ -30,12 +30,14 @@
 <script setup lang="ts">
 import { computed, ref, defineAsyncComponent, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useHead } from '@unhead/vue'
 import { getToolById } from '@/tools/toolData'
 import DlsMainLayout from '@/components/layout/DlsMainLayout.vue'
 import { createToolNavItems } from '@/tools/createToolNavItems'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
 import ToolSkeleton from '@/components/common/ToolSkeleton.vue'
 import { logger } from '@/utils/logger'
+import { SITE_NAME, SITE_URL } from '@/composables/useSeo'
 
 const route = useRoute()
 const router = useRouter()
@@ -72,6 +74,57 @@ for (const [path, loader] of Object.entries(pagesGlob)) {
 
 const tool = computed(() => {
   return getToolById(toolId.value)
+})
+
+useHead({
+  title: computed(() => (tool.value ? `${tool.value.name} | ${SITE_NAME}` : `工具未找到 | ${SITE_NAME}`)),
+  meta: [
+    {
+      name: 'description',
+      content: computed(() =>
+        tool.value
+          ? `${tool.value.description} — ${tool.value.tags.join('、')}相关在线工具，免安装、浏览器直接使用。`
+          : '工具未找到',
+      ),
+    },
+    {
+      name: 'keywords',
+      content: computed(() =>
+        tool.value ? [...tool.value.tags, tool.value.name, '在线工具', '地理空间'].join(',') : '',
+      ),
+    },
+    { property: 'og:type', content: 'website' },
+    { property: 'og:site_name', content: SITE_NAME },
+    { property: 'og:title', content: computed(() => (tool.value ? tool.value.name : SITE_NAME)) },
+    {
+      property: 'og:description',
+      content: computed(() => (tool.value ? tool.value.description : '')),
+    },
+    { property: 'og:url', content: computed(() => `${SITE_URL}/tools/${toolId.value}`) },
+    { name: 'twitter:card', content: 'summary_large_image' },
+  ],
+  link: [
+    { rel: 'canonical', href: computed(() => `${SITE_URL}/tools/${toolId.value}`) },
+  ],
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: computed(() =>
+        JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'SoftwareApplication',
+          name: tool.value?.name,
+          description: tool.value?.description,
+          applicationCategory: 'UtilitiesApplication',
+          operatingSystem: 'Web',
+          keywords: tool.value?.tags.join(', '),
+          url: `${SITE_URL}/tools/${toolId.value}`,
+          offers: { '@type': 'Offer', price: '0', priceCurrency: 'CNY' },
+          publisher: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
+        }),
+      ),
+    },
+  ],
 })
 
 const toolComponent = computed(() => {

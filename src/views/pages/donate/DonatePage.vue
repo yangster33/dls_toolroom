@@ -61,6 +61,14 @@ import { ref, onMounted } from 'vue'
 import { PhHeart, PhCreditCard, PhGlobe } from '@phosphor-icons/vue'
 import QRCode from 'qrcode'
 import { logger } from '@/utils/logger'
+import { useSeo } from '@/composables/useSeo'
+
+useSeo({
+  title: '支持作者',
+  description: '如果大龙山工具间对您的工作有帮助，欢迎扫码支持作者，您的支持是我前进的动力。',
+  path: '/donate',
+  keywords: ['支持作者', '赞助', '打赏', '大龙山工具间'],
+})
 
 const alipayCanvas = ref<HTMLCanvasElement | null>(null)
 const wechatCanvas = ref<HTMLCanvasElement | null>(null)
