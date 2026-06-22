@@ -1,14 +1,14 @@
 // scripts/prerender.mjs
-// 用 Playwright 预渲染 SPA 路由到 dist/ 下，让爬虫拿到完整 HTML（含动态 head）
-// 依赖 @playwright/test（已在 devDependencies）
+// 用 Puppeteer + @sparticuz/chromium 预渲染 SPA 路由到 dist/ 下
+// @sparticuz/chromium 自带系统依赖，兼容 Vercel / AWS Lambda build 环境
 
-import { chromium } from '@playwright/test'
+import puppeteer from 'puppeteer-core'
+import chromium from '@sparticuz/chromium'
 import { createServer } from 'node:http'
 import { readFile, writeFile, mkdir, stat } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { extname, join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { spawnSync } from 'node:child_process'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -16,6 +16,9 @@ const DIST = join(ROOT, 'dist')
 const PORT = Number(process.env.PRERENDER_PORT ?? 5174)
 const BASE_URL = `http://localhost:${PORT}`
 const SITE_URL = (process.env.VITE_SITE_URL ?? 'https://dlslab.cn').replace(/\/$/, '')
+// 本地开发环境用系统 chrome；Vercel/CI 用 @sparticuz/chromium
+const IS_CI = !!process.env.CI || !!process.env.VERCEL
+const HEADLESS = IS_CI
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -45,8 +48,9 @@ async function statOrNull(p) {
   }
 }
 
-// 启动一个简单静态服务器，SPA fallback 到干净的原始 index.html（避免被预渲染产物污染）
+// 干净的原始 index.html 模板，作为 SPA fallback（避免被预渲染产物污染）
 let cleanIndexHtml = ''
+
 function startStaticServer() {
   return new Promise((resolve) => {
     const server = createServer(async (req, res) => {
@@ -68,8 +72,6 @@ function startStaticServer() {
         if (s?.isDirectory()) {
           filePath = join(filePath, 'index.html')
         }
-        // 文件不存在 → 用干净的原始 index.html 作为 SPA fallback
-        // （不能用 dist/index.html，因为首页预渲染后它已被污染）
         if (!existsSync(filePath)) {
           res.setHeader('Content-Type', 'text/html; charset=utf-8')
           res.end(cleanIndexHtml)
@@ -94,7 +96,6 @@ function startStaticServer() {
   })
 }
 
-// 从 toolData.ts 提取工具 ID（避免引入 TS 解析依赖）
 async function getToolIds() {
   const content = await readFile(join(ROOT, 'src/tools/toolData.ts'), 'utf-8')
   const ids = []
@@ -115,12 +116,12 @@ function routeToFilePath(route) {
 async function prerenderRoute(page, route) {
   const url = `${BASE_URL}${route}`
   console.log(`  → ${route}`)
-  await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 })
+  await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 })
   // 等待 @unhead/vue 写入 head
   await page
     .waitForFunction(() => document.title && document.title.length > 0, { timeout: 5000 })
     .catch(() => {})
-  await page.waitForTimeout(300)
+  await new Promise((r) => setTimeout(r, 300))
 
   const html = await page.content()
   const outPath = routeToFilePath(route)
@@ -165,28 +166,50 @@ async function writeRobots() {
   console.log('✓ robots.txt')
 }
 
-async function ensureChromium() {
-  // 检测 playwright chromium 是否已安装
-  const result = spawnSync('npx', ['playwright', 'install', '--dry-run', 'chromium'], {
-    cwd: ROOT,
-    encoding: 'utf-8',
-    shell: process.platform === 'win32',
-  })
-  // dry-run 输出包含 "is already installed" 则跳过
-  const out = (result.stdout || '') + (result.stderr || '')
-  if (out.includes('already installed') || out.includes('Skip')) {
-    return
+async function launchBrowser() {
+  if (IS_CI) {
+    // Vercel / CI 环境：用 @sparticuz/chromium 自带的二进制
+    const executablePath = await chromium.executablePath()
+    return puppeteer.launch({
+      args: chromium.args,
+      executablePath,
+      headless: HEADLESS,
+    })
   }
-  console.log('安装 Playwright chromium…')
-  const install = spawnSync('npx', ['playwright', 'install', 'chromium'], {
-    cwd: ROOT,
-    stdio: 'inherit',
-    shell: process.platform === 'win32',
-  })
-  if (install.status !== 0) {
-    console.error('chromium 安装失败')
-    process.exit(1)
+  // 本地开发：按优先级找一个可用的 chrome
+  const localCandidates = [
+    // Windows
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    process.env.LOCALAPPDATA && `${process.env.LOCALAPPDATA}\\Google\\Chrome\\Application\\chrome.exe`,
+    // Edge 也能用（Windows 自带）
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+    // macOS
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+    // Linux
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+  ].filter(Boolean)
+  for (const p of localCandidates) {
+    if (existsSync(p)) {
+      return puppeteer.launch({
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        executablePath: p,
+        headless: HEADLESS,
+      })
+    }
   }
+  // 最后 fallback：@sparticuz/chromium（本地也能跑，但首次会解压）
+  const executablePath = await chromium.executablePath()
+  return puppeteer.launch({
+    args: chromium.args,
+    executablePath,
+    headless: HEADLESS,
+  })
 }
 
 async function main() {
@@ -195,21 +218,16 @@ async function main() {
     process.exit(1)
   }
 
-  // 确保 chromium 已安装（CI 环境如 Vercel 首次 build 时缺失）
-  await ensureChromium()
-
-  // 备份干净的原始 index.html，作为 SPA fallback 模板
   cleanIndexHtml = await readFile(join(DIST, 'index.html'), 'utf-8')
 
   const toolIds = await getToolIds()
   const routes = ['/', '/tools', '/about', '/donate', ...toolIds.map((id) => `/tools/${id}`)]
-  console.log(`预渲染 ${routes.length} 个路由…`)
+  console.log(`预渲染 ${routes.length} 个路由… (环境: ${IS_CI ? 'CI/Vercel' : 'local'})`)
+
   const server = await startStaticServer()
-  const browser = await chromium.launch({ headless: true })
-  const context = await browser.newContext({
-    userAgent: 'dls-prerender/1.0 (+https://dls.yangbagongji.com)',
-  })
-  const page = await context.newPage()
+  const browser = await launchBrowser()
+  const page = await browser.newPage()
+  await page.setUserAgent('dls-prerender/1.0 (+https://dlslab.cn)')
 
   const failed = []
   for (const route of routes) {
@@ -231,7 +249,6 @@ async function main() {
   }
   console.log(`\n预渲染完成：${routes.length} 个路由`)
 
-  // 生成 sitemap.xml 和 robots.txt
   await writeSitemap(routes)
   await writeRobots()
 }
