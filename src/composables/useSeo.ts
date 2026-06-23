@@ -37,6 +37,8 @@ export function useSeo(options: SeoOptions) {
       { name: 'twitter:title', content: fullTitle },
       { name: 'twitter:description', content: description },
       { name: 'twitter:url', content: url },
+      { name: 'twitter:image', content: options.image ?? `${SITE_URL}/my-logo.png` },
+      { property: 'og:image', content: options.image ?? `${SITE_URL}/my-logo.png` },
     ],
     link: [{ rel: 'canonical', href: url }],
   })

@@ -30,7 +30,6 @@
 <script setup lang="ts">
 import { computed, ref, defineAsyncComponent, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useHead } from '@unhead/vue'
 import { getToolById } from '@/tools/toolData'
 import DlsMainLayout from '@/components/layout/DlsMainLayout.vue'
 import { createToolNavItems } from '@/tools/createToolNavItems'
@@ -38,6 +37,7 @@ import ErrorDialog from '@/components/common/ErrorDialog.vue'
 import ToolSkeleton from '@/components/common/ToolSkeleton.vue'
 import { logger } from '@/utils/logger'
 import { SITE_NAME, SITE_URL } from '@/composables/useSeo'
+import { useHead } from '@unhead/vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -101,7 +101,15 @@ useHead({
       content: computed(() => (tool.value ? tool.value.description : '')),
     },
     { property: 'og:url', content: computed(() => `${SITE_URL}/tools/${toolId.value}`) },
+    { property: 'og:image', content: `${SITE_URL}/my-logo.png` },
     { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: computed(() => (tool.value ? tool.value.name : SITE_NAME)) },
+    {
+      name: 'twitter:description',
+      content: computed(() => (tool.value ? tool.value.description : '')),
+    },
+    { name: 'twitter:url', content: computed(() => `${SITE_URL}/tools/${toolId.value}`) },
+    { name: 'twitter:image', content: `${SITE_URL}/my-logo.png` },
   ],
   link: [
     { rel: 'canonical', href: computed(() => `${SITE_URL}/tools/${toolId.value}`) },

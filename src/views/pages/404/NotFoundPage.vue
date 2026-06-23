@@ -21,6 +21,13 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { PhHouse, PhArrowLeft } from '@phosphor-icons/vue'
+import { useSeo } from '@/composables/useSeo'
+
+useSeo({
+  title: '页面未找到',
+  description: '抱歉，您访问的页面不存在或已被移除。返回大龙山工具间首页浏览更多在线工具。',
+  keywords: ['404', '页面未找到', '大龙山工具间'],
+})
 
 const router = useRouter()
 
