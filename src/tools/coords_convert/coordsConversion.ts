@@ -100,7 +100,7 @@ export async function batchConvertCoordinates(
 
     const processBatch = (startIndex: number): Promise<void> => {
       return new Promise((resolve) => {
-        setImmediate(() => {
+        setTimeout(() => {
           const endIndex = Math.min(startIndex + batchSize, dataRows.length)
 
           for (let i = startIndex; i < endIndex; i++) {
