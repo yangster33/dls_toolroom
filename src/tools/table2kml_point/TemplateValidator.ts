@@ -71,7 +71,7 @@ export async function readAndValidateKmlTemplate(file: File): Promise<TableKmlRe
 /**
  * 验证单行数据
  */
-function validateKmlRow(row: Record<string, unknown>): string[] {
+export function validateKmlRow(row: Record<string, unknown>): string[] {
   const errors: string[] = []
 
   const name = String(row['名称'] ?? '').trim()

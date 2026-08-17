@@ -40,7 +40,7 @@ export interface BasestationReadResult {
 /**
  * 验证单行数据
  */
-function validateRow(row: any, rowIndex: number): string[] {
+export function validateRow(row: any, _rowIndex: number): string[] {
   const errors: string[] = []
 
   // 扇区名称（必填）
