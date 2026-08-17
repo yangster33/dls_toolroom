@@ -6,13 +6,6 @@ import {
   DEFAULT_CGCS2000_PARAMS,
 } from './coordConversion.ts'
 
-interface PersistedStateConfig {
-  persist: {
-    key: string
-    storage: typeof localStorage
-  }
-}
-
 interface CoordinateRow {
   id: number
   coordinateSystem: string
@@ -62,5 +55,5 @@ export const useCoordinateInputStore = defineStore(
       key: 'coordinate-input-store',
       storage: localStorage,
     },
-  } as PersistedStateConfig,
+  },
 )
