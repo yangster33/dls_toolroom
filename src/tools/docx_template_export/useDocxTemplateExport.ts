@@ -6,114 +6,19 @@ import { saveAs } from 'file-saver'
 import * as XLSX from 'xlsx'
 import * as Papa from 'papaparse'
 import expressions from 'angular-expressions'
-
-// ========== 注册 angular-expressions 过滤器 ==========
-
-function ensureString(input: any): string {
-  if (input === null || input === undefined) return ''
-  return String(input)
-}
-
-function ensureNumber(input: any): number {
-  const n = Number(input)
-  return isNaN(n) ? 0 : n
-}
-
-// 转大写
-expressions.filters.upper = (input: any) => ensureString(input).toUpperCase()
-
-// 转小写
-expressions.filters.lower = (input: any) => ensureString(input).toLowerCase()
-
-// 首字母大写
-expressions.filters.capitalize = (input: any) => {
-  const str = ensureString(input)
-  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
-}
-
-// 保留 n 位小数
-expressions.filters.number = (input: any, decimals: any) => {
-  const n = ensureNumber(input)
-  const d = ensureNumber(decimals)
-  return n.toFixed(d)
-}
-
-// 货币格式 ¥x,xxx.xx
-expressions.filters.currency = (input: any, symbol: any) => {
-  const n = ensureNumber(input)
-  const s = symbol != null ? String(symbol) : '¥'
-  return s + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-}
-
-// 百分比 (0.85 → "85%")
-expressions.filters.percent = (input: any, decimals: any) => {
-  const n = ensureNumber(input) * 100
-  const d = decimals != null ? ensureNumber(decimals) : 0
-  return n.toFixed(d) + '%'
-}
-
-// 日期格式化: {birthday | date:'yyyy-mm-dd'}
-// 如果日期已经是字符串（比如从 xlsx 读取并经过 convertDatesInData 处理过），则直接返回
-expressions.filters.date = (input: any, format: any) => {
-  if (input === null || input === undefined) return ''
-  const fmt = format != null ? String(format) : 'yyyy-mm-dd'
-  let d: Date
-  if (input instanceof Date) {
-    d = input
-  } else {
-    d = new Date(input)
-    if (isNaN(d.getTime())) return ensureString(input) // 无法解析则返回原样
-  }
-  const year = d.getFullYear()
-  const month = d.getMonth() + 1
-  const day = d.getDate()
-  const hours = String(d.getHours()).padStart(2, '0')
-  const minutes = String(d.getMinutes()).padStart(2, '0')
-  const seconds = String(d.getSeconds()).padStart(2, '0')
-
-  return fmt
-    .replace(/yyyy/g, String(year))
-    .replace(/yy/g, String(year).slice(-2))
-    .replace(/mm/g, String(month).padStart(2, '0'))
-    .replace(/dd/g, String(day).padStart(2, '0'))
-    .replace(/hh/g, hours)
-    .replace(/ii/g, minutes)
-    .replace(/ss/g, seconds)
-}
-
-// 默认值: {field | default:'未填写'}
-expressions.filters.default = (input: any, fallback: any) => {
-  if (input === null || input === undefined || input === '') {
-    return fallback != null ? fallback : ''
-  }
-  return input
-}
-
-// 截取前 n 个字符
-expressions.filters.truncate = (input: any, length: any) => {
-  const str = ensureString(input)
-  const len = ensureNumber(length) || 10
-  return str.length > len ? str.substring(0, len) + '...' : str
-}
-
-// 去除首尾空格
-expressions.filters.trim = (input: any) => ensureString(input).trim()
-
-// 按分隔符拆分取第 N 段: {name | split:' ':0}
-expressions.filters.split = (input: any, delimiter: any, index: any) => {
-  const str = ensureString(input)
-  const delim = delimiter != null ? String(delimiter) : ' '
-  const i = ensureNumber(index)
-  const parts = str.split(delim)
-  return parts[i] !== undefined ? parts[i] : ''
-}
+import {
+  convertDatesInData,
+  generateFilename,
+  resolveDuplicates,
+  validateFilenameTemplate,
+} from './docxTemplateFunctions'
 
 // ========== Angular 解析器 ==========
 
 function angularParser(tag: string) {
   const expr = expressions.compile(tag)
   return {
-    get(scope: Record<string, any>, context: any) {
+    get(scope: Record<string, any>) {
       try {
         const result = expr(scope)
         // 如果 scope 中的值已经是格式化后的字符串，直接返回
@@ -136,145 +41,6 @@ function angularParser(tag: string) {
       }
     },
   }
-}
-
-function convertDatesInData(data: Record<string, any>[]): Record<string, any>[] {
-  return data.map((row) => {
-    const convertedRow: Record<string, any> = {}
-    for (const key in row) {
-      convertedRow[key] = convertDateValue(row[key])
-    }
-    return convertedRow
-  })
-}
-
-function convertDateValue(value: any): any {
-  if (value instanceof Date) {
-    const year = value.getFullYear()
-    const month = value.getMonth() + 1
-    const day = value.getDate()
-    const hours = String(value.getHours()).padStart(2, '0')
-    const minutes = String(value.getMinutes()).padStart(2, '0')
-    const seconds = String(value.getSeconds()).padStart(2, '0')
-    const formatted = `${year}-${month}-${day}`
-    const hasTime = hours !== '00' || minutes !== '00' || seconds !== '00'
-    return hasTime ? `${formatted} ${hours}:${minutes}:${seconds}` : formatted
-  }
-
-  if (typeof value === 'number') {
-    return value
-  }
-
-  if (typeof value === 'string') {
-    const trimmed = value.trim()
-
-    const chineseDatePattern =
-      /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
-    const matchChinese = trimmed.match(chineseDatePattern)
-    if (matchChinese && parseInt(matchChinese[1]!) > 1900) {
-      const year = matchChinese[1]!
-      const month = parseInt(matchChinese[2]!)
-      const day = parseInt(matchChinese[3]!)
-      const hours = parseInt(matchChinese[4]!) || 0
-      const minutes = parseInt(matchChinese[5]!) || 0
-      const seconds = parseInt(matchChinese[6]!) || 0
-      const hasTime = hours !== 0 || minutes !== 0 || seconds !== 0
-      const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
-      return hasTime ? `${year}-${month}-${day} ${timeStr}` : `${year}-${month}-${day}`
-    }
-
-    const usDatePattern = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
-    const matchUS = trimmed.match(usDatePattern)
-    if (matchUS) {
-      const month = parseInt(matchUS[1]!)
-      const day = parseInt(matchUS[2]!)
-      const year = matchUS[3]!
-      const hours = parseInt(matchUS[4]!) || 0
-      const minutes = parseInt(matchUS[5]!) || 0
-      const seconds = parseInt(matchUS[6]!) || 0
-      const hasTime = hours !== 0 || minutes !== 0 || seconds !== 0
-      const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
-      return hasTime ? `${year}-${month}-${day} ${timeStr}` : `${year}-${month}-${day}`
-    }
-
-    if (/^\d{8}/.test(trimmed)) {
-      const year = trimmed.substring(0, 4)
-      const month = parseInt(trimmed.substring(4, 6))
-      const day = parseInt(trimmed.substring(6, 8))
-      return `${year}-${month}-${day}`
-    }
-
-    return value
-  }
-
-  return value
-}
-
-// ========== 文件名工具函数 ==========
-
-function sanitizeFilename(name: string): string {
-  return name.replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim() || '未命名'
-}
-
-function validateFilenameTemplate(template: string): { valid: boolean; error?: string } {
-  let depth = 0
-  for (const ch of template) {
-    if (ch === '{') depth++
-    if (ch === '}') depth--
-    if (depth < 0) return { valid: false, error: '多余的 } 右花括号' }
-  }
-  if (depth > 0) return { valid: false, error: '花括号未闭合，缺少 }' }
-  if (depth < 0) return { valid: false, error: '花括号不匹配' }
-
-  const re = /\{([^}]+)\}/g
-  let m: RegExpExecArray | null
-  while ((m = re.exec(template)) !== null) {
-    if (m[1] === '') return { valid: false, error: '存在空的 {} 占位符' }
-    if (!/^[\w]+$/.test(m[1]!)) {
-      return { valid: false, error: `字段名 "{${m[1]!}}" 包含非法字符，只允许字母、数字和下划线` }
-    }
-  }
-
-  return { valid: true }
-}
-
-function generateFilename(
-  row: Record<string, any>,
-  template: string,
-  index: number,
-): string {
-  if (!template) {
-    const keys = Object.keys(row)
-    const firstKey = keys[0]
-    if (firstKey && row[firstKey] != null) {
-      return sanitizeFilename(String(row[firstKey]))
-    }
-    return `文档_${index + 1}`
-  }
-
-  const name = template.replace(/\{([^}]+)\}/g, (_, key: string) => {
-    const val = row[key]
-    return val != null ? String(val) : ''
-  })
-  return sanitizeFilename(name)
-}
-
-function resolveDuplicates(
-  names: string[],
-  strategy: 'appendIndex' | 'rowPrefix',
-): string[] {
-  if (strategy === 'rowPrefix') {
-    const pad = String(names.length).length
-    return names.map((name, i) => `${String(i + 1).padStart(pad, '0')}-${name}`)
-  }
-
-  const seen = new Map<string, number>()
-  return names.map((name) => {
-    const count = seen.get(name) || 0
-    seen.set(name, count + 1)
-    if (count === 0) return name
-    return `${name}(${count})`
-  })
 }
 
 export function useDocxTemplateExport() {
