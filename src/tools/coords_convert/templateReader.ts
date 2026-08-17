@@ -67,7 +67,7 @@ export async function readAndValidateCoordTemplate(
 /**
  * 验证坐标数据行
  */
-function validateCoordRow(
+export function validateCoordRow(
   row: { [key: string]: string | number | boolean | null | undefined },
   isLngLatMode: boolean,
   isXYMode: boolean,

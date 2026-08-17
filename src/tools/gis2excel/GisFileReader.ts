@@ -21,7 +21,7 @@ export interface GisValidationResult {
   polygonCount: number
 }
 
-function parseKmlXml(xmlString: string, basePath: string = ''): GisFeature[] {
+export function parseKmlXml(xmlString: string, basePath: string = ''): GisFeature[] {
   const features: GisFeature[] = []
   const parser = new DOMParser()
   const xmlDoc = parser.parseFromString(xmlString, 'application/xml')
@@ -177,7 +177,7 @@ export async function parseShpFile(file: File | File[]): Promise<GisFeature[]> {
   return result
 }
 
-function convertGeoJsonToFeatures(geojson: any): GisFeature[] {
+export function convertGeoJsonToFeatures(geojson: any): GisFeature[] {
   const collections: any[] = Array.isArray(geojson) ? geojson : [geojson]
   const features: GisFeature[] = []
 

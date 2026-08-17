@@ -9,7 +9,7 @@ export interface ExportOptions {
   closePolygon: boolean
 }
 
-function formatCoordinates(
+export function formatCoordinates(
   coordinates: string,
   type: 'Point' | 'LineString' | 'Polygon',
   options: ExportOptions
@@ -256,22 +256,6 @@ function exportToCsv(groupedFeatures: GisFeature[][], options: ExportOptions): v
   
   const blob = new Blob([result], { type: 'text/csv;charset=UTF-8' })
   triggerDownload(blob, 'gis_export', 'csv')
-}
-
-function generateCsvNoBom(headers: string[], dataRows: string[][]): Blob {
-  const rows: string[][] = [headers, ...dataRows]
-  const csvLines = rows.map(row => 
-    row.map(cell => {
-      const cellStr = String(cell)
-      if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
-        return `"${cellStr.replace(/"/g, '""')}"`
-      }
-      return cellStr
-    }).join(',')
-  )
-  
-  const csvContent = new TextEncoder().encode(csvLines.join('\n'))
-  return new Blob([csvContent], { type: 'text/csv;charset=UTF-8' })
 }
 
 function exportSingleTypeToXlsx(features: GisFeature[], type: 'Point' | 'LineString' | 'Polygon', filename: string, options: ExportOptions): void {
