@@ -79,6 +79,7 @@
         v-else
         :key="activeCategory"
         v-model="dragTools"
+        :disabled="!isDragEnabled"
         item-key="id"
         class="desktop-area"
         :animation="300"
@@ -115,7 +116,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Draggable from 'vuedraggable'
 import { PhSmileySad } from '@phosphor-icons/vue'
@@ -124,6 +125,26 @@ import type { ToolConfig } from '@/tools/toolData'
 
 const router = useRouter()
 const store = useHomeToolsStore()
+
+// 拖拽排序仅在使用鼠标的设备上启用（hover + 精细指针）。
+// 触屏设备（手机/平板）上若启用 Sortable 拖拽，会拦截点击事件，
+// 导致卡片 tap 时无法触发跳转（PC 鼠标正常、手机无效）。
+const isDragEnabled = ref(false)
+let dragMediaQuery: MediaQueryList | null = null
+
+const updateDragEnabled = () => {
+  isDragEnabled.value = dragMediaQuery?.matches ?? false
+}
+
+onMounted(() => {
+  dragMediaQuery = window.matchMedia('(hover: hover) and (pointer: fine)')
+  updateDragEnabled()
+  dragMediaQuery.addEventListener('change', updateDragEnabled)
+})
+
+onUnmounted(() => {
+  dragMediaQuery?.removeEventListener('change', updateDragEnabled)
+})
 const searchQuery = ref('')
 const staggerStyle = (i: number, delayPerItem = 40) => ({
   animation: 'slide-up 0.35s ease-out both',
