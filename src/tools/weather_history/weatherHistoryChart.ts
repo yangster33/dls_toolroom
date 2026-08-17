@@ -1,7 +1,7 @@
 import type { EChartsOption } from 'echarts'
 import * as echarts from 'echarts'
 import type { WeatherApiResponse } from './weatherHistoryService'
-import { parseOklch, oklchToHex } from '@/utils/colorUtils'
+import { oklchToHex } from '@/utils/colorUtils'
 
 export interface ChartThemeColors {
   base100: string

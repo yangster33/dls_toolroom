@@ -130,15 +130,6 @@ async function prerenderRoute(page, route) {
   console.log(`    ✓ ${outPath.replace(DIST, '')} (${(html.length / 1024).toFixed(1)} KB)`)
 }
 
-function escapeXml(s) {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
-}
-
 async function writeSitemap(routes) {
   const today = new Date().toISOString().slice(0, 10)
   const toolsRoutes = routes.filter((r) => r.startsWith('/tools/'))

@@ -801,7 +801,7 @@ function saveTask() {
   pushUndo()
 
   // 确保开始日期不晚于结束日期
-  let start = taskForm.value.start
+  const start = taskForm.value.start
   let end = taskForm.value.end
   if (new Date(end) < new Date(start)) {
     end = start

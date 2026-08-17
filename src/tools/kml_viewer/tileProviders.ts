@@ -1,5 +1,3 @@
-import type { TileLayer } from 'leaflet'
-
 /**
  * 底图瓦片提供商配置
  * 集中管理所有支持的国内主流地图底图 URL 模板

@@ -137,7 +137,7 @@ function sphericalCosDistance(
 
 /** 转为弧度并计算 cosLat/sinLat 缓存，按纬度升序排列 */
 function prepareTarget(points: LocationPoint[]): IndexedPoint[] {
-  const result: IndexedPoint[] = new Array(points.length)
+  const result: IndexedPoint[] = []
   for (let i = 0; i < points.length; i++) {
     const p = points[i]!
     const latRad = p.latitude * DEG_TO_RAD

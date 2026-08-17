@@ -1,4 +1,4 @@
-import { parseShpFile, type GisFeature, type GisValidationResult } from '../gis2excel/GisFileReader'
+import { parseShpFile, type GisFeature } from '../gis2excel/GisFileReader'
 
 export interface ShpMultiFileResult {
   isValid: boolean

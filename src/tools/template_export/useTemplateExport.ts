@@ -89,7 +89,7 @@ expressions.filters.split = (input: any, delimiter: any, index: any) => {
 function angularParser(tag: string) {
   const expr = expressions.compile(tag)
   return {
-    get(scope: Record<string, any>, context: any) {
+    get(scope: Record<string, any>) {
       try {
         const result = expr(scope)
         if (result instanceof Date) {
