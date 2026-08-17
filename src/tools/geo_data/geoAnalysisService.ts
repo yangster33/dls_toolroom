@@ -383,10 +383,9 @@ export async function analyzePolygonToPolygon(
 
       let intersectionArea = '0'
       try {
-        const fcA = turf.featureCollection([polyA])
-        const fcB = turf.featureCollection([polyB])
-        const intersection = turf.intersect(fcA as any, fcB as any) as any
-        if (intersection && intersection.features && intersection.features.length > 0) {
+        const fc = turf.featureCollection([polyA, polyB])
+        const intersection = turf.intersect(fc as any) as any
+        if (intersection) {
           intersectionArea = (turf.area(intersection) / 1000000).toFixed(4)
         }
       } catch {

@@ -201,58 +201,6 @@ export async function fetchGdacsData(formData: GdacsFormData): Promise<QueryResu
   }
 }
 
-function parseGdacsXml(xmlText: string): GdacsEvent[] {
-  const parser = new DOMParser()
-  const xmlDoc = parser.parseFromString(xmlText, 'text/xml')
-  const items = xmlDoc.querySelectorAll('item')
-  const events: GdacsEvent[] = []
-  const gdacsNamespace = 'http://www.gdacs.org'
-
-  items.forEach((item) => {
-    const title = item.querySelector('title')?.textContent || ''
-    const description = item.querySelector('description')?.textContent || ''
-    const link = item.querySelector('link')?.textContent || ''
-
-    const gdacsAlertLevel = getGdacsElementContent(item, gdacsNamespace, 'alertlevel')
-    const gdacsEventId = getGdacsElementContent(item, gdacsNamespace, 'eventid')
-    const gdacsEventType = getGdacsElementContent(item, gdacsNamespace, 'eventtype')
-    const gdacsCountry = getGdacsElementContent(item, gdacsNamespace, 'country')
-    const gdacsSeverity = getGdacsElementContent(item, gdacsNamespace, 'severity')
-    const gdacsFromDate = getGdacsElementContent(item, gdacsNamespace, 'fromdate')
-    const gdacsToDate = getGdacsElementContent(item, gdacsNamespace, 'todate')
-    const gdacsLat = parseFloat(getGdacsElementContent(item, gdacsNamespace, 'lat') || '0')
-    const gdacsLon = parseFloat(getGdacsElementContent(item, gdacsNamespace, 'lon') || '0')
-
-    events.push({
-      id: gdacsEventId!,
-      title: title!,
-      type: gdacsEventType!,
-      country: gdacsCountry!,
-      countrycode: gdacsCountry!,
-      fromdate: gdacsFromDate!,
-      todate: gdacsToDate!,
-      alertlevel: gdacsAlertLevel!,
-      severity: gdacsSeverity!,
-      population: 0,
-      latitude: gdacsLat,
-      longitude: gdacsLon,
-      description: description,
-      url: link,
-    })
-  })
-
-  return events
-}
-
-function getGdacsElementContent(
-  parent: Element,
-  namespace: string,
-  tagName: string,
-): string | null {
-  const elements = parent.getElementsByTagNameNS(namespace, tagName)
-  return elements.length > 0 ? elements[0]!.textContent : null
-}
-
 export function downloadJson(data: GdacsEvent[], filename: string = 'gdacs_events.json'): void {
   const jsonStr = JSON.stringify(data, null, 2)
   const blob = new Blob([jsonStr], { type: 'application/json' })
