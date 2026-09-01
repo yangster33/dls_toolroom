@@ -1,5 +1,5 @@
 <template>
-  <div class="p-6">
+  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
     <ErrorDialog
       :is-open="errorDialogOpen"
       :type="errorDialogType"
@@ -7,8 +7,8 @@
       :message="errorDialogMessage"
       @close="closeErrorDialog"
     />
-    <h1 class="text-3xl font-bold mb-2">{{ toolConfig?.name || '距离测算' }}</h1>
-    <p class="text-base-content/70 mb-6">{{ toolConfig?.description || '两点间距离计算工具' }}</p>
+    <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || '距离测算' }}</h1>
+    <p class="text-base-content/70">{{ toolConfig?.description || '两点间距离计算工具' }}</p>
 
     <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-6 mb-6 space-y-6">
       <!-- 模板下载区域 -->

@@ -1,5 +1,5 @@
 <template>
-  <div class="p-6">
+  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
     <ErrorDialog
       :is-open="errorDialogOpen"
       type="error"
@@ -7,8 +7,8 @@
       :message="error"
       @close="closeErrorDialog"
     />
-    <h1 class="text-3xl font-bold mb-2">{{ toolConfig?.name || '历史天气查询' }}</h1>
-    <p class="text-base-content/70 mb-6">
+    <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || '历史天气查询' }}</h1>
+    <p class="text-base-content/70">
       {{ toolConfig?.description || '输入经纬度查询历史天气数据，支持多种气象变量选择' }}
     </p>
 

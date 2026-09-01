@@ -1,5 +1,5 @@
 <template>
-  <div class="p-6">
+  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
     <ErrorDialog
       :is-open="errorDialogOpen"
       :type="errorDialogType"
@@ -7,8 +7,8 @@
       :message="errorDialogMessage"
       @close="closeErrorDialog"
     />
-    <h1 class="text-3xl font-bold mb-2">{{ toolConfig?.name || (mode === 'add' ? '地址解析' : '经纬度查询') }}</h1>
-    <p class="text-base-content/70 mb-6">
+    <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || (mode === 'add' ? '地址解析' : '经纬度查询') }}</h1>
+    <p class="text-base-content/70">
       {{ toolConfig?.description || (mode === 'add' ? '经纬度转地址工具' : '地址转经纬度工具') }}
     </p>
 

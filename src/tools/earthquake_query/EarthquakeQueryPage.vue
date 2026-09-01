@@ -1,7 +1,7 @@
 <template>
-  <div class="p-6">
-    <h1 class="text-3xl font-bold mb-2">{{ toolConfig?.name || '地震查询' }}</h1>
-    <p class="text-base-content/70 mb-6">
+  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
+    <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || '地震查询' }}</h1>
+    <p class="text-base-content/70">
       {{
         toolConfig?.description || '查询全球历史地震数据，支持按时间范围、震级范围和地理位置筛选'
       }}

@@ -1,6 +1,6 @@
 <!-- src/tools/gantt_chart/GanttChartPage.vue -->
 <template>
-  <div class="p-6">
+  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
     <ErrorDialog
       :is-open="errorDialogOpen"
       :type="errorDialogType"
@@ -8,8 +8,8 @@
       :message="errorDialogMessage"
       @close="closeErrorDialog"
     />
-    <h1 class="text-3xl font-bold mb-2">{{ toolConfig?.name || '甘特图' }}</h1>
-    <p class="text-base-content/70 mb-6">
+    <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || '甘特图' }}</h1>
+    <p class="text-base-content/70">
       {{ toolConfig?.description || '基于 Frappe Gantt 的交互式甘特图工具，支持任务管理、依赖关系、进度追踪与多视图切换。' }}
     </p>
 

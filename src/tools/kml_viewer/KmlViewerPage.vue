@@ -1,5 +1,8 @@
 <template>
-  <div class="p-6" :class="{ '!p-0': isMapFullscreen }">
+  <div
+    class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6"
+    :class="{ '!p-0': isMapFullscreen }"
+  >
     <ErrorDialog
       :is-open="errorDialogOpen"
       type="error"
@@ -8,8 +11,8 @@
       @close="closeErrorDialog"
     />
     <template v-if="!isMapFullscreen">
-      <h1 class="text-3xl font-bold mb-2">{{ toolConfig?.name || 'KML查看器' }}</h1>
-      <p class="text-base-content/70 mb-6">{{ toolConfig?.description || '' }}</p>
+      <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || 'KML查看器' }}</h1>
+      <p class="text-base-content/70">{{ toolConfig?.description || '' }}</p>
     </template>
 
     <div

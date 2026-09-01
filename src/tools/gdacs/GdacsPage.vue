@@ -1,5 +1,5 @@
 <template>
-  <div class="p-6">
+  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
     <ErrorDialog
       :is-open="errorDialogOpen"
       type="error"
@@ -7,8 +7,8 @@
       :message="error"
       @close="closeErrorDialog"
     />
-    <h1 class="text-3xl font-bold mb-2">{{ toolConfig?.name || 'GDACS 灾害数据' }}</h1>
-    <p class="text-base-content/70 mb-6">
+    <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || 'GDACS 灾害数据' }}</h1>
+    <p class="text-base-content/70">
       {{ toolConfig?.description || '从 GDACS 获取全球灾害事件数据' }}
     </p>
 

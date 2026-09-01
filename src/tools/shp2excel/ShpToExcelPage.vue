@@ -1,7 +1,7 @@
 <template>
-  <div class="p-6">
-    <h1 class="text-3xl font-bold mb-2">{{ toolConfig?.name || 'SHP转表格' }}</h1>
-    <p class="text-base-content/70 mb-6">{{ toolConfig?.description || '将SHP文件转换为Excel/CSV表格' }}</p>
+  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
+    <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || 'SHP转表格' }}</h1>
+    <p class="text-base-content/70">{{ toolConfig?.description || '将SHP文件转换为Excel/CSV表格' }}</p>
 
     <div class="bg-base-100 rounded-lg shadow-lg p-6 mb-6 space-y-6">
       <!-- 步骤1: 上传SHP文件 -->

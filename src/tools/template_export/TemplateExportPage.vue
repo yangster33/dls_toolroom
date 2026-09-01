@@ -1,7 +1,7 @@
 <template>
-  <div class="p-6">
-    <h1 class="text-3xl font-bold mb-2">{{ toolConfig?.name || (format === 'docx' ? 'DOCX模板' : 'XLSX模板') }}</h1>
-    <p class="text-base-content/70 mb-6">
+  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
+    <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || (format === 'docx' ? 'DOCX模板' : 'XLSX模板') }}</h1>
+    <p class="text-base-content/70">
       {{ toolConfig?.description || (format === 'docx' ? '使用docxtemplater将CSV/Excel数据填充到Word模板' : '使用xlsx-template将CSV/Excel数据填充到Excel模板') }}
     </p>
 
