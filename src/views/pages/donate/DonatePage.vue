@@ -15,35 +15,39 @@
       <!-- 收款码区域 -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- 支付宝 -->
-        <div
-          class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg p-6 text-white"
-        >
-          <div class="flex items-center mb-4">
-            <PhCreditCard class="w-6 h-6 mr-2" />
-            <span class="text-lg font-semibold">支付宝</span>
-          </div>
-          <div class="bg-white rounded-xl p-4 mb-4">
-            <div class="flex justify-center">
-              <canvas ref="alipayCanvas" class="w-48 h-48"></canvas>
+        <div class="aura aura-holo w-full">
+          <div
+            class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg p-6 text-white"
+          >
+            <div class="flex items-center mb-4">
+              <PhCreditCard class="w-6 h-6 mr-2" />
+              <span class="text-lg font-semibold">支付宝</span>
             </div>
+            <div class="bg-white rounded-xl p-4 mb-4">
+              <div class="flex justify-center">
+                <canvas ref="alipayCanvas" class="w-48 h-48"></canvas>
+              </div>
+            </div>
+            <p class="text-center text-sm opacity-90">扫码支持</p>
           </div>
-          <p class="text-center text-sm opacity-90">扫码支持</p>
         </div>
 
         <!-- 微信 -->
-        <div
-          class="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg p-6 text-white"
-        >
-          <div class="flex items-center mb-4">
-            <PhGlobe class="w-6 h-6 mr-2" />
-            <span class="text-lg font-semibold">微信</span>
-          </div>
-          <div class="bg-white rounded-xl p-4 mb-4">
-            <div class="flex justify-center">
-              <canvas ref="wechatCanvas" class="w-48 h-48"></canvas>
+        <div class="aura aura-holo w-full">
+          <div
+            class="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg p-6 text-white"
+          >
+            <div class="flex items-center mb-4">
+              <PhGlobe class="w-6 h-6 mr-2" />
+              <span class="text-lg font-semibold">微信</span>
             </div>
+            <div class="bg-white rounded-xl p-4 mb-4">
+              <div class="flex justify-center">
+                <canvas ref="wechatCanvas" class="w-48 h-48"></canvas>
+              </div>
+            </div>
+            <p class="text-center text-sm opacity-90">扫码支持</p>
           </div>
-          <p class="text-center text-sm opacity-90">扫码支持</p>
         </div>
       </div>
 

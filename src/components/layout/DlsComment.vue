@@ -12,7 +12,8 @@
     </div>
 
     <!-- 评论表单 -->
-    <div class="p-4 bg-base-200 rounded-lg mb-6">
+    <div class="aura aura-holo w-full [--aura-radius:0.5rem] mb-6">
+      <div class="p-4 bg-base-200 rounded-lg">
       <div class="space-y-3">
         <!-- 评论内容（必填） -->
         <div>
@@ -109,21 +110,24 @@
           </button>
         </div>
       </div>
+      </div>
     </div>
 
     <!-- 评论列表 -->
     <div class="space-y-3">
-      <div v-for="comment in comments" :key="comment.id" class="p-4 bg-base-200 rounded-lg">
-        <div class="flex items-center gap-2 mb-2 flex-wrap">
-          <span class="font-semibold text-sm text-base-content">
-            {{ comment.nickname || '匿名' }}
-          </span>
-          <span class="badge badge-sm" :class="COMMENT_TYPE_COLORS[comment.type]">
-            {{ COMMENT_TYPE_LABELS[comment.type] }}
-          </span>
-          <span class="text-xs text-base-content/50">{{ comment.created_at }}</span>
+      <div v-for="comment in comments" :key="comment.id" class="aura aura-holo w-full [--aura-radius:0.5rem]">
+        <div class="p-4 bg-base-200 rounded-lg">
+          <div class="flex items-center gap-2 mb-2 flex-wrap">
+            <span class="font-semibold text-sm text-base-content">
+              {{ comment.nickname || '匿名' }}
+            </span>
+            <span class="badge badge-sm" :class="COMMENT_TYPE_COLORS[comment.type]">
+              {{ COMMENT_TYPE_LABELS[comment.type] }}
+            </span>
+            <span class="text-xs text-base-content/50">{{ comment.created_at }}</span>
+          </div>
+          <p class="text-base-content/80 text-sm leading-relaxed">{{ comment.content }}</p>
         </div>
-        <p class="text-base-content/80 text-sm leading-relaxed">{{ comment.content }}</p>
       </div>
 
       <div v-if="comments.length === 0" class="text-center text-base-content/50 py-12">
