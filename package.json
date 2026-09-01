@@ -89,7 +89,7 @@
     "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.9.1",
     "autoprefixer": "^10.5.0",
-    "daisyui": "^5.5.19",
+    "daisyui": "^5.7.17",
     "eslint": "^10.1.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-oxlint": "~1.57.0",
