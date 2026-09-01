@@ -2,17 +2,21 @@ import { markRaw, type Component } from 'vue'
 import { PhYinYang, PhFileText, PhWrench, PhCpu, PhTrendUp } from '@phosphor-icons/vue'
 import DlsMdPage from '@/components/layout/DlsMdPage.vue'
 import DlsMoment from '@/components/layout/DlsMoment.vue'
-import ToolWithMdPage from '@/components/layout/ToolWithMdPage.vue'
 import type { NavItem } from '@/types/nav'
 
 const AsyncMdPage = markRaw(DlsMdPage)
 const AsyncMoment = markRaw(DlsMoment)
-const AsyncToolWithMdPage = markRaw(ToolWithMdPage)
 
-export function createToolNavItems(toolPage: Component, toolName: string): NavItem[] {
+export interface ToolNav {
+  navItems: NavItem[]
+  toolPage: Component | null
+  toolPageProps: Record<string, unknown>
+}
+
+export function createToolNavItems(toolPage: Component | null, toolName: string): ToolNav {
   const basePath = `docs/${toolName}`
 
-  const baseItems: NavItem[] = [
+  const navItems: NavItem[] = [
     {
       name: '道',
       icon: markRaw(PhYinYang),
@@ -34,15 +38,15 @@ export function createToolNavItems(toolPage: Component, toolName: string): NavIt
     {
       name: '器',
       icon: markRaw(PhCpu),
-      component: AsyncToolWithMdPage,
-      props: { toolPage: markRaw(toolPage), toolName },
+      component: AsyncMdPage,
+      props: { fileName: 'tool.md', basePath },
     },
   ]
 
   const enableMomentTab = import.meta.env.VITE_ENABLE_MOMENT_TAB === 'true'
 
   if (enableMomentTab) {
-    baseItems.push({
+    navItems.push({
       name: '势',
       icon: markRaw(PhTrendUp),
       component: AsyncMoment,
@@ -50,5 +54,5 @@ export function createToolNavItems(toolPage: Component, toolName: string): NavIt
     })
   }
 
-  return baseItems
+  return { navItems, toolPage, toolPageProps: {} }
 }

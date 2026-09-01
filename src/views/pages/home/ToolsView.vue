@@ -1,5 +1,9 @@
 <template>
-  <DlsMainLayout :nav-items="navItems" />
+  <DlsMainLayout
+    :nav-items="toolNav.navItems"
+    :tool-page="toolNav.toolPage"
+    :tool-page-props="toolNav.toolPageProps"
+  />
 </template>
 
 <script setup lang="ts">
@@ -16,5 +20,5 @@ useSeo({
   keywords: ['在线工具列表', '地理空间工具', '坐标转换', 'GIS', 'KML', 'SHP'],
 })
 
-const navItems = createToolNavItems(ToolsPage, 'tools')
+const toolNav = createToolNavItems(ToolsPage, 'tools')
 </script>

@@ -1,7 +1,12 @@
 <template>
   <div class="tool-detail-view h-full">
     <div v-if="tool" class="tool-content">
-      <DlsMainLayout :nav-items="navItems" v-if="toolComponent" />
+      <DlsMainLayout
+        :nav-items="toolNav.navItems"
+        :tool-page="toolNav.toolPage"
+        :tool-page-props="toolNav.toolPageProps"
+        v-if="toolComponent"
+      />
       <div v-else class="flex items-center justify-center h-full">
         <div class="text-center">
           <h2 class="text-2xl font-bold mb-4">工具组件加载失败</h2>
@@ -144,8 +149,10 @@ const toolComponent = computed(() => {
   return component || null
 })
 
-const navItems = computed(() => {
-  if (!toolComponent.value || !toolId.value) return []
+const toolNav = computed(() => {
+  if (!toolComponent.value || !toolId.value) {
+    return { navItems: [], toolPage: null, toolPageProps: {} }
+  }
   return createToolNavItems(toolComponent.value, toolId.value)
 })
 </script>

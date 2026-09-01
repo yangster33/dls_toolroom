@@ -1,29 +1,37 @@
 <!-- src/components/layout/DlsMainLayout.vue -->
 <template>
-  <div class="tabs tabs-lift">
-    <template v-for="(item, index) in effectiveNavItems" :key="item.name">
-      <input
-        type="radio"
-        name="my_tabs_4"
-        :checked="activeIndex === index"
-        class="tab"
-        :aria-label="item.name"
-        @change="activeIndex = index"
-      />
-      <div class="tab-content bg-base-100 border-base-300 p-6">
-        <div
-          class="tab-pane"
-          :key="activeIndex === index ? `active-${item.name}` : `hidden-${item.name}`"
-        >
-          <component v-if="item.component" :is="item.component" v-bind="item.props" />
+  <div class="tool-main-layout">
+    <!-- 器：真正的工具页面常驻上方，不随下方 tab 切换 -->
+    <div v-if="toolPage" class="tool-page-area mb-4">
+        <component :is="toolPage" v-bind="toolPageProps" />
+    </div>
+
+    <!-- 道法术器势：仅切换下方说明文本；宽度与上方工具框（aura 内层）一致 -->
+    <div class="tabs tabs-lift w-[calc(100%-4px)]">
+      <template v-for="(item, index) in navItems" :key="item.name">
+        <input
+          type="radio"
+          name="my_tabs_4"
+          :checked="activeIndex === index"
+          class="tab"
+          :aria-label="item.name"
+          @change="activeIndex = index"
+        />
+        <div class="tab-content bg-base-100 border-base-300 p-6">
+          <div
+            class="tab-pane"
+            :key="activeIndex === index ? `active-${item.name}` : `hidden-${item.name}`"
+          >
+            <component v-if="item.component" :is="item.component" v-bind="item.props" />
+          </div>
         </div>
-      </div>
-    </template>
-  </div>
+      </template>
+    </div>
+    </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, type Component } from 'vue'
+import { ref, type Component } from 'vue'
 
 interface NavItem {
   name: string
@@ -34,14 +42,11 @@ interface NavItem {
 
 const props = defineProps<{
   navItems: NavItem[]
+  toolPage?: Component | null
+  toolPageProps?: Record<string, unknown>
 }>()
 
-const effectiveNavItems = computed(() => props.navItems)
-const defaultIndex = computed(() => {
-  const idx = 3
-  return effectiveNavItems.value.length > idx ? idx : 0
-})
-const activeIndex = ref(defaultIndex.value)
+const activeIndex = ref(0)
 </script>
 
 <style scoped>

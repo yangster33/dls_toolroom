@@ -5,16 +5,10 @@ export interface DlsMdPageProps extends Record<string, unknown> {
   basePath?: string
 }
 
-export interface ToolWithMdPageProps extends Record<string, unknown> {
-  toolPage: Component
-  toolPageProps?: Record<string, unknown>
-  toolName: string
-}
-
 export interface DlsMomentProps extends Record<string, unknown> {
 }
 
-export type NavItemProps = DlsMdPageProps | ToolWithMdPageProps | DlsMomentProps
+export type NavItemProps = DlsMdPageProps | DlsMomentProps
 
 export interface NavItem {
   name: string
