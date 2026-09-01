@@ -105,7 +105,19 @@ const staggerStyle = (i: number) => ({
   animationDelay: `${i * 80}ms`,
 })
 
-const featuredTools = [...toolConfigs].sort((a, b) => a.name.localeCompare(b.name)).slice(0, 4)
+// Fisher-Yates 随机打乱后取前 4 个，每次进入首页展示不同的推荐工具
+function shuffleTools<T>(tools: T[]): T[] {
+  const result = [...tools]
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const tmp = result[i]!
+    result[i] = result[j]!
+    result[j] = tmp
+  }
+  return result
+}
+
+const featuredTools = shuffleTools(toolConfigs).slice(0, 4)
 
 const navigateToTool = (toolId: string) => {
   router.push(`/tools/${toolId}`)
