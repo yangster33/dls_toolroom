@@ -19,6 +19,13 @@
 - **工具页内部面板不再套金边**（用户已表达「浮夸」反馈，与 daisyUI「Aura 只用于重点元素」理念一致；A3 兜底方案弃用）。
 - **验收**：`vite build` ✅；`oxlint` 触碰文件 ✅；`playwright test` 7/7 ✅；运行态校验（conic-gradient 生效、`animation-duration: 4s`、wrapper/卡片宽度匹配、使用注意卡全宽 1094px）。
 - **任务 B 验收（✅ 2026-08-18）**：`vue-tsc` ✅；`vite build` ✅；`oxlint` 8 文件 ✅；`vitest` 450/450 ✅；`playwright` 7/7 ✅；运行态脚本校验 —— 工具页 h1+表单常驻上方、切「法」后表单输入值保留（**工具不重挂载**）、默认选中「道」（DOM `checked` 确认）、「器」tab 渲染 tool.md、/tools 列表常驻 5 tab、/about 窗口常驻 5 tab。
+- **第五轮（✅ 2026-09-29，去除工具页双层卡片冗余）**：`cae740a` 把 20 个工具页**根节点**由 `<div class="p-6">` 改为毛玻璃卡（`bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4`），但多数页面**内部本已存在一层卡片**，导致卡片套卡片。处理：
+  - **真·重复卡**（内外同款毛玻璃）7 处降级为普通分区——`CoordConvertPage`、`CoordsConvertPage`、`DistanceSensorPage`、`GisToExcelPage`、`Table2KmlPage`、`GeocodeCommon` 内层改为 `<div class="mt-4 space-y-6">`；`QrcodePage` 两个并排功能面板改为内嵌样式 `rounded-lg bg-base-200/50 p-4`（保留分区语义，不做纯 div）。
+  - **合法内嵌卡**（内层为实色 `bg-base-100`，层级本可分辨）12 文件 25 处软化：`bg-base-100 rounded-lg shadow-lg` → `bg-base-200/40 rounded-lg`，去阴影降对比，形成「外框=页面 / 内层=分区」层次。**两处例外保留不透明底色**：`KmlViewerPage` 地图容器、`GanttChartPage` 甘特图容器——半透明底会透出背景影响绘制。
+  - **间距**：`mb-6`(根) + `mb-4`(area) + `mb-6`(内层) 原叠成 64px；根节点 `mb-6` 删除（间距统一交给 `.tool-page-area` 的 `mb-4`），11 个文件末尾内嵌面板的尾部 `mb-6` 一并去除。
+  - **`w-[calc(100%-4px)]` 作废**：该 hack 是为抵消 aura 描边左右各 2px 内边距而设，aura 早已删除，残留导致 tab 框右边缘比工具卡少 4px（左边齐、右边不齐故不易察觉）。改回 `w-full`，两侧真正齐平。
+  - 顺带修正 `DlsMainLayout.vue` 内 `<component>` 缩进与一个错位的 `</div>`。
+  - **验收**：浏览器实测 22 个工具路由 + `/tools` + `/about` 全部 `align: true`、宽度 753/753 一致，且每页恰好 1 个页面级卡片边框；`vue-tsc` ✅；`vitest` 450/450 ✅；`eslint` 114 errors 与改动前 `git stash` 基线完全一致（均为既有 `no-explicit-any` 等），未引入新问题。
 - **遗留**：`DlsChart`/弹窗类未套（无自有卡片容器/保持低调）；`ToolWithMdPage.vue` 已删除。
 
 ---
@@ -144,9 +151,9 @@
 
 ```
 ┌────────────────────────────────────────┐
-│  器（真正的工具页面，常驻，永不随 tab 切换）   │  ← aura-holo（第四轮追加，[--aura-radius:0.5rem]）
+│  器（真正的工具页面，常驻，永不随 tab 切换）   │  ← 工具页自带毛玻璃卡（第五轮起单层，无 aura）
 ├────────────────────────────────────────┤
-│  道 │ 法 │ 术 │ 器 │ 势                    │  ← tab 栏在下方
+│  道 │ 法 │ 术 │ 器 │ 势                    │  ← tab 栏在下方，与上方工具卡同宽
 ├────────────────────────────────────────┤
 │  说明文本区（仅此区域随 tab 切换）            │
 │  道=tao.md / 法=method.md / 术=tech.md / │
@@ -159,7 +166,7 @@
 | # | 文件 | 改动 |
 |---|------|------|
 | 1 | `src/tools/createToolNavItems.ts` | 重构为返回 `{ navItems, toolPage, toolPageProps }`；**「器」tab 改为纯文本** `DlsMdPage(tool.md)`（不再包 `ToolWithMdPage`）；`ToolWithMdPage` 引用删除；势 tab 的 env 开关逻辑保留 |
-| 2 | `src/components/layout/DlsMainLayout.vue` | 新增 props：`toolPage?: Component \| null`、`toolPageProps?: Record<string, unknown>`；模板顶部渲染「器」常驻区（`aura aura-holo w-full [--aura-radius:0.5rem]` 光环容器，与下方 tab 同宽，留 `mb-4` 间距），下方才是 tabs-lift；默认 `activeIndex` 从 3 改为 **0（道）** |
+| 2 | `src/components/layout/DlsMainLayout.vue` | 新增 props：`toolPage?: Component \| null`、`toolPageProps?: Record<string, unknown>`；模板顶部渲染「器」常驻区（与下方 tab 同宽，留 `mb-4` 间距），下方才是 tabs-lift；默认 `activeIndex` 从 3 改为 **0（道）**。第五轮修正：`tabs` 的 `w-[calc(100%-4px)]` 改回 `w-full`（aura 删除后残留的 -4px hack 已无意义） |
 | 3 | `src/components/layout/ToolWithMdPage.vue` | **删除**（其职责被 B1 布局取代：工具页常驻上方 + 器 tab 呈现 tool.md「使用注意」） |
 | 4 | `src/types/nav.ts` | `ToolWithMdPageProps` 及相关联合类型按新结构收窄（`NavItemProps` 只保留 `DlsMdPageProps \| DlsMomentProps`） |
 | 5 | `src/views/layouts/ToolDetailView.vue` | 解构 `createToolNavItems` 返回值，`navItems`、`toolPage`、`toolPageProps` 一并传给 `DlsMainLayout` |
@@ -169,7 +176,8 @@
 ### B3. 交互与样式细节
 
 - tab 交互沿用现有 daisyUI `tabs tabs-lift`（radio input 方案）不动，`tab-in` 切换动画保留
-- 器常驻区与下方 tab 区之间留 `mb-4` 间距；tab-content 文本面板保留 `bg-base-100 border-base-300 p-6`（**无 aura**）；`ToolsPage`/`AboutPage` 根节点移除 `mx-6` 保证与 tab 框全宽一致
+- 器常驻区与下方 tab 区之间留 `mb-4` 间距（工具页根节点不再自带 `mb-6`，间距统一由 `.tool-page-area` 控制）；tab-content 文本面板保留 `bg-base-100 border-base-300 p-6`（**无 aura**）；`ToolsPage`/`AboutPage` 根节点移除 `mx-6` 保证与 tab 框全宽一致
+- **卡片层级（第五轮确立）**：工具页根节点毛玻璃卡 = 页面外框，全站唯一；内部功能区一律 `bg-base-200/40 rounded-lg` 无阴影的内嵌面板；地图/甘特图等绘制表面例外，保留不透明 `bg-base-100`
 - 默认选中「道」（文档打头），不再默认器
 - 工具加载中（`ToolSkeleton`）逻辑不受影响（`toolComponent` 判断在 `ToolDetailView`）
 
@@ -186,6 +194,8 @@
    - 「器」tab 显示 tool.md（使用注意）文本
    - 默认选中「道」
    - `/tools`（工具列表）、`/about` 同样生效
+   - **单层卡片（第五轮新增）**：任意工具页内**有阴影的页面级卡片恰好 1 个**（即根节点），无卡片套卡片
+   - **左右齐平（第五轮新增）**：`.tool-page-area` 与 `.tabs` 的 `left`/`right`/宽度完全相等（`tabs` 用 `w-full`，不得再出现 `-4px` 偏移）
 3. **回归**
    - `npm run type-check` 全绿
    - `npm run lint`（eslint/oxlint 涉及文件）通过

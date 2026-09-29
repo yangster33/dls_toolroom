@@ -1,11 +1,11 @@
 <template>
-  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
+  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4">
     <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || '批量高程查询' }}</h1>
     <p class="text-base-content/70">
       {{ toolConfig?.description || '批量输入经纬度查询海拔高度，支持 Excel 导入导出。' }}
     </p>
 
-    <div class="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
+    <div class="bg-base-200/40 rounded-lg p-6">
       <h2 class="text-xl font-semibold mb-4">批量高程查询</h2>
 
       <div class="mb-6">
@@ -37,7 +37,7 @@
       </div>
     </div>
 
-    <div v-if="results.length > 0" class="bg-base-100 rounded-lg shadow-lg p-6">
+    <div v-if="results.length > 0" class="bg-base-200/40 rounded-lg p-6">
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-xl font-semibold">查询结果</h2>
         <button

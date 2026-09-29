@@ -1,12 +1,12 @@
 <template>
-  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
+  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4">
     <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || '二维码工具' }}</h1>
     <p class="text-base-content/70">
       {{ toolConfig?.description || '生成和识别二维码的工具。' }}
     </p>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-6">
+      <div class="rounded-lg bg-base-200/50 p-4">
         <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
           <PhQrCode class="w-5 h-5" />
           生成二维码
@@ -109,7 +109,7 @@
         </div>
       </div>
 
-      <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-6">
+      <div class="rounded-lg bg-base-200/50 p-4">
         <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
           <PhMagnifyingGlass class="w-5 h-5" />
           识别二维码

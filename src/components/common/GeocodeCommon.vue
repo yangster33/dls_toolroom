@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
+  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4">
     <ErrorDialog
       :is-open="errorDialogOpen"
       :type="errorDialogType"
@@ -12,7 +12,7 @@
       {{ toolConfig?.description || (mode === 'add' ? '经纬度转地址工具' : '地址转经纬度工具') }}
     </p>
 
-    <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-6 mb-6 space-y-6">
+    <div class="mt-4 space-y-6">
       <div>
         <h2 class="text-xl font-semibold mb-4">1. 下载模板</h2>
         <p class="text-base-content/70 mb-3 text-sm">

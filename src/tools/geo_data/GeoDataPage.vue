@@ -1,9 +1,9 @@
 <template>
-  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
+  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4">
     <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || '空间分析' }}</h1>
     <p class="text-base-content/70">{{ toolConfig?.description || '基于Turf.js的地理空间分析工具' }}</p>
 
-    <div class="bg-base-100 rounded-lg shadow-lg p-6 mb-6 space-y-6">
+    <div class="bg-base-200/40 rounded-lg p-6 space-y-6">
       <!-- 文件上传区域 -->
       <div>
         <label class="label">

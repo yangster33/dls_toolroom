@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
+  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4">
     <ErrorDialog
       :is-open="errorDialogOpen"
       :type="errorDialogType"
@@ -10,7 +10,7 @@
     <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || '批量高程查询' }}</h1>
     <p class="text-base-content/70">{{ toolConfig?.description || '通过上传模板批量查询高程数据' }}</p>
 
-    <div class="bg-base-100 rounded-lg shadow-lg p-6 mb-6 space-y-6">
+    <div class="bg-base-200/40 rounded-lg p-6 space-y-6">
       <div>
         <h2 class="text-xl font-semibold mb-4">1. 下载模板</h2>
         <p class="text-base-content/70 mb-3 text-sm">模板包含三列：名称、经度、纬度</p>
@@ -221,7 +221,7 @@
       </div>
     </div>
 
-    <div v-if="queryResults.length > 0" class="bg-base-100 rounded-lg shadow-lg p-6">
+    <div v-if="queryResults.length > 0" class="bg-base-200/40 rounded-lg p-6">
       <h2 class="text-xl font-semibold mb-4">查询结果预览 (前10条)</h2>
       <div class="overflow-x-auto">
         <table class="table table-zebra w-full">

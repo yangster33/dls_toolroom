@@ -1,9 +1,9 @@
 <template>
-  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
+  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4">
     <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || '基站转KML' }}</h1>
     <p class="text-base-content/70">{{ toolConfig?.description || '基站数据转KML文件' }}</p>
 
-    <div class="bg-base-100 rounded-lg shadow-lg p-6 mb-6 space-y-6">
+    <div class="bg-base-200/40 rounded-lg p-6 space-y-6">
       <!-- 操作区域 -->
       <div>
         <h2 class="text-xl font-semibold mb-4">1. 下载模板</h2>

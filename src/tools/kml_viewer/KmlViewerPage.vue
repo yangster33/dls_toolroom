@@ -1,6 +1,6 @@
 <template>
   <div
-    class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6"
+    class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4"
     :class="{ '!p-0': isMapFullscreen }"
   >
     <ErrorDialog
@@ -16,7 +16,7 @@
     </template>
 
     <div
-      class="bg-base-100 rounded-lg shadow-lg overflow-hidden"
+      class="bg-base-100 rounded-lg overflow-hidden"
       :class="isMapFullscreen ? '!rounded-none fixed inset-0 z-50 m-0' : ''"
       :style="isMapFullscreen ? {} : { height: `calc(100vh - ${isWebFullscreen ? '40px' : '220px'})`, minHeight: '500px' }"
     >

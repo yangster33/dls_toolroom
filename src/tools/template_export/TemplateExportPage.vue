@@ -1,11 +1,11 @@
 <template>
-  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
+  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4">
     <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || (format === 'docx' ? 'DOCX模板' : 'XLSX模板') }}</h1>
     <p class="text-base-content/70">
       {{ toolConfig?.description || (format === 'docx' ? '使用docxtemplater将CSV/Excel数据填充到Word模板' : '使用xlsx-template将CSV/Excel数据填充到Excel模板') }}
     </p>
 
-    <div class="bg-base-100 rounded-lg shadow-lg p-6 mb-6 space-y-6">
+    <div class="bg-base-200/40 rounded-lg p-6 space-y-6">
       <div>
         <h2 class="text-xl font-semibold mb-4">1. 下载模板</h2>
         <div class="dropdown">

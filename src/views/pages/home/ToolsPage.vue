@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-6 mb-6">
+  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-6">
     <!-- 搜索 + 分类 chips -->
     <div class="search-container mb-4">
       <div class="relative mb-3">

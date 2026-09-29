@@ -3,11 +3,11 @@
   <div class="tool-main-layout">
     <!-- 器：真正的工具页面常驻上方，不随下方 tab 切换 -->
     <div v-if="toolPage" class="tool-page-area mb-4">
-        <component :is="toolPage" v-bind="toolPageProps" />
+      <component :is="toolPage" v-bind="toolPageProps" />
     </div>
 
-    <!-- 道法术器势：仅切换下方说明文本；宽度与上方工具框（aura 内层）一致 -->
-    <div class="tabs tabs-lift w-[calc(100%-4px)]">
+    <!-- 道法术器势：仅切换下方说明文本；与上方工具卡片同宽 -->
+    <div class="tabs tabs-lift w-full">
       <template v-for="(item, index) in navItems" :key="item.name">
         <input
           type="radio"
@@ -27,7 +27,7 @@
         </div>
       </template>
     </div>
-    </div>
+  </div>
 </template>
 
 <script setup lang="ts">

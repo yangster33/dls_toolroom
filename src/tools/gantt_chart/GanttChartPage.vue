@@ -1,6 +1,6 @@
 <!-- src/tools/gantt_chart/GanttChartPage.vue -->
 <template>
-  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
+  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4">
     <ErrorDialog
       :is-open="errorDialogOpen"
       :type="errorDialogType"
@@ -14,7 +14,7 @@
     </p>
 
     <!-- 工具栏 -->
-    <div class="bg-base-100 rounded-lg shadow-lg p-4 mb-4">
+    <div class="bg-base-200/40 rounded-lg p-4 mb-4">
       <div class="flex flex-wrap items-center gap-3">
         <!-- 视图模式选择 -->
         <div class="join">
@@ -169,7 +169,7 @@
     </div>
 
     <!-- 甘特图容器 -->
-    <div class="bg-base-100 rounded-lg shadow-lg mb-6 relative">
+    <div class="bg-base-100 rounded-lg mb-6 relative">
       <div
         ref="ganttContainer"
         class="gantt-container-wrapper"
@@ -183,7 +183,7 @@
     </div>
 
     <!-- 任务列表表格 -->
-    <div class="bg-base-100 rounded-lg shadow-lg p-4 mb-6">
+    <div class="bg-base-200/40 rounded-lg p-4 mb-6">
       <h2 class="text-xl font-semibold mb-4">任务列表 ({{ store.tasks.length }})</h2>
       <div class="overflow-x-auto">
         <table class="table table-sm table-zebra">
@@ -278,7 +278,7 @@
     </div>
 
     <!-- 图例 -->
-    <div class="bg-base-100 rounded-lg shadow-lg p-4 mb-6">
+    <div class="bg-base-200/40 rounded-lg p-4">
       <h2 class="text-lg font-semibold mb-3">快捷操作提示</h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
         <div class="flex items-start gap-2">

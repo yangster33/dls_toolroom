@@ -1,11 +1,11 @@
 <template>
-  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
+  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4">
     <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || '高程查询' }}</h1>
     <p class="text-base-content/70">
       {{ toolConfig?.description || '输入经纬度查询海拔高度，数据来源于 Open-Meteo Elevation API。' }}
     </p>
 
-    <div class="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
+    <div class="bg-base-200/40 rounded-lg p-6">
       <h2 class="text-xl font-semibold mb-4">高程查询</h2>
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -41,7 +41,7 @@
       </button>
     </div>
 
-    <div v-if="result" class="bg-base-100 rounded-lg shadow-lg p-6">
+    <div v-if="result" class="bg-base-200/40 rounded-lg p-6">
       <h2 class="text-xl font-semibold mb-4">查询结果</h2>
       
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">

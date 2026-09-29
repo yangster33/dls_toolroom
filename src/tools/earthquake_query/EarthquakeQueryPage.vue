@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
+  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4">
     <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || '地震查询' }}</h1>
     <p class="text-base-content/70">
       {{
@@ -7,7 +7,7 @@
       }}
     </p>
 
-    <div class="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
+    <div class="bg-base-200/40 rounded-lg p-6">
       <h2 class="text-xl font-semibold mb-4">查询参数</h2>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -163,7 +163,7 @@
     />
 
     <div v-if="earthquakeData" class="space-y-6">
-      <div class="bg-base-100 rounded-lg shadow-lg p-6">
+      <div class="bg-base-200/40 rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-4">数据概览</h2>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div class="stat bg-base-200 rounded-lg">
@@ -189,7 +189,7 @@
         </div>
       </div>
 
-      <div class="bg-base-100 rounded-lg shadow-lg p-6">
+      <div class="bg-base-200/40 rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-4">可视化图表</h2>
 
         <div class="flex flex-wrap gap-2 mb-4">
@@ -214,7 +214,7 @@
         <div v-else ref="chartContainer" class="w-full h-[400px]"></div>
       </div>
 
-      <div class="bg-base-100 rounded-lg shadow-lg p-6">
+      <div class="bg-base-200/40 rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-4">地震列表</h2>
         <div class="overflow-x-auto">
           <table class="table table-compact w-full">

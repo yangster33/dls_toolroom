@@ -1,9 +1,9 @@
 <template>
-  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4 mb-6">
+  <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4">
     <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || 'GIS转表格' }}</h1>
     <p class="text-base-content/70">{{ toolConfig?.description || '将SHP、KML、KMZ文件转换为Excel表格' }}</p>
 
-    <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-6 mb-6 space-y-6">
+    <div class="mt-4 space-y-6">
       <div>
         <h2 class="text-xl font-semibold mb-4">1. 上传GIS文件</h2>
         <input
