@@ -1,6 +1,7 @@
 import JSZip from 'jszip'
 import shp from 'shpjs'
 import { logger } from '@/utils/logger'
+import { parseKmlCoordinates, formatCoordinates } from '@/utils/kmlCoordinates'
 
 export interface GisFeature {
   id: string
@@ -42,22 +43,22 @@ export function parseKmlXml(xmlString: string, basePath: string = ''): GisFeatur
       if (pointElement) {
         type = 'Point'
         const coordsText = pointElement.querySelector('coordinates')?.textContent || ''
-        const coords = coordsText.trim().split(',')
-        if (coords.length >= 2) {
-          coordinates = `${coords[0]},${coords[1]}`
+        // Point 只取第一个点；无有效坐标时 coordinates 保持空串，
+        // 由下方 `if (coordinates)` 过滤，避免导出 ",undefined" 垃圾
+        const points = parseKmlCoordinates(coordsText)
+        if (points.length > 0) {
+          coordinates = `${points[0]!.lng},${points[0]!.lat}`
         }
       } else if (lineElement) {
         type = 'LineString'
         const coordsText = lineElement.querySelector('coordinates')?.textContent || ''
-        const coordPairs = coordsText.trim().split(/\s+/).filter(s => s && s.includes(','))
-        coordinates = coordPairs.join(';')
+        coordinates = formatCoordinates(parseKmlCoordinates(coordsText))
       } else if (polygonElement) {
         type = 'Polygon'
         const linearRing = polygonElement.querySelector('LinearRing')
         if (linearRing) {
           const coordsText = linearRing.querySelector('coordinates')?.textContent || ''
-          const coordPairs = coordsText.trim().split(/\s+/).filter(s => s && s.includes(','))
-          coordinates = coordPairs.join(';')
+          coordinates = formatCoordinates(parseKmlCoordinates(coordsText))
         }
       }
       

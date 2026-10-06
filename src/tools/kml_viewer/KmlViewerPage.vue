@@ -232,6 +232,7 @@ import { tileProviders, type TileProvider } from './tileProviders'
 import KmlTreeNode from './KmlTreeNode.vue'
 import type { KmlTreeNodeData } from './types'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
+import { parseKmlCoordinates } from '@/utils/kmlCoordinates'
 
 // ===================== Tool Config =====================
 const toolConfig = getToolById('kml_viewer')
@@ -711,11 +712,11 @@ function createLayerForPlacemark(
   // Point
   const pointEls = el.getElementsByTagName('Point')
   if (pointEls.length > 0) {
-    const coords = pointEls[0]!.getElementsByTagName('coordinates')[0]?.textContent?.trim()
-    if (coords) {
-      const parts = coords.split(',')
-      const latlng = L.latLng(parseFloat(parts[1]!), parseFloat(parts[0]!))
-      return L.marker(latlng, { icon: getMarkerIcon(color) }).bindPopup(popupContent)
+    const coordEl = pointEls[0]!.getElementsByTagName('coordinates')[0]
+    const points = parseKmlCoordinates(coordEl?.textContent)
+    if (points.length > 0) {
+      const first = points[0]!
+      return L.marker(L.latLng(first.lat, first.lng), { icon: getMarkerIcon(color) }).bindPopup(popupContent)
     }
   }
 
@@ -752,9 +753,14 @@ function createLayerForPlacemark(
     const coords = [...Array.from(coordEls), ...Array.from(gxCoordEls)]
     const latlngs = coords
       .map((c) => {
+        // gx:coord 同样是「lon lat」空格分隔，用统一解析避免 parseFloat 产生 NaN
         const parts = (c.textContent || '').trim().split(/\s+/)
-        if (parts.length >= 2) return L.latLng(parseFloat(parts[1]!), parseFloat(parts[0]!))
-        return null
+        if (parts.length < 2) return null
+        const lng = parseFloat(parts[0]!)
+        const lat = parseFloat(parts[1]!)
+        if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null
+        if (lng < -180 || lng > 180 || lat < -90 || lat > 90) return null
+        return L.latLng(lat, lng)
       })
       .filter(Boolean) as L.LatLng[]
     if (latlngs.length > 1) {
@@ -781,16 +787,9 @@ function createLayerForPlacemark(
 
 function parseCoords(el: Element): L.LatLng[] {
   const coordEl = el.getElementsByTagName('coordinates')[0]
-  if (!coordEl?.textContent) return []
-  const text = coordEl.textContent.trim()
-  const pairs = text.split(/[\s\n]+/).filter(Boolean)
-  return pairs
-    .map((p) => {
-      const parts = p.split(',')
-      if (parts.length < 2) return null
-      return L.latLng(parseFloat(parts[1]!), parseFloat(parts[0]!))
-    })
-    .filter(Boolean) as L.LatLng[]
+  if (!coordEl) return []
+  // 统一走 kmlCoordinates 解析：兼容「逗号后带空格」等写法，且过滤 NaN / 越界坐标
+  return parseKmlCoordinates(coordEl.textContent).map((p) => L.latLng(p.lat, p.lng))
 }
 
 // ===================== Tree Node Actions =====================

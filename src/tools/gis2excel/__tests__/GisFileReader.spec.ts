@@ -71,11 +71,15 @@ describe('parseKmlXml', () => {
     })
   })
 
-  it('解析 LineString 坐标以分号连接（保留高程）', () => {
+  it('解析 LineString 坐标以分号连接（归一化为 lon,lat）', () => {
+    // 行为变更（审计 P0-2）：此前 LineString 保留高程段，Polygon 丢弃，
+    // 同一个文件里两种几何体格式不一致。现统一归一化为 lon,lat。
+    // 对最终导出的 Excel **无影响**——GisToExcelExporter.formatCoordinates
+    // 一直是 `const [lon, lat] = pair.split(',')`，第三个字段本就未被使用。
     const features = parseKmlXml(lineKml)
     expect(features[0]).toMatchObject({
       type: 'LineString',
-      coordinates: '116.4,39.9,0;116.5,39.95,0;116.6,40.0,0',
+      coordinates: '116.4,39.9;116.5,39.95;116.6,40',
     })
   })
 
@@ -83,8 +87,46 @@ describe('parseKmlXml', () => {
     const features = parseKmlXml(polygonKml)
     expect(features[0]).toMatchObject({
       type: 'Polygon',
-      coordinates: '116.4,39.9;116.5,39.9;116.5,40.0;116.4,39.9',
+      coordinates: '116.4,39.9;116.5,39.9;116.5,40;116.4,39.9',
     })
+  })
+
+  it('回归（审计 P0-2）：逗号后带空格的 coordinates 不再丢失线/面要素', () => {
+    // 旧实现 text.split(/[\\s\\n]+/) 会把元组切开，导致该 Placemark 被静默丢弃
+    const kmlWithSpaceAfterComma = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Placemark>
+    <name>路线</name>
+    <LineString><coordinates>116.4, 39.9,0 116.5, 39.95,0 116.6, 40.0,0</coordinates></LineString>
+  </Placemark>
+  <Placemark>
+    <name>站点</name>
+    <Point><coordinates>116.4, 39.9,0</coordinates></Point>
+  </Placemark>
+</kml>`
+
+    const features = parseKmlXml(kmlWithSpaceAfterComma)
+    expect(features).toHaveLength(2)
+
+    const line = features.find((f) => f.type === 'LineString')
+    expect(line).toBeDefined()
+    expect(line!.coordinates).toBe('116.4,39.9;116.5,39.95;116.6,40')
+
+    const point = features.find((f) => f.type === 'Point')
+    expect(point).toBeDefined()
+    expect(point!.coordinates).toBe('116.4,39.9')
+  })
+
+  it('回归（审计 P0-2 附带）：无有效坐标的要素不产生 ",undefined" 垃圾', () => {
+    const kmlEmptyCoord = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Placemark>
+    <name>空点</name>
+    <Point><coordinates></coordinates></Point>
+  </Placemark>
+</kml>`
+    const features = parseKmlXml(kmlEmptyCoord)
+    expect(features).toHaveLength(0)
   })
 
   it('Folder 内要素路径为文件夹名，且支持嵌套拼接', () => {
