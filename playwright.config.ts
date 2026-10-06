@@ -43,8 +43,11 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        /* 使用系统 Edge（Windows 自带），免去浏览器二进制下载 */
-        channel: 'msedge',
+        /**
+         * 默认使用系统 Edge（Windows 自带），免去浏览器二进制下载。
+         * CI（Linux）没有 Edge，通过 PLAYWRIGHT_CHANNEL=chromium 覆盖。
+         */
+        channel: (process.env.PLAYWRIGHT_CHANNEL as 'msedge' | 'chromium' | undefined) ?? 'msedge',
       },
     },
   ],
