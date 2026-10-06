@@ -511,10 +511,14 @@ export function useTemplateExport(format: ExportFormat) {
 
     renderResults.value = []
 
+    // ExcelJS 是重库（约 700KB+），按需动态加载，避免进入首屏 bundle。
+    // 注意：必须使用包的真实导入，window.ExcelJS 从未被赋值（见审计 P0-1）。
+    const { Workbook } = await import('exceljs')
+
     for (let i = 0; i < dataList.length; i++) {
       const rowData = dataList[i]
 
-      const workbook = new (window as any).ExcelJS.Workbook()
+      const workbook = new Workbook()
       await workbook.xlsx.load(templateContent.value!)
       const worksheet = workbook.getWorksheet(1)
       if (!worksheet) throw new Error('模板中没有工作表')

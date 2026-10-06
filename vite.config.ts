@@ -53,8 +53,13 @@ export default defineConfig(({ command, mode }) => {
             if (id.includes('@turf')) {
               return 'turf'
             }
+            // ExcelJS 单独成块：它约 900KB，且只在「XLSX 模板导出」被使用时
+            // 通过动态 import 加载。不拆开的话，用 DOCX 模板的用户也得下载它。
+            if (id.includes('exceljs')) {
+              return 'exceljs'
+            }
             // Document generation libraries
-            if (id.includes('docxtemplater') || id.includes('exceljs') || id.includes('xlsx') || id.includes('jszip') || id.includes('pizzip')) {
+            if (id.includes('docxtemplater') || id.includes('xlsx') || id.includes('jszip') || id.includes('pizzip')) {
               return 'document-libs'
             }
             // UI component libraries
