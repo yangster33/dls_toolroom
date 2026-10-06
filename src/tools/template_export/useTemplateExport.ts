@@ -6,6 +6,7 @@ import { saveAs } from 'file-saver'
 import * as XLSX from 'xlsx'
 import * as Papa from 'papaparse'
 import expressions from 'angular-expressions'
+import { logger } from '@/utils/logger'
 
 export type ExportFormat = 'docx' | 'xlsx'
 
@@ -353,11 +354,19 @@ export function useTemplateExport(format: ExportFormat) {
     try {
       let data: Record<string, any>[] = []
 
-      if (file.name.endsWith('.csv')) {
+      // 扩展名判断必须忽略大小写，否则 DATA.CSV / DATA.XLSX 会两个分支都不匹配，
+      // 导致 data 保持 [] 且不报错，界面表现为「什么都没发生」（见审计 P1-11）
+      const lowerName = file.name.toLowerCase()
+
+      if (lowerName.endsWith('.csv')) {
         const text = await file.text()
         const parsed = Papa.parse(text, { header: true, skipEmptyLines: true })
         data = parsed.data as Record<string, any>[]
-      } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        // 畸形 CSV（参差行、未闭合引号）此前从不检查 errors，静默产出半截数据
+        if (parsed.errors.length > 0) {
+          logger.warn('CSV 解析存在问题（已尽量恢复）:', parsed.errors.slice(0, 5))
+        }
+      } else if (lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls')) {
         const arrayBuffer = await file.arrayBuffer()
         const workbook = XLSX.read(arrayBuffer, {
           type: 'array',
