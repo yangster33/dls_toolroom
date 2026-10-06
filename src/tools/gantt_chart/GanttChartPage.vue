@@ -386,6 +386,7 @@ import { getToolById } from '../toolData'
 import { useGanttStore, type GanttTask } from '@/stores/ganttStore'
 import { logger } from '@/utils/logger'
 import {
+  formatLocalDate,
   computeNextTaskId,
   validateImportedTasks,
 } from './ganttTaskUtils'
@@ -458,10 +459,10 @@ function getDefaultColor(index: number): string {
   return colorPalette[index % colorPalette.length]!
 }
 
-function formatDate(date: string): string {
-  if (!date) return ''
-  const d = new Date(date)
-  return d.toISOString().split('T')[0]!
+// 使用本地时区格式化：旧的 toISOString() 是 UTC，在 UTC+8 的 00:00–08:00
+// 之间会把日期算成「昨天」，导致排期整体少一天（审计 P1-12）
+function formatDate(date: string | Date | number): string {
+  return formatLocalDate(date)
 }
 
 /**

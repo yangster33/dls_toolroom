@@ -7,7 +7,14 @@ export interface GanttTask {
   start: string
   end: string
   progress: number
-  dependencies?: string
+  /**
+   * 依赖任务 id。
+   * 运行时同时支持数组与逗号分隔字符串——`GanttChartPage.vue` 的
+   * `formatDependencies` 与 tooltip 渲染都已对两种形态做分支处理，
+   * 从导入 JSON 归一化出来的值是数组。此前的类型声明窄化为 `string`，
+   * 与实际行为不符（审计报告 4.4 节「重复类型定义」问题）。
+   */
+  dependencies?: string | string[]
   color?: string
   color_progress?: string
   custom_class?: string
