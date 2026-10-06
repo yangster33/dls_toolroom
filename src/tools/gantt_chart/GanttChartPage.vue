@@ -385,6 +385,10 @@ logger.log('Gantt module loaded:', typeof Gantt, Gantt)
 import { getToolById } from '../toolData'
 import { useGanttStore, type GanttTask } from '@/stores/ganttStore'
 import { logger } from '@/utils/logger'
+import {
+  computeNextTaskId,
+  validateImportedTasks,
+} from './ganttTaskUtils'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
 
 const toolConfig = getToolById('gantt_chart')
@@ -458,6 +462,20 @@ function formatDate(date: string): string {
   if (!date) return ''
   const d = new Date(date)
   return d.toISOString().split('T')[0]!
+}
+
+/**
+ * HTML 转义
+ * frappe-gantt 的 set_title / set_subtitle / set_details 直接把字符串赋给
+ * innerHTML（已核对 frappe-gantt.es.js:685,687,689），所有插值都必须先转义。
+ */
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
 
 function formatDependencies(deps: string | string[] | undefined): string {
@@ -610,18 +628,26 @@ function initGantt() {
         ? (Array.isArray(t.dependencies) ? t.dependencies.join(', ') : t.dependencies)
         : '无'
 
-      ctx.set_title(t.name)
-      const progressBarHtml = `<div class="mt-1" style="background:#e5e7eb;border-radius:4px;height:6px;width:100%;overflow:hidden"><div style="background:${t.color || '#3b82f6'};height:100%;width:${t.progress || 0}%;border-radius:4px;transition:width 0.3s"></div></div>`
+      // frappe-gantt 的 set_title / set_subtitle / set_details 均走 innerHTML
+      // （已核对 frappe-gantt.es.js:685,687,689），因此所有插入的动态值必须转义，
+      // 否则导入的 JSON 中的任务名/依赖字段即可执行脚本（审计 P0-3）
+      ctx.set_title(escapeHtml(t.name))
+
+      // color 已在 validateImportedTasks 中做 #hex 白名单，此处再做一次防御
+      const safeColor = /^#[0-9a-fA-F]{3,8}$/.test(String(t.color || '')) ? t.color : '#3b82f6'
+      const safeProgress = Math.min(Math.max(Number(t.progress) || 0, 0), 100)
+
+      const progressBarHtml = `<div class="mt-1" style="background:#e5e7eb;border-radius:4px;height:6px;width:100%;overflow:hidden"><div style="background:${safeColor};height:100%;width:${safeProgress}%;border-radius:4px;transition:width 0.3s"></div></div>`
 
       ctx.set_subtitle(
-        `<div style="font-size:12px;color:#6b7280;margin-top:4px">进度: ${t.progress || 0}%</div>${progressBarHtml}`,
+        `<div style="font-size:12px;color:#6b7280;margin-top:4px">进度: ${safeProgress}%</div>${progressBarHtml}`,
       )
       ctx.set_details(
         `<div style="font-size:12px;line-height:1.8">
-          <div><b>开始:</b> ${startStr}</div>
-          <div><b>结束:</b> ${endStr}</div>
+          <div><b>开始:</b> ${escapeHtml(startStr)}</div>
+          <div><b>结束:</b> ${escapeHtml(endStr)}</div>
           <div><b>持续:</b> ${days} 天</div>
-          <div><b>依赖:</b> ${deps}</div>
+          <div><b>依赖:</b> ${escapeHtml(deps)}</div>
         </div>`,
       )
 
@@ -752,11 +778,12 @@ function applyWeekendOption() {
 
 // ── 任务 CRUD ──
 
+// 旧实现 `while (some(...)) nextTaskId++` 在 nextTaskId 为 NaN 时会死循环
+// （NaN++ 仍是 NaN，条件恒真 → 主线程永久阻塞）。computeNextTaskId 保证永不返回 NaN。
 function getNextId(): string {
-  while (store.tasks.some((t) => t.id === String(store.nextTaskId))) {
-    store.nextTaskId++
-  }
-  return String(store.nextTaskId++)
+  const next = computeNextTaskId(store.tasks, store.nextTaskId)
+  store.nextTaskId = next + 1
+  return String(next)
 }
 
 function openAddTaskModal() {
@@ -1406,16 +1433,26 @@ function importTasks(event: Event) {
   if (!file) return
   const reader = new FileReader()
   reader.onload = (e) => {
+    let parsed: unknown
     try {
-      const data = JSON.parse(e.target?.result as string)
-      if (Array.isArray(data)) {
-        pushUndo()
-        store.tasks = data
-        store.nextTaskId = Math.max(...data.map((t: GanttTask) => Number(t.id)), 0) + 1
-        refreshGantt()
-      }
+      parsed = JSON.parse(e.target?.result as string)
     } catch {
-      showErrorDialog('error', '导入失败', '文件格式错误，请导入有效的 JSON 文件')
+      showErrorDialog('error', '导入失败', '文件不是合法的 JSON，请检查文件内容')
+      return
+    }
+
+    // 必须做 schema 校验：旧实现直接 store.tasks = data，
+    // 导致非数字 id → NaN → getNextId 死循环（标签页永久卡死），
+    // 且任意字段会流入 frappe-gantt 的 innerHTML 造成 XSS（审计 P0-3）
+    try {
+      const tasks = validateImportedTasks(parsed)
+      pushUndo()
+      store.tasks = tasks
+      store.nextTaskId = computeNextTaskId(tasks) + 1
+      refreshGantt()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '文件内容不符合任务格式'
+      showErrorDialog('error', '导入失败', message)
     }
   }
   reader.readAsText(file)
