@@ -134,18 +134,25 @@ describe('字段映射预设', () => {
     ).toEqual({ name: '甲', longitude: 116.4, latitude: 39.9 })
   })
 
-  it('ADDRESS_FIELDS 支持别名，空字段转换为数字 0', () => {
+  it('ADDRESS_FIELDS 支持别名，空字段保持空字符串', () => {
+    // 回归用例（审计 P0-4）：空地址字段曾被转成数字 0，
+    // 拼接后得到「广东省0市0区0镇」这类垃圾地址
     const result = validateRow({ name: '甲', province: '广东', 地址: 'xx路1号' }, 0, ADDRESS_FIELDS)
     expect(result.valid).toBe(true)
     expect(result.data).toEqual({
       名称: '甲',
       省: '广东',
-      市: 0,
-      '区/县': 0,
-      '乡/镇': 0,
-      '社区/村': 0,
+      市: '',
+      '区/县': '',
+      '乡/镇': '',
+      '社区/村': '',
       地址: 'xx路1号',
     })
+  })
+
+  it('显式的数字 0 地址字段仍被识别为 0（非空白）', () => {
+    const result = validateRow({ name: '甲', 市: '0' }, 0, ADDRESS_FIELDS)
+    expect(result.data).toMatchObject({ 市: 0 })
   })
 
   it('transformToFullAddress 输出全字段地址', () => {

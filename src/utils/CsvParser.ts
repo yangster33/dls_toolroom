@@ -80,10 +80,14 @@ export function parseCSV(
         value = value.trim().replace(/^"|"$/g, '')
       }
 
-      // 尝试转换为数字
+      // 尝试转换为数字。
+      // 注意：Number('') === 0，因此空白单元格必须显式排除，
+      // 否则空的经纬度会变成 0 并通过范围校验，被当作 (0°N, 0°E) 的真实坐标
+      // 发给高程/距离 API，产出「看起来合理但完全错误」的结果（审计 P0-4）。
       if (convertNumbers) {
-        const numValue = Number(value)
-        row[header] = isNaN(numValue) ? value : numValue
+        const trimmed = value.trim()
+        const numValue = trimmed === '' ? Number.NaN : Number(trimmed)
+        row[header] = Number.isNaN(numValue) ? value : numValue
       } else {
         row[header] = value
       }

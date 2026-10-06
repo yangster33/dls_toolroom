@@ -73,9 +73,21 @@ describe('parseCSV', () => {
     expect(rows).toEqual([{ a: 'x' }])
   })
 
-  it('空单元格转换为数字 0', () => {
+  it('空单元格保持空字符串，不转换为数字 0', () => {
+    // 回归用例（审计 P0-4）：旧实现 `Number('') === 0` 会把空白经纬度变成 0，
+    // 通过范围校验后被当作几内亚湾 (0°N,0°E) 的真实坐标发给 API。
     const rows = parseCSV('a,b\n1,')
-    expect(rows).toEqual([{ a: 1, b: 0 }])
+    expect(rows).toEqual([{ a: 1, b: '' }])
+  })
+
+  it('全空白单元格保持空字符串', () => {
+    const rows = parseCSV('a,b,c\n ,   ,')
+    expect(rows).toEqual([{ a: '', b: '', c: '' }])
+  })
+
+  it('显式的 "0" 仍然是数字 0（与空白区分）', () => {
+    const rows = parseCSV('a,b\n0,0')
+    expect(rows).toEqual([{ a: 0, b: 0 }])
   })
 
   it('缺少表头时返回空数组', () => {
@@ -83,8 +95,8 @@ describe('parseCSV', () => {
     expect(parseCSV('a,b')).toEqual([])
   })
 
-  it('缺失字段按空处理', () => {
+  it('缺失字段按空字符串处理', () => {
     const rows = parseCSV('a,b\n1')
-    expect(rows).toEqual([{ a: 1, b: 0 }])
+    expect(rows).toEqual([{ a: 1, b: '' }])
   })
 })

@@ -87,9 +87,15 @@ export function validateRow(
       }
     }
 
-    // 尝试转换数值类型
-    const numValue = Number(value)
-    data[fieldName] = isNaN(numValue) ? value : numValue
+    // 尝试转换数值类型。
+    // 空值必须保持 ''：Number('') === 0，若直接转换会让空地址字段
+    // 变成 0，拼接后得到「广东省0市0区0镇」这类垃圾（审计 P0-4）。
+    if (value === '') {
+      data[fieldName] = ''
+    } else {
+      const numValue = Number(value)
+      data[fieldName] = isNaN(numValue) ? value : numValue
+    }
   }
 
   return {
