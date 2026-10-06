@@ -263,6 +263,7 @@
 import { ref, reactive, computed } from 'vue'
 import * as XLSX from 'xlsx'
 import { exportData, exportTemplate } from '@/utils/TemplateExporter'
+import { parseCSV } from '@/utils/CsvParser'
 import { logger } from '@/utils/logger'
 import { getToolById } from '../toolData'
 import { ELEVATION_HEADERS } from './TemplateExporter'
@@ -420,52 +421,12 @@ const onDropFile = async (event: DragEvent) => {
   await onFileUpload(inputEvent)
 }
 
-const parseCSV = (text: string): Record<string, string | number>[] => {
-  const lines = text.trim().split('\n')
-  if (lines.length < 2) return []
-
-  const headerLine = lines[0]
-  if (!headerLine) return []
-
-  const headers = headerLine.split(',').map((h) => h.trim().replace(/^"|"$/g, ''))
-  const rows: Record<string, string | number>[] = []
-
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i]
-    if (!line) continue
-
-    const values = parseCSVLine(line)
-    const row: Record<string, string | number> = {}
-    headers.forEach((header, index) => {
-      const value = values[index]?.trim().replace(/^"|"$/g, '') || ''
-      row[header] = isNaN(Number(value)) ? value : Number(value)
-    })
-    rows.push(row)
-  }
-
-  return rows
-}
-
-const parseCSVLine = (line: string): string[] => {
-  const result: string[] = []
-  let current = ''
-  let inQuotes = false
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i]
-    if (char === '"') {
-      inQuotes = !inQuotes
-    } else if (char === ',' && !inQuotes) {
-      result.push(current)
-      current = ''
-    } else {
-      current += char
-    }
-  }
-  result.push(current)
-
-  return result
-}
+// 注：本文件原先自带一份 parseCSV / parseCSVLine 的复制实现，
+// 已改为复用 @/utils/CsvParser 的共享实现，原因：
+//   1. 复制品存在 P0-4（空白单元格被转成数字 0）
+//   2. 复制品不处理 UTF-8 BOM，首列表头会变成 "\uFEFF名称" 导致字段匹配失败
+//   3. 复制品表头用 split(',')，不处理引号内的逗号
+// 共享实现三项全部正确。
 
 const executeQuery = async () => {
   if (!validationResult.value?.isValid) return
