@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: 类型检查 / Lint / 单元测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # 部署用的就是这条命令，必须硬失败
+      - name: 类型检查
+        run: npm run type-check
+
+      - name: Lint (oxlint)
+        run: npx oxlint .
+
+      - name: 单元测试
+        run: npx vitest run --reporter=dot
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # playwright.config.ts 里 channel: 'msedge'，CI 上换成官方 chromium
+      - name: 安装 chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: 构建产物
+        run: npm run build-only
+
+      - name: 运行 E2E
+        run: npx playwright test
+        env:
+          # 强制走 chromium 而非 msedge（Linux runner 没有 Edge）
+          PLAYWRIGHT_CHANNEL: chromium
+
+  build:
+    name: 生产构建
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: 构建 + 预渲染
+        run: npm run build
