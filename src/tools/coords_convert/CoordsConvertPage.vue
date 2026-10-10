@@ -158,6 +158,9 @@
                   />
                 </label>
               </div>
+              <p v-if="cgcsParamError" class="text-error text-sm mt-2">
+                ⚠ {{ cgcsParamError }}（CGCS2000 相关转换会失败，修正后自动恢复）
+              </p>
             </div>
           </div>
         </div>
@@ -365,6 +368,7 @@ import {
   DEFAULT_CGCS2000_PARAMS,
   computeCentralMeridian,
 } from './coordsConversion'
+import { validateCGCS2000Params } from '@/utils/coordTransform'
 import { readAndValidateCoordTemplate, type CoordReadResult } from './templateReader'
 
 const templateHeaders = ['名称', '经度/X（必填）', '纬度/Y（必填）']
@@ -399,9 +403,29 @@ const showErrorDialog = (
 
 // CGCS2000投影参数
 const cgcs2000Params = ref<CGCS2000Params>({ ...DEFAULT_CGCS2000_PARAMS })
-const computedCM = computed(() =>
-  computeCentralMeridian(cgcs2000Params.value.centralMeridian, cgcs2000Params.value.zoneWidth),
-)
+const computedCM = computed(() => {
+  const cm = computeCentralMeridian(
+    cgcs2000Params.value.centralMeridian,
+    cgcs2000Params.value.zoneWidth,
+  )
+  return Number.isFinite(cm) ? String(cm) : '—'
+})
+
+/**
+ * CGCS2000 投影参数实时校验。
+ *
+ * `v-model.number` 清空输入框时产出 `''` → NaN 沿链路传播，
+ * 旧代码在批量转换处只判 `converted.length !== 2`，而 [NaN, NaN] 长度也是 2，
+ * 于是 NaN 被静默写进导出的 CSV/Excel（审计 P0-5）。
+ */
+const cgcsParamError = computed(() => {
+  // v-model.number 清空输入框时运行时给出 ''，但 TS 类型是 number，用 unknown 桥接
+  const raw: unknown = cgcs2000Params.value.centralMeridian
+  if (raw === '' || raw === null || raw === undefined) {
+    return '中央子午线经度不能为空'
+  }
+  return validateCGCS2000Params(cgcs2000Params.value)
+})
 
 // 转换相关状态
 const validatedDataRows = ref<DataRow[]>([])
@@ -426,7 +450,9 @@ const canStartConversion = computed(() => {
     inputCoordinateSystem.value !== '' &&
     outputCoordinateSystem.value !== '' &&
     validatedDataRows.value.length > 0 &&
-    !isProcessing.value
+    !isProcessing.value &&
+    // 投影参数无效时禁用按钮，避免跑完才发现全部行失败（审计 P0-5）
+    !cgcsParamError.value
   )
 })
 

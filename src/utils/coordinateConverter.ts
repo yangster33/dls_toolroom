@@ -70,13 +70,20 @@ export function toWGS84(
     }
 
     if (sys === 'cgcs2000_lnglat') {
-      return proj4('EPSG:4490', 'EPSG:4326', [x, y]) as [number, number]
+      const result = proj4('EPSG:4490', 'EPSG:4326', [x, y])
+      if (!Number.isFinite(result[0]) || !Number.isFinite(result[1])) return null
+      return [result[0]!, result[1]!]
     }
 
     if (sys === 'cgcs2000_xy') {
       const projStr = buildCGCS2000ProjString(cgcs2000Params)
       const lnglat = proj4(projStr, 'EPSG:4490', [x, y])
-      return proj4('EPSG:4490', 'EPSG:4326', lnglat) as [number, number]
+      // 中间结果也要校验：projStr 含 NaN 时 proj4 返回 [NaN, NaN]，
+      // 不拦截会把 NaN 继续喂给下一个 proj4 调用
+      if (!Number.isFinite(lnglat[0]) || !Number.isFinite(lnglat[1])) return null
+      const result = proj4('EPSG:4490', 'EPSG:4326', lnglat)
+      if (!Number.isFinite(result[0]) || !Number.isFinite(result[1])) return null
+      return [result[0]!, result[1]!]
     }
 
     return null
@@ -104,13 +111,18 @@ export function fromWGS84(
 
     if (sys === 'cgcs2000_lnglat') {
       const result = proj4('EPSG:4326', 'EPSG:4490', [lng, lat])
-      return [result[0] ?? 0, result[1] ?? 0]
+      // 注意：不能写 `result[0] ?? 0` —— ?? 只对 null/undefined 生效，
+      // proj4 失败时返回的是 NaN，`NaN ?? 0` 仍是 NaN，会一路传播到导出文件。
+      // 失败时返回 null，让调用方明确报错（审计 P0-5）。
+      if (!Number.isFinite(result[0]) || !Number.isFinite(result[1])) return null
+      return [result[0]!, result[1]!]
     }
 
     if (sys === 'cgcs2000_xy') {
       const projStr = buildCGCS2000ProjString(cgcs2000Params)
       const result = proj4('EPSG:4326', projStr, [lng, lat])
-      return [result[0] ?? 0, result[1] ?? 0]
+      if (!Number.isFinite(result[0]) || !Number.isFinite(result[1])) return null
+      return [result[0]!, result[1]!]
     }
 
     return null

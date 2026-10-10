@@ -141,8 +141,15 @@ export async function batchConvertCoordinates(
 
               const converted = convert(inputSystem, outputSystem, lngNum, latNum, cgcs2000Params)
 
-              if (!converted || converted.length !== 2) {
-                result.errors.push(`第 ${rowNum} 行: 坐标转换失败`)
+              // 只判 length 不够：proj4 出错时返回 [NaN, NaN]，长度也是 2，
+              // 于是 NaN 被静默写进导出的 CSV/Excel（审计 P0-5）
+              if (
+                !converted ||
+                converted.length !== 2 ||
+                !Number.isFinite(converted[0]) ||
+                !Number.isFinite(converted[1])
+              ) {
+                result.errors.push(`第 ${rowNum} 行: 坐标转换失败，请检查投影参数`)
                 continue
               }
 

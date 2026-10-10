@@ -4,12 +4,14 @@ import {
   fromWGS84,
   validateCoordinate as validateCoord,
 } from '@/utils/coordinateConverter'
-import { type CGCS2000Params } from '@/utils/coordTransform'
+import { type CGCS2000Params, validateCGCS2000Params } from '@/utils/coordTransform'
+import { logger } from '@/utils/logger'
 
 export {
   type CGCS2000Params,
   DEFAULT_CGCS2000_PARAMS,
   computeCentralMeridian,
+  validateCGCS2000Params,
 } from '@/utils/coordTransform'
 export { type CoordinateSystemType } from '@/utils/coordinateConverter'
 
@@ -73,16 +75,27 @@ export function convertAll(
   const x = validation.x
   const y = validation.y
 
-  const wgs84 = toWGS84(sys, x, y, cgcs2000Params)
-  if (!wgs84) return null
+  // 投影参数无效时直接失败，不再往下游传播 NaN（审计 P0-5）
+  const paramError = validateCGCS2000Params(cgcs2000Params)
+  if (paramError) {
+    logger.error('CGCS2000 参数无效:', paramError)
+    return null
+  }
 
+  const wgs84 = toWGS84(sys, x, y, cgcs2000Params)
+  if (!wgs84 || !Number.isFinite(wgs84[0]) || !Number.isFinite(wgs84[1])) {
+    return null
+  }
+
+  // 未成功转换的目标坐标用 NaN 占位，而不是 0 —— 0 是本初子午线/赤道，
+  // 是一个合法坐标，会让用户以为转换成功。UI 层据此显示"转换失败"。
   const result: AllConversionResults = {
-    wgs84: { lng: 0, lat: 0 },
-    gcj02: { lng: 0, lat: 0 },
-    bd09: { lng: 0, lat: 0 },
-    amap: { lng: 0, lat: 0 },
-    cgcs2000_lnglat: { lng: 0, lat: 0 },
-    cgcs2000_xy: { x: 0, y: 0 },
+    wgs84: { lng: wgs84[0], lat: wgs84[1] },
+    gcj02: { lng: Number.NaN, lat: Number.NaN },
+    bd09: { lng: Number.NaN, lat: Number.NaN },
+    amap: { lng: Number.NaN, lat: Number.NaN },
+    cgcs2000_lnglat: { lng: Number.NaN, lat: Number.NaN },
+    cgcs2000_xy: { x: Number.NaN, y: Number.NaN },
   }
 
   const targetSystems: CoordinateSystemType[] = [
@@ -107,7 +120,9 @@ export function convertAll(
       }
     } else {
       const converted = fromWGS84(targetSys, wgs84[0], wgs84[1], cgcs2000Params)
-      if (converted) {
+      // converted 可能是 [NaN, NaN]（proj4 出错时），只判 truthy 会让
+      // NaN 静默流入结果 —— 这里要求两端都是有限数
+      if (converted && Number.isFinite(converted[0]) && Number.isFinite(converted[1])) {
         if (targetSys === 'cgcs2000_xy') {
           result.cgcs2000_xy = { x: converted[0], y: converted[1] }
         } else {

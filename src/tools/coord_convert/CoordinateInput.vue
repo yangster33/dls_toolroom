@@ -114,6 +114,9 @@
             </label>
           </div>
         </div>
+        <p v-if="cgcsParamError" class="text-error text-sm mt-2">
+          ⚠ {{ cgcsParamError }}（CGCS2000 相关转换已暂停，修正后自动恢复）
+        </p>
       </div>
     </div>
 
@@ -132,39 +135,42 @@
           <tbody>
             <tr>
               <td>WGS84</td>
-              <td>{{ conversionResults.wgs84.lng }}</td>
-              <td>{{ conversionResults.wgs84.lat }}</td>
+              <td>{{ fmt(conversionResults.wgs84.lng) }}</td>
+              <td>{{ fmt(conversionResults.wgs84.lat) }}</td>
             </tr>
             <tr>
               <td>GCJ-02</td>
-              <td>{{ conversionResults.gcj02.lng }}</td>
-              <td>{{ conversionResults.gcj02.lat }}</td>
+              <td>{{ fmt(conversionResults.gcj02.lng) }}</td>
+              <td>{{ fmt(conversionResults.gcj02.lat) }}</td>
             </tr>
             <tr>
               <td>百度 BD-09</td>
-              <td>{{ conversionResults.bd09.lng }}</td>
-              <td>{{ conversionResults.bd09.lat }}</td>
+              <td>{{ fmt(conversionResults.bd09.lng) }}</td>
+              <td>{{ fmt(conversionResults.bd09.lat) }}</td>
             </tr>
             <tr>
               <td>高德地图</td>
-              <td>{{ conversionResults.amap.lng }}</td>
-              <td>{{ conversionResults.amap.lat }}</td>
+              <td>{{ fmt(conversionResults.amap.lng) }}</td>
+              <td>{{ fmt(conversionResults.amap.lat) }}</td>
             </tr>
             <tr>
               <td>CGCS2000（经纬度）</td>
-              <td>{{ conversionResults.cgcs2000_lnglat.lng }}</td>
-              <td>{{ conversionResults.cgcs2000_lnglat.lat }}</td>
+              <td>{{ fmt(conversionResults.cgcs2000_lnglat.lng) }}</td>
+              <td>{{ fmt(conversionResults.cgcs2000_lnglat.lat) }}</td>
             </tr>
             <tr>
               <td>CGCS2000（平面坐标）</td>
-              <td>{{ conversionResults.cgcs2000_xy.x }}</td>
-              <td>{{ conversionResults.cgcs2000_xy.y }}</td>
+              <td>{{ fmt(conversionResults.cgcs2000_xy.x) }}</td>
+              <td>{{ fmt(conversionResults.cgcs2000_xy.y) }}</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
-    <div v-else class="text-center text-gray-500 py-8">请输入有效的坐标以查看转换结果</div>
+    <div v-else class="text-center text-gray-500 py-8">
+      <template v-if="cgcsParamError">{{ cgcsParamError }}</template>
+      <template v-else>请输入有效的坐标以查看转换结果</template>
+    </div>
   </div>
 </template>
 
@@ -177,6 +183,7 @@ import {
   DEFAULT_CGCS2000_PARAMS,
   computeCentralMeridian,
   convertAll,
+  validateCGCS2000Params,
 } from './coordConversion.ts'
 
 interface CurrentCoordinateRow {
@@ -193,15 +200,42 @@ const currentRow = ref<CurrentCoordinateRow>({
 
 const cgcs2000Params = ref<CGCS2000Params>({ ...DEFAULT_CGCS2000_PARAMS })
 
-const computedCM = computed(() =>
-  computeCentralMeridian(cgcs2000Params.value.centralMeridian, cgcs2000Params.value.zoneWidth),
-)
+const computedCM = computed(() => {
+  const cm = computeCentralMeridian(
+    cgcs2000Params.value.centralMeridian,
+    cgcs2000Params.value.zoneWidth,
+  )
+  return Number.isFinite(cm) ? String(cm) : '—'
+})
 
 const conversionResults = ref<AllConversionResults | null>(null)
 
+/**
+ * 格式化转换结果。NaN 显示为「转换失败」而不是 NaN 本身 —— NaN 对用户
+ * 没有信息量，且以前会以 0 的形式伪装成合法坐标（审计 P0-5）。
+ */
+const fmt = (value: number): string => (Number.isFinite(value) ? String(value) : '转换失败')
+
+/**
+ * CGCS2000 投影参数实时校验。
+ *
+ * `v-model.number` 在输入框被清空时产出 `''`，沿链路会变成 NaN 并被
+ * proj4 一路传播、最终写进导出文件。这里实时提示，让用户知道是参数的
+ * 问题而不是坐标算不出来（审计 P0-5）。
+ */
+const cgcsParamError = computed(() => {
+  // v-model.number 清空输入框时运行时给出 ''，但 TS 类型是 number，用 unknown 桥接
+  const raw: unknown = cgcs2000Params.value.centralMeridian
+  // v-model.number 清空输入框时是 ''，不是 NaN
+  if (raw === '' || raw === null || raw === undefined) {
+    return '中央子午线经度不能为空'
+  }
+  return validateCGCS2000Params(cgcs2000Params.value)
+})
+
 watchEffect(() => {
   const { coordinateSystem, x, y } = currentRow.value
-  if (coordinateSystem && x.trim() !== '' && y.trim() !== '') {
+  if (coordinateSystem && x.trim() !== '' && y.trim() !== '' && !cgcsParamError.value) {
     conversionResults.value = convertAll(
       coordinateSystem as CoordinateSystemType,
       x,
