@@ -223,7 +223,37 @@
     </div>
 
     <div v-if="queryResults.length > 0" class="bg-base-200/40 rounded-lg p-6">
-      <h2 class="text-xl font-semibold mb-4">查询结果预览 (前10条)</h2>
+      <!-- 部分失败警示：明确告知这是不完整结果，避免被当成完整数据使用 -->
+      <div v-if="hasPartialFailures" class="alert alert-warning mb-4">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-6 w-6 shrink-0 stroke-current"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+          />
+        </svg>
+        <div>
+          <h3 class="font-bold">部分点位查询失败</h3>
+          <div class="text-sm">
+            共 {{ queryResults.length }} 个点位，成功 {{ successCount }} 个，失败
+            {{ failedCount }} 个。 下载的文件名会标注
+            <code class="font-mono">_partial</code>，请勿直接当完整结果使用。
+          </div>
+        </div>
+      </div>
+
+      <h2 class="text-xl font-semibold mb-4">
+        查询结果预览 (前10条)
+        <span class="text-sm font-normal text-gray-500">
+          —— 成功 {{ successCount }} / 失败 {{ failedCount }}
+        </span>
+      </h2>
       <div class="overflow-x-auto">
         <table class="table table-zebra w-full">
           <thead>
@@ -243,7 +273,11 @@
               <td>{{ result.longitude.toFixed(6) }}</td>
               <td>{{ result.latitude.toFixed(6) }}</td>
               <td :class="result.error ? 'text-gray-400' : 'text-primary font-semibold'">
-                {{ result.error ? '-' : result.elevation?.toFixed(2) }}
+                {{
+                  result.error || !Number.isFinite(result.elevation)
+                    ? '查询失败'
+                    : result.elevation.toFixed(2)
+                }}
               </td>
               <td>
                 <span v-if="result.error" class="text-red-500 text-sm">失败</span>
@@ -297,7 +331,12 @@ const queryOptions = reactive<QueryOptions>({
 })
 
 interface ElevationQueryResult extends CoordinatePoint {
-  elevation?: number
+  /**
+   * 高程（米）。必填，NaN 表示查询失败或接口未返回 —— 与真实的 0 米海拔
+   * 严格区分。原来这里是可选且缺失时显示空白，看不出是"没查到"。
+   */
+  elevation: number
+  /** 有值表示该点查询失败 */
   error?: string
 }
 
@@ -306,6 +345,8 @@ const queryResults = ref<ElevationQueryResult[]>([])
 const isQuerying = ref(false)
 const progressPercent = ref(0)
 const progressMessage = ref('')
+/** true 表示本次结果里有失败点，下载时要明确标注「部分失败」 */
+const hasPartialFailures = ref(false)
 
 // 错误对话框状态
 const errorDialogOpen = ref(false)
@@ -329,14 +370,22 @@ const showErrorDialog = (
   errorDialogOpen.value = true
 }
 
+// 上限由 elevationService 内部分批解决，这里只保留一个防呆上限。
+// 原来这里是 100 条且页面已实现分批循环却永远走不到，用户被提示
+// "请分批查询"却没有任何分批机制（审计 P0-6 / 旧 P1-5）。
+const MAX_TOTAL_POINTS = 5000
+
 const canExecuteQuery = computed(
   () =>
     validationResult.value?.isValid &&
     !isQuerying.value &&
-    validationResult.value.data.length <= 100,
+    validationResult.value.data.length <= MAX_TOTAL_POINTS,
 )
 
 const canDownloadResult = computed(() => queryResults.value.length > 0)
+
+const failedCount = computed(() => queryResults.value.filter((r) => r.error !== undefined).length)
+const successCount = computed(() => queryResults.value.length - failedCount.value)
 
 const hasData = computed(() => validationResult.value !== null || queryResults.value.length > 0)
 
@@ -449,45 +498,78 @@ const executeQuery = async () => {
 
   const data = validationResult.value.data
   queryResults.value = []
+  hasPartialFailures.value = false
 
-  const MAX_BATCH_SIZE = 100
+  // 分批只用于进度反馈与限速；elevationService 内部还会再按 100 点切分
+  const BATCH_FOR_PROGRESS = 100
   const batches: CoordinatePoint[][] = []
-
-  for (let i = 0; i < data.length; i += MAX_BATCH_SIZE) {
-    batches.push(data.slice(i, i + MAX_BATCH_SIZE))
+  for (let i = 0; i < data.length; i += BATCH_FOR_PROGRESS) {
+    batches.push(data.slice(i, i + BATCH_FOR_PROGRESS))
   }
 
-  try {
-    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-      const batch = batches[batchIndex]!
-      const points = batch!.map((p) => ({ longitude: p.longitude, latitude: p.latitude }))
+  const failedPoints: string[] = []
 
-      if (batchIndex > 0) {
-        await delay(getDelay())
-      }
+  for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+    const batch = batches[batchIndex]!
+    const points = batch.map((p) => ({ longitude: p.longitude, latitude: p.latitude }))
 
+    if (batchIndex > 0) {
+      await delay(getDelay())
+    }
+
+    try {
+      // getElevations 现在不会因单批失败而抛错，逐点带 error 返回
       const results = await elevationService.getElevations(points)
 
       results.forEach((result, index) => {
-        const point = batch![index]!
+        const point = batch[index]!
         queryResults.value.push({
-          name: point!.name,
-          longitude: point!.longitude,
-          latitude: point!.latitude,
+          name: point.name,
+          longitude: point.longitude,
+          latitude: point.latitude,
           elevation: result.elevation,
+          error: result.error,
         })
+        if (result.error !== undefined) {
+          failedPoints.push(point.name)
+        }
       })
-
-      progressPercent.value = ((batchIndex + 1) / batches.length) * 100
-      progressMessage.value = `已完成 ${queryResults.value.length}/${data.length}`
+    } catch (error) {
+      // 理论上到不了这里（getElevations 已内部容错），保留兜底：
+      // 整批标记失败，不丢弃其它批次的结果
+      logger.error('查询批次失败:', error)
+      const reason = error instanceof Error ? error.message : String(error)
+      for (const point of batch) {
+        queryResults.value.push({
+          name: point.name,
+          longitude: point.longitude,
+          latitude: point.latitude,
+          elevation: Number.NaN,
+          error: reason,
+        })
+        failedPoints.push(point.name)
+      }
     }
-  } catch (error) {
-    logger.error('查询失败:', error)
-    showErrorDialog('error', '查询失败', (error as Error).message)
-  } finally {
-    isQuerying.value = false
-    progressMessage.value = '查询完成'
+
+    progressPercent.value = ((batchIndex + 1) / batches.length) * 100
+    progressMessage.value = `已完成 ${batchIndex + 1}/${batches.length} 批`
   }
+
+  hasPartialFailures.value = failedPoints.length > 0
+
+  if (failedPoints.length > 0) {
+    const preview = failedPoints.slice(0, 5).join('、')
+    showErrorDialog(
+      'warning',
+      '部分点位查询失败',
+      `${failedPoints.length} / ${queryResults.value.length} 个点位未取得高程，` +
+        `结果中对应行的海拔显示为"查询失败"，下载的文件名会标注 _partial。\n` +
+        `失败点位：${preview}${failedPoints.length > 5 ? ' 等' : ''}`,
+    )
+  }
+
+  isQuerying.value = false
+  progressMessage.value = '查询完成'
 }
 
 const getDelay = (): number => {
@@ -507,17 +589,21 @@ const delay = (ms: number): Promise<void> => {
 const downloadResult = (format: 'csv' | 'xlsx') => {
   if (queryResults.value.length === 0) return
 
+  const suffix = hasPartialFailures.value ? '_partial' : ''
+
   const headers = ['序号', '名称', '经度', '纬度', '海拔高度', '状态']
   const dataRows = queryResults.value.map((result, index) => [
     (index + 1).toString(),
     result.name,
     result.longitude.toFixed(6),
     result.latitude.toFixed(6),
-    result.error ? '查询失败' : `${result.elevation?.toFixed(2) || ''} 米`,
+    result.error
+      ? '查询失败'
+      : `${Number.isFinite(result.elevation) ? result.elevation!.toFixed(2) : '查询失败'} 米`,
     result.error ? '失败' : '成功',
   ])
 
-  exportData(headers, dataRows, format, '高程查询结果')
+  exportData(headers, dataRows, format, `高程查询结果${suffix}`)
 }
 
 const clearAll = () => {
@@ -525,6 +611,7 @@ const clearAll = () => {
   uploadedFileName.value = ''
   validationResult.value = null
   queryResults.value = []
+  hasPartialFailures.value = false
   progressPercent.value = 0
   progressMessage.value = ''
 }

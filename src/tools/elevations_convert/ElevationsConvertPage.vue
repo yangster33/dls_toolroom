@@ -57,7 +57,11 @@
               <td>{{ result.longitude.toFixed(6) }}</td>
               <td>{{ result.latitude.toFixed(6) }}</td>
               <td :class="result.error ? 'text-gray-400' : 'text-primary font-semibold'">
-                {{ result.error ? '-' : result.elevation.toFixed(2) }}
+                {{
+                  result.error || !Number.isFinite(result.elevation)
+                    ? '查询失败'
+                    : result.elevation.toFixed(2)
+                }}
               </td>
               <td>
                 <span v-if="result.error" class="text-red-500 text-sm">失败</span>
@@ -146,7 +150,11 @@ const failCount = computed(() => {
   return results.value.filter((r) => r.error).length
 })
 
-const MAX_POINTS = 100
+/**
+ * 防呆上限。elevationService 已内部分批（每批 100 点），这里只需防止
+ * 用户误粘贴超大文件把浏览器卡死，不再因为"API 一次只能 100 个"而劝退。
+ */
+const MAX_POINTS = 5000
 
 const closeErrorDialog = () => {
   errorDialogOpen.value = false
@@ -182,13 +190,22 @@ const queryElevations = async () => {
         return {
           longitude: point.longitude,
           latitude: point.latitude,
-          elevation: 0,
+          elevation: Number.NaN,
           error: point.error,
         }
       }
+      // getElevations 逐点返回且带 error，不再抛错；仍用可选链兜底，
+      // 防止 validPoints 与实际返回条数不一致时 push undefined
       const result = validResults[validIndex++]
-      return result!
-    }) as ElevationRow[]
+      return (
+        result ?? {
+          longitude: point.longitude,
+          latitude: point.latitude,
+          elevation: Number.NaN,
+          error: '接口未返回该点高程',
+        }
+      )
+    })
   } catch (err) {
     error.value = err instanceof Error ? err.message : '查询失败，请稍后重试'
     errorDialogOpen.value = true
@@ -209,7 +226,9 @@ const exportResults = () => {
     (index + 1).toString(),
     result.longitude.toFixed(6),
     result.latitude.toFixed(6),
-    result.error ? '查询失败' : `${result.elevation.toFixed(2)} 米`,
+    result.error || !Number.isFinite(result.elevation)
+      ? '查询失败'
+      : `${result.elevation.toFixed(2)} 米`,
     result.error ? '失败' : '成功',
   ])
 
