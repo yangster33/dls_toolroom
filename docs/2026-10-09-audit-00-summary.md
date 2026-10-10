@@ -93,6 +93,7 @@
 | [`2026-10-09-audit-03-P2-engineering.md`](./2026-10-09-audit-03-P2-engineering.md) | 工程配置 · 安全 · 性能 · 健壮性 | 22 |
 | [`2026-10-09-audit-04-P3-cleanup.md`](./2026-10-09-audit-04-P3-cleanup.md) | 死代码 · 重复实现 · 结构拆分 | 15+ |
 | [`2026-10-10-stage0-fix-record.md`](./2026-10-10-stage0-fix-record.md) | **阶段 0 执行记录**（含方案偏差与验证证据） | 10 项已修 |
+| [`2026-10-10-stage1-fix-record.md`](./2026-10-10-stage1-fix-record.md) | **阶段 1 执行记录**（eslint 133→0，门禁真实生效） | 6 项已修 |
 | [`2026-09-27-audit-report.md`](./2026-09-27-audit-report.md) | 上一轮审计（历史归档，阶段 0–1 已修） | — |
 
 每份报告中的问题卡片结构统一：
@@ -141,14 +142,25 @@
 >
 > **额外收获**：删除死代码后导出的 live 纯函数暴露出 P1-4（ZIP 内文件互相覆盖）与两个潜在死分支（`{}` 空占位符校验失效、`文档_N` 兜底不可达），已一并修复。
 
-### 阶段 1：让门禁真实生效（约半天）
+### 阶段 1：让门禁真实生效（约半天）— ✅ **已完成（2026-10-10）**
 
-1. CI 加 `npm run lint`，并修 133 个 eslint error（主要是 112 个 `as any`）→ [P2-3](./2026-10-09-audit-03-P2-engineering.md)
-2. `engines` 收紧为 `>=22.17.0`，CI `node-version` 升到 `24` → [P2-6](./2026-10-09-audit-03-P2-engineering.md)
-3. `.env` 删重复 key；`VITE_ENABLE_MOMENT_TAB` 生产默认值写进代码 → [P2-7](./2026-10-09-audit-03-P2-engineering.md)
-4. CI 加 `prettier --experimental-cli --check .` → [P2-9](./2026-10-09-audit-03-P2-engineering.md)
-5. `build` 改为 `run-s type-check lint test:unit build-only prerender` → [P2-2](./2026-10-09-audit-03-P2-engineering.md)
-6. `vitest.config.ts` 独立精简配置，不引入 devtools / mock / `loadEnv('')` → [P2-4](./2026-10-09-audit-03-P2-engineering.md)
+> 执行记录见 [`2026-10-10-stage1-fix-record.md`](./2026-10-10-stage1-fix-record.md)，
+> 计划见 [`../plan/2026-10-10-stage1-gates-plan.md`](../plan/2026-10-10-stage1-gates-plan.md)。
+>
+> **核心成果：eslint 从 133 error 归零**，CI 从 3 步扩到 5 步，
+> `npm run build` 前置全部门禁（已反证会因 type error 中止）。
+>
+> ⚠️ **计划外收获**：修 `as any` 时暴露 3 个被掩盖的真实 bug（turf v7
+> `intersect` 传参错误导致面/面相交面积恒为 0 等）。
+
+| # | 动作 | 报告 | 状态 |
+|---|---|---|---|
+| 1 | CI 加 `npm run lint`，并修 133 个 eslint error | [P2-3](./2026-10-09-audit-03-P2-engineering.md) | ✅ 133→0 |
+| 2 | `engines` 收紧为 `>=22.17.0`，CI `node-version` 升到 `24` | [P2-6](./2026-10-09-audit-03-P2-engineering.md) | ✅ |
+| 3 | `.env` 删重复 key；`VITE_ENABLE_MOMENT_TAB` 默认值写进代码 | [P2-7](./2026-10-09-audit-03-P2-engineering.md) | ✅ |
+| 4 | CI 加 `prettier --check .` + 全仓格式化基线 | [P2-9](./2026-10-09-audit-03-P2-engineering.md) | ✅ 216 files → 0 |
+| 5 | `build` 改为 `run-s lint type-check test:unit build-only prerender` | [P2-2](./2026-10-09-audit-03-P2-engineering.md) | ✅ |
+| 6 | `vitest.config.ts` 独立精简配置 | [P2-4](./2026-10-09-audit-03-P2-engineering.md) | ✅ |
 
 ### 阶段 2：正确性与健壮性（约 2 天）
 
