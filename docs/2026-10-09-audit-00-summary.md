@@ -94,6 +94,7 @@
 | [`2026-10-09-audit-04-P3-cleanup.md`](./2026-10-09-audit-04-P3-cleanup.md) | 死代码 · 重复实现 · 结构拆分 | 15+ |
 | [`2026-10-10-stage0-fix-record.md`](./2026-10-10-stage0-fix-record.md) | **阶段 0 执行记录**（含方案偏差与验证证据） | 10 项已修 |
 | [`2026-10-10-stage1-fix-record.md`](./2026-10-10-stage1-fix-record.md) | **阶段 1 执行记录**（eslint 133→0，门禁真实生效） | 6 项已修 |
+| [`2026-10-10-stage2-fix-record.md`](./2026-10-10-stage2-fix-record.md) | **阶段 2 执行记录**（三个静默数据错误 P0） | 3 个 P0 已修 |
 | [`2026-09-27-audit-report.md`](./2026-09-27-audit-report.md) | 上一轮审计（历史归档，阶段 0–1 已修） | — |
 
 每份报告中的问题卡片结构统一：
@@ -162,16 +163,27 @@
 | 5 | `build` 改为 `run-s lint type-check test:unit build-only prerender` | [P2-2](./2026-10-09-audit-03-P2-engineering.md) | ✅ |
 | 6 | `vitest.config.ts` 独立精简配置 | [P2-4](./2026-10-09-audit-03-P2-engineering.md) | ✅ |
 
-### 阶段 2：正确性与健壮性（约 2 天）
+### 阶段 2：正确性与健壮性（约 2 天）— 🟡 **部分完成（2026-10-10，三个 P0 已修）**
 
-1. 修 `manualChunks` 顺序；`@vuepic` CSS 移出 `main.ts`；`proj4`/`dompurify` 改动态 import → [P2-11](./2026-10-09-audit-03-P2-engineering.md)
-2. 所有 `push(...arr)` / `Math.max(...arr)` 改循环 / `reduce` → [P2-13](./2026-10-09-audit-03-P2-engineering.md)
-3. 空间分析：`Multi*` 拆分 + 逐 feature try/catch，部分失败不再丢弃全部结果 → [P0-4](./2026-10-09-audit-01-P0-data-correctness.md)
-4. `CoordsConvertPage` 捕获上传时坐标系快照 → [P0-5](./2026-10-09-audit-01-P0-data-correctness.md)
-5. `elevationService` 分批 + `AbortController` + 缺失值用 `null` 而非 `0` → [P0-6](./2026-10-09-audit-01-P0-data-correctness.md)
-6. 4 处裸 `fetch` 补 `AbortController` + 超时 + `onUnmounted` 中断 → [P2-15](./2026-10-09-audit-03-P2-engineering.md)
-7. 修两处内存泄漏（`KmlViewerPage.vue:507` 的 fullscreenchange；甘特图重复实例化）→ [P2-14](./2026-10-09-audit-03-P2-engineering.md)
-8. `resolveDuplicates` 改 `while`；`skipRows` 差一错；`Number()` 后回验字符串 → [P1-4](./2026-10-09-audit-02-P1-functional.md)、[P1-5](./2026-10-09-audit-02-P1-functional.md)、[P1-9](./2026-10-09-audit-02-P1-functional.md)
+> 执行记录见 [`2026-10-10-stage2-fix-record.md`](./2026-10-10-stage2-fix-record.md)，
+> 计划见 [`../plan/2026-10-10-stage2-correctness-plan.md`](../plan/2026-10-10-stage2-correctness-plan.md)。
+> 本批只做了**三个静默数据错误 P0**（用户后果与阶段 0 的 P0 同级）。
+> 其余性能/健壮性项仍待排期，见下方状态列。
+
+| # | 动作 | 报告 | 状态 |
+|---|---|---|---|
+| 1 | 修 `manualChunks` 顺序；`@vuepic` CSS 移出 `main.ts`；`proj4`/`dompurify` 改动态 import | [P2-11](./2026-10-09-audit-03-P2-engineering.md) | ⬜ 待做 |
+| 2 | 所有 `push(...arr)` / `Math.max(...arr)` 改循环 / `reduce` | [P2-13](./2026-10-09-audit-03-P2-engineering.md) | ⬜ 待做 |
+| 3 | 空间分析：`Multi*` 拆分 + 逐 feature try/catch | [P0-4](./2026-10-09-audit-01-P0-data-correctness.md) | ✅ |
+| 4 | `CoordsConvertPage` 捕获上传时坐标系快照；CGCS2000 NaN | [P0-5](./2026-10-09-audit-01-P0-data-correctness.md) | ✅ NaN 已修；坐标系快照待做 |
+| 5 | `elevationService` 分批 + 超时 + 缺失值不再当 0 | [P0-6](./2026-10-09-audit-01-P0-data-correctness.md) | ✅ |
+| 6 | 4 处裸 `fetch` 补 `AbortController` + 超时 + `onUnmounted` 中断 | [P2-15](./2026-10-09-audit-03-P2-engineering.md) | ⬜ 待做 |
+| 7 | 修两处内存泄漏（`KmlViewerPage` fullscreenchange；甘特图重复实例化） | [P2-14](./2026-10-09-audit-03-P2-engineering.md) | ⬜ 待做 |
+| 8 | `resolveDuplicates` 改 `while`；`skipRows` 差一错；`Number()` 后回验字符串 | [P1-4](./2026-10-09-audit-02-P1-functional.md)、[P1-5](./2026-10-09-audit-02-P1-functional.md)、[P1-9](./2026-10-09-audit-02-P1-functional.md) | ✅ P1-4 已修（阶段 0）；P1-5/P1-9 待做 |
+
+> **关键成果**：三处仍在产线的静默数据错误（畸形几何丢弃全部分析结果、
+> CGCS2000 NaN 进导出文件、批量高程失败被吞且缺失当 0 米）已消除，
+> 测试 564 → 577。
 
 ### 阶段 3：清理与拆分（约 1 周）
 
