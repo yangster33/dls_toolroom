@@ -7,7 +7,9 @@
       :message="errorDialogMessage"
       @close="closeErrorDialog"
     />
-    <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || (mode === 'add' ? '地址解析' : '经纬度查询') }}</h1>
+    <h1 class="text-3xl font-bold mb-1">
+      {{ toolConfig?.name || (mode === 'add' ? '地址解析' : '经纬度查询') }}
+    </h1>
     <p class="text-base-content/70">
       {{ toolConfig?.description || (mode === 'add' ? '经纬度转地址工具' : '地址转经纬度工具') }}
     </p>
@@ -16,7 +18,11 @@
       <div>
         <h2 class="text-xl font-semibold mb-4">1. 下载模板</h2>
         <p class="text-base-content/70 mb-3 text-sm">
-          {{ mode === 'add' ? '模板包含三列：名称、经度、纬度' : '模板包含：省、市、区/县、乡/镇、社区/村、地址（地址必填，其他可选）' }}
+          {{
+            mode === 'add'
+              ? '模板包含三列：名称、经度、纬度'
+              : '模板包含：省、市、区/县、乡/镇、社区/村、地址（地址必填，其他可选）'
+          }}
         </p>
         <div class="dropdown">
           <label tabindex="0" class="btn btn-outline btn-primary">
@@ -221,7 +227,12 @@
             <div class="flex gap-2">
               <input
                 :value="currentConfig.queryOptions.minRandomDelay"
-                @input="updateQueryOption('minRandomDelay', Number(($event.target as HTMLInputElement).value))"
+                @input="
+                  updateQueryOption(
+                    'minRandomDelay',
+                    Number(($event.target as HTMLInputElement).value),
+                  )
+                "
                 type="number"
                 min="0"
                 placeholder="最小"
@@ -230,7 +241,12 @@
               <span class="self-center">~</span>
               <input
                 :value="currentConfig.queryOptions.maxRandomDelay"
-                @input="updateQueryOption('maxRandomDelay', Number(($event.target as HTMLInputElement).value))"
+                @input="
+                  updateQueryOption(
+                    'maxRandomDelay',
+                    Number(($event.target as HTMLInputElement).value),
+                  )
+                "
                 type="number"
                 min="0"
                 placeholder="最大"
@@ -242,7 +258,12 @@
 
         <div v-if="mode === 'lonlat'" class="mt-4">
           <label class="label flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" :checked="currentConfig.enableBounds" @change="toggleEnableBounds" class="checkbox checkbox-primary" />
+            <input
+              type="checkbox"
+              :checked="currentConfig.enableBounds"
+              @change="toggleEnableBounds"
+              class="checkbox checkbox-primary"
+            />
             <span class="label-text font-semibold">启用区域约束（WGS84）</span>
           </label>
 
@@ -489,18 +510,27 @@
                   <th>经度(WGS84)</th>
                   <th>纬度(WGS84)</th>
                 </template>
-                <th v-for="field in currentConfig.selectedFields" :key="field">{{ getFieldLabel(field) }}</th>
+                <th v-for="field in currentConfig.selectedFields" :key="field">
+                  {{ getFieldLabel(field) }}
+                </th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(result, index) in queryResults.slice(0, 20)" :key="index">
-                <template v-if="mode === 'add'">
+              <!-- add 模式 -->
+              <template v-if="mode === 'add'">
+                <tr v-for="(result, index) in addResults.slice(0, 20)" :key="'add-' + index">
                   <td>{{ index + 1 }}</td>
                   <td>{{ result.name }}</td>
                   <td>{{ result.longitude.toFixed(6) }}</td>
                   <td>{{ result.latitude.toFixed(6) }}</td>
-                </template>
-                <template v-else>
+                  <td v-for="field in currentConfig.selectedFields" :key="field">
+                    {{ getFieldValue(result, field) }}
+                  </td>
+                </tr>
+              </template>
+              <!-- lonlat 模式 -->
+              <template v-else>
+                <tr v-for="(result, index) in lonlatResults.slice(0, 20)" :key="'ll-' + index">
                   <td>{{ index + 1 }}</td>
                   <td>{{ result.province }}</td>
                   <td>{{ result.city }}</td>
@@ -514,11 +544,11 @@
                   <td :class="!result.inBounds && currentConfig.enableBounds ? 'text-error' : ''">
                     {{ result.latitude.toFixed(6) }}
                   </td>
-                </template>
-                <td v-for="field in currentConfig.selectedFields" :key="field">
-                  {{ getFieldValue(result, field) }}
-                </td>
-              </tr>
+                  <td v-for="field in currentConfig.selectedFields" :key="field">
+                    {{ getFieldValue(result, field) }}
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
           <div v-if="queryResults.length > 20" class="text-center text-gray-500 py-2">
@@ -532,7 +562,9 @@
       :is-open="errorModalOpen"
       type="error"
       title="API Key 验证失败"
-      :message="errorModalData.errorMessage || '您输入的高德地图 API Key 无效或已过期，请检查后重新输入。'"
+      :message="
+        errorModalData.errorMessage || '您输入的高德地图 API Key 无效或已过期，请检查后重新输入。'
+      "
       :details="errorModalData.url ? { url: errorModalData.url } : undefined"
       @close="closeErrorModal"
     />
@@ -560,15 +592,15 @@ const toolConfig = getToolById(mode === 'add' ? 'get_add' : 'get_lonlat')
 const ADDRESS_HEADERS = ['名称', '经度', '纬度']
 const LONLAT_HEADERS = ['省', '市', '区/县', '乡/镇', '社区/村', '地址']
 
-import {
-  readAndValidateTemplate as validateAddTemplate,
-  type CoordinatePoint,
-} from '../../tools/get_add/TemplateReader'
+import { readAndValidateTemplate as validateAddTemplate } from '../../tools/get_add/TemplateReader'
 
 import {
   readAndValidateTemplate as validateLonLatTemplate,
+  type TemplateValidationResult,
   type FullAddress,
 } from '../../tools/get_lonlat/TemplateReader'
+
+import type { CoordinatePoint } from '../../tools/get_add/TemplateReader'
 
 import {
   batchQueryAddresses,
@@ -616,7 +648,11 @@ const closeErrorDialog = () => {
   errorDialogMessage.value = ''
 }
 
-const showErrorDialog = (type: 'error' | 'warning' | 'success' | 'info', title: string, message: string) => {
+const showErrorDialog = (
+  type: 'error' | 'warning' | 'success' | 'info',
+  title: string,
+  message: string,
+) => {
   errorDialogType.value = type
   errorDialogTitle.value = title
   errorDialogMessage.value = message
@@ -703,15 +739,25 @@ const resetBounds = () => {
 
 const availableFields = mode === 'add' ? getAddFields() : getLonLatFields()
 
-const validationResult = ref<any>(null)
-const queryResults = ref<any[]>([])
+type AddValidation = TemplateValidationResult<CoordinatePoint>
+type LonLatValidation = TemplateValidationResult<FullAddress>
+const validationResult = ref<AddValidation | LonLatValidation | null>(null)
+const queryResults = ref<AddQueryResult[] | LonLatQueryResult[]>([])
+
+/** 模板按 mode 分流渲染；用 computed 收窄，避免模板里访问并集上不存在的字段 */
+const addResults = computed<AddQueryResult[]>(() =>
+  mode === 'add' ? (queryResults.value as AddQueryResult[]) : [],
+)
+const lonlatResults = computed<LonLatQueryResult[]>(() =>
+  mode === 'lonlat' ? (queryResults.value as LonLatQueryResult[]) : [],
+)
 const isQuerying = ref(false)
 
 const progressPercent = ref(0)
 const progressMessage = ref('')
 
 const hasValidApiKeys = computed(() =>
-  currentConfig.value.apiKeys.some((k: any) => k.isValid && k.provider),
+  currentConfig.value.apiKeys.some((k) => k.isValid && k.provider),
 )
 const hasData = computed(() => validationResult.value !== null || queryResults.value.length > 0)
 const canExecuteQuery = computed(
@@ -868,25 +914,31 @@ const executeQuery = async () => {
     }
 
     if (mode === 'add') {
-      queryResults.value = await batchQueryAddresses(
-        validationResult.value.data,
-        currentConfig.value.apiKeys as AddApiKeyInfo[],
-        options as AddQueryOptions,
-        (progress) => {
-          progressPercent.value = progress.progress
-          progressMessage.value = progress.message
-        },
-      )
+      const data = validationResult.value?.data as CoordinatePoint[] | undefined
+      queryResults.value = data
+        ? await batchQueryAddresses(
+            data,
+            currentConfig.value.apiKeys as AddApiKeyInfo[],
+            options as AddQueryOptions,
+            (progress) => {
+              progressPercent.value = progress.progress
+              progressMessage.value = progress.message
+            },
+          )
+        : []
     } else {
-      queryResults.value = await batchQueryLonLats(
-        validationResult.value.data,
-        currentConfig.value.apiKeys as LonLatApiKeyInfo[],
-        options as LonLatQueryOptions,
-        (progress) => {
-          progressPercent.value = progress.progress
-          progressMessage.value = progress.message
-        },
-      )
+      const data = validationResult.value?.data as FullAddress[] | undefined
+      queryResults.value = data
+        ? await batchQueryLonLats(
+            data,
+            currentConfig.value.apiKeys as LonLatApiKeyInfo[],
+            options as LonLatQueryOptions,
+            (progress) => {
+              progressPercent.value = progress.progress
+              progressMessage.value = progress.message
+            },
+          )
+        : []
     }
   } catch (error) {
     logger.error('查询失败:', error)
@@ -900,11 +952,22 @@ const executeQuery = async () => {
 const downloadResult = (format: 'csv' | 'xlsx') => {
   if (queryResults.value.length === 0) return
 
-  const exportFn = mode === 'add' ? exportAddRows : exportLonLatRows
-  const rows = exportFn(queryResults.value, currentConfig.value.selectedFields)
+  // 两个 exportResultsToRows 签名不同，按 mode 分别调用（用三元会导致类型交集）
+  const rows =
+    mode === 'add'
+      ? exportAddRows(queryResults.value as AddQueryResult[], currentConfig.value.selectedFields)
+      : exportLonLatRows(
+          queryResults.value as LonLatQueryResult[],
+          currentConfig.value.selectedFields,
+        )
 
   if (mode === 'add') {
-    const headers = ['名称', '经度', '纬度', ...currentConfig.value.selectedFields.map((f: string) => getFieldLabel(f))]
+    const headers = [
+      '名称',
+      '经度',
+      '纬度',
+      ...currentConfig.value.selectedFields.map((f: string) => getFieldLabel(f)),
+    ]
     const dataRows = rows.slice(1)
     exportData(headers, dataRows, format, '地址查询结果')
   } else {

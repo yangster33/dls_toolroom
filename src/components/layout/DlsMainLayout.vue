@@ -40,7 +40,7 @@ interface NavItem {
   props: Record<string, unknown>
 }
 
-const props = defineProps<{
+defineProps<{
   navItems: NavItem[]
   toolPage?: Component | null
   toolPageProps?: Record<string, unknown>

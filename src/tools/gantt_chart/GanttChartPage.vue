@@ -10,7 +10,10 @@
     />
     <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || '甘特图' }}</h1>
     <p class="text-base-content/70">
-      {{ toolConfig?.description || '基于 Frappe Gantt 的交互式甘特图工具，支持任务管理、依赖关系、进度追踪与多视图切换。' }}
+      {{
+        toolConfig?.description ||
+        '基于 Frappe Gantt 的交互式甘特图工具，支持任务管理、依赖关系、进度追踪与多视图切换。'
+      }}
     </p>
 
     <!-- 工具栏 -->
@@ -37,7 +40,19 @@
             <PhMagnifyingGlassPlus :size="16" />
           </button>
           <span class="btn btn-sm join-item no-animation pointer-events-none text-xs px-1">
-            {{ store.currentViewMode === 'Hour' ? '时' : store.currentViewMode === 'Quarter Day' || store.currentViewMode === 'Half Day' ? '半' : store.currentViewMode === 'Day' ? '日' : store.currentViewMode === 'Week' ? '周' : store.currentViewMode === 'Month' ? '月' : '年' }}
+            {{
+              store.currentViewMode === 'Hour'
+                ? '时'
+                : store.currentViewMode === 'Quarter Day' || store.currentViewMode === 'Half Day'
+                  ? '半'
+                  : store.currentViewMode === 'Day'
+                    ? '日'
+                    : store.currentViewMode === 'Week'
+                      ? '周'
+                      : store.currentViewMode === 'Month'
+                        ? '月'
+                        : '年'
+            }}
           </span>
           <button class="btn btn-sm join-item btn-ghost" @click="zoomViewOut">
             <PhMagnifyingGlassMinus :size="16" />
@@ -67,14 +82,24 @@
         <div class="divider divider-horizontal mx-1"></div>
 
         <!-- 功能按钮 -->
-        <button class="btn btn-sm btn-ghost" @click="ganttInstance?.scroll_current()" title="回到今天">
+        <button class="btn btn-sm btn-ghost" @click="scrollToToday" title="回到今天">
           <PhCalendarCheck :size="16" />
           <span class="hidden sm:inline ml-1">今天</span>
         </button>
-        <button class="btn btn-sm btn-ghost" @click="undo" :disabled="undoStack.length === 0" title="撤销">
+        <button
+          class="btn btn-sm btn-ghost"
+          @click="undo"
+          :disabled="undoStack.length === 0"
+          title="撤销"
+        >
           <PhArrowCounterClockwise :size="16" />
         </button>
-        <button class="btn btn-sm btn-ghost" @click="redo" :disabled="redoStack.length === 0" title="重做">
+        <button
+          class="btn btn-sm btn-ghost"
+          @click="redo"
+          :disabled="redoStack.length === 0"
+          title="重做"
+        >
           <PhArrowClockwise :size="16" />
         </button>
       </div>
@@ -121,25 +146,49 @@
         <div class="flex items-center gap-2">
           <label class="text-xs text-base-content/60">视图选项:</label>
           <label class="flex items-center gap-1 cursor-pointer">
-            <input type="checkbox" v-model="store.options.weekendHighlight" class="checkbox checkbox-xs" @change="applyWeekendOption" />
+            <input
+              type="checkbox"
+              v-model="store.options.weekendHighlight"
+              class="checkbox checkbox-xs"
+              @change="applyWeekendOption"
+            />
             <span class="text-xs">周末高亮</span>
           </label>
           <label class="flex items-center gap-1 cursor-pointer">
-            <input type="checkbox" v-model="store.options.showTodayBtn" class="checkbox checkbox-xs" @change="updateGanttOptions" />
+            <input
+              type="checkbox"
+              v-model="store.options.showTodayBtn"
+              class="checkbox checkbox-xs"
+              @change="updateGanttOptions"
+            />
             <span class="text-xs">今天按钮</span>
           </label>
           <label class="flex items-center gap-1 cursor-pointer">
-            <input type="checkbox" v-model="store.options.showViewModeSelect" class="checkbox checkbox-xs" @change="updateGanttOptions" />
+            <input
+              type="checkbox"
+              v-model="store.options.showViewModeSelect"
+              class="checkbox checkbox-xs"
+              @change="updateGanttOptions"
+            />
             <span class="text-xs">内置视图选择</span>
           </label>
           <label class="flex items-center gap-1 cursor-pointer">
-            <input type="checkbox" v-model="store.options.showExpectedProgress" class="checkbox checkbox-xs" @change="updateGanttOptions" />
+            <input
+              type="checkbox"
+              v-model="store.options.showExpectedProgress"
+              class="checkbox checkbox-xs"
+              @change="updateGanttOptions"
+            />
             <span class="text-xs">预期进度</span>
           </label>
         </div>
         <div class="flex items-center gap-2">
           <label class="text-xs text-base-content/60">吸附:</label>
-          <select v-model="store.options.snapAt" class="select select-xs select-bordered" @change="updateGanttOptions">
+          <select
+            v-model="store.options.snapAt"
+            class="select select-xs select-bordered"
+            @change="updateGanttOptions"
+          >
             <option value="">无</option>
             <option value="1h">1小时</option>
             <option value="3h">3小时</option>
@@ -151,7 +200,11 @@
         </div>
         <div class="flex items-center gap-2">
           <label class="text-xs text-base-content/60">线条:</label>
-          <select v-model="store.options.lines" class="select select-xs select-bordered" @change="updateGanttOptions">
+          <select
+            v-model="store.options.lines"
+            class="select select-xs select-bordered"
+            @change="updateGanttOptions"
+          >
             <option value="both">横纵都有</option>
             <option value="horizontal">横向</option>
             <option value="vertical">纵向</option>
@@ -160,7 +213,11 @@
         </div>
         <div class="flex items-center gap-2">
           <label class="text-xs text-base-content/60">弹窗:</label>
-          <select v-model="store.options.popupOn" class="select select-xs select-bordered" @change="updateGanttOptions">
+          <select
+            v-model="store.options.popupOn"
+            class="select select-xs select-bordered"
+            @change="updateGanttOptions"
+          >
             <option value="click">点击</option>
             <option value="hover">悬停</option>
           </select>
@@ -170,13 +227,15 @@
 
     <!-- 甘特图容器 -->
     <div class="bg-base-100 rounded-lg mb-6 relative">
+      <div ref="ganttContainer" class="gantt-container-wrapper"></div>
       <div
-        ref="ganttContainer"
-        class="gantt-container-wrapper"
-      ></div>
-      <div v-if="isLoading" class="gantt-skeleton absolute inset-0 bg-base-100/90 flex items-center justify-center z-10">
+        v-if="isLoading"
+        class="gantt-skeleton absolute inset-0 bg-base-100/90 flex items-center justify-center z-10"
+      >
         <div class="text-center">
-          <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+          <div
+            class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"
+          ></div>
           <p class="text-base-content/60">加载中...</p>
         </div>
       </div>
@@ -262,7 +321,11 @@
                 />
               </td>
               <td>
-                <button class="btn btn-xs btn-ghost text-error" @click="deleteTask(task.id)" title="删除">
+                <button
+                  class="btn btn-xs btn-ghost text-error"
+                  @click="deleteTask(task.id)"
+                  title="删除"
+                >
                   <PhTrash :size="14" />
                 </button>
               </td>
@@ -307,7 +370,12 @@
         <form @submit.prevent="saveTask" class="space-y-3">
           <div class="form-control">
             <label class="label"><span class="label-text">任务名称</span></label>
-            <input v-model="taskForm.name" class="input input-bordered" required placeholder="输入任务名称" />
+            <input
+              v-model="taskForm.name"
+              class="input input-bordered"
+              required
+              placeholder="输入任务名称"
+            />
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div class="form-control">
@@ -322,8 +390,18 @@
           <div class="grid grid-cols-2 gap-3">
             <div class="form-control">
               <label class="label"><span class="label-text">进度 (%)</span></label>
-              <input v-model.number="taskForm.progress" type="number" min="0" max="100" class="input input-bordered" />
-              <progress class="progress progress-primary w-full mt-1" :value="taskForm.progress" max="100"></progress>
+              <input
+                v-model.number="taskForm.progress"
+                type="number"
+                min="0"
+                max="100"
+                class="input input-bordered"
+              />
+              <progress
+                class="progress progress-primary w-full mt-1"
+                :value="taskForm.progress"
+                max="100"
+              ></progress>
             </div>
             <div class="form-control">
               <label class="label"><span class="label-text">依赖任务ID</span></label>
@@ -337,11 +415,19 @@
           <div class="grid grid-cols-2 gap-3">
             <div class="form-control">
               <label class="label"><span class="label-text">颜色</span></label>
-              <input v-model="taskForm.color" type="color" class="w-full h-10 rounded cursor-pointer border-0" />
+              <input
+                v-model="taskForm.color"
+                type="color"
+                class="w-full h-10 rounded cursor-pointer border-0"
+              />
             </div>
             <div class="form-control">
               <label class="label"><span class="label-text">自定义CSS类</span></label>
-              <input v-model="taskForm.custom_class" class="input input-bordered" placeholder="可选" />
+              <input
+                v-model="taskForm.custom_class"
+                class="input input-bordered"
+                placeholder="可选"
+              />
             </div>
           </div>
           <div class="modal-action">
@@ -376,20 +462,14 @@ import {
   PhFileImage,
   PhImage,
 } from '@phosphor-icons/vue'
-// @ts-ignore
-import GanttModule from 'frappe-gantt'
+import Gantt from 'frappe-gantt'
+import type { FrappeGanttPopupContext, FrappeGanttInternalTask } from 'frappe-gantt'
 import './frappe-gantt.css'
-
-const Gantt = GanttModule.default || GanttModule
 logger.log('Gantt module loaded:', typeof Gantt, Gantt)
 import { getToolById } from '../toolData'
 import { useGanttStore, type GanttTask } from '@/stores/ganttStore'
 import { logger } from '@/utils/logger'
-import {
-  formatLocalDate,
-  computeNextTaskId,
-  validateImportedTasks,
-} from './ganttTaskUtils'
+import { formatLocalDate, computeNextTaskId, validateImportedTasks } from './ganttTaskUtils'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
 
 const toolConfig = getToolById('gantt_chart')
@@ -411,7 +491,11 @@ const closeErrorDialog = () => {
   errorDialogMessage.value = ''
 }
 
-const showErrorDialog = (type: 'error' | 'warning' | 'success' | 'info', title: string, message: string) => {
+const showErrorDialog = (
+  type: 'error' | 'warning' | 'success' | 'info',
+  title: string,
+  message: string,
+) => {
   errorDialogType.value = type
   errorDialogTitle.value = title
   errorDialogMessage.value = message
@@ -419,7 +503,13 @@ const showErrorDialog = (type: 'error' | 'warning' | 'success' | 'info', title: 
 }
 
 // ── Frappe Gantt 实例 ──
-let ganttInstance: typeof Gantt | null = null
+let ganttInstance: Gantt | null = null
+
+/** 回到今天。包装成方法而非在模板里直接访问 ganttInstance：
+ *  ganttInstance 是非响应式的实例句柄，模板直接读它拿不到稳定类型。 */
+function scrollToToday() {
+  ganttInstance?.scroll_current()
+}
 
 // ── 所有视图模式 ──
 const allViewModes = [
@@ -451,8 +541,16 @@ const taskForm = ref({
 
 // ── 工具函数 ──
 const colorPalette = [
-  '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-  '#ec4899', '#06b6d4', '#f97316', '#84cc16', '#6366f1',
+  '#3b82f6',
+  '#10b981',
+  '#f59e0b',
+  '#ef4444',
+  '#8b5cf6',
+  '#ec4899',
+  '#06b6d4',
+  '#f97316',
+  '#84cc16',
+  '#6366f1',
 ]
 
 function getDefaultColor(index: number): string {
@@ -604,7 +702,7 @@ function initGantt() {
     bar_corner_radius: 3,
     container_height: store.containerHeight,
     padding: 18,
-    popup: (ctx: any) => {
+    popup: (ctx: FrappeGanttPopupContext) => {
       const t = ctx.task
       let dateFormat = 'yyyy-MM-dd'
       if (['Hour', 'Quarter Day', 'Half Day'].includes(store.currentViewMode)) {
@@ -626,7 +724,9 @@ function initGantt() {
       const endMs = new Date(t.end).getTime()
       const days = Math.round((endMs - startMs) / (1000 * 60 * 60 * 24))
       const deps = t.dependencies
-        ? (Array.isArray(t.dependencies) ? t.dependencies.join(', ') : t.dependencies)
+        ? Array.isArray(t.dependencies)
+          ? t.dependencies.join(', ')
+          : t.dependencies
         : '无'
 
       // frappe-gantt 的 set_title / set_subtitle / set_details 均走 innerHTML
@@ -660,25 +760,25 @@ function initGantt() {
       })
     },
     on_click: () => {},
-    on_date_change: (task: any, start: Date, end: Date) => {
+    on_date_change: (task: FrappeGanttInternalTask, start: Date, end: Date) => {
       if (!dragUndoRecorded) {
         pushUndo()
         dragUndoRecorded = true
       }
       const idx = store.tasks.findIndex((t) => t.id === task.id)
       if (idx !== -1) {
-        store.tasks[idx]!.start = formatDate(start as any)
-        store.tasks[idx]!.end = formatDate(end as any)
+        store.tasks[idx]!.start = formatDate(start)
+        store.tasks[idx]!.end = formatDate(end)
       }
     },
-    on_progress_change: (task: any, progress: number) => {
+    on_progress_change: (task: FrappeGanttInternalTask, progress: number) => {
       pushUndo()
       const idx = store.tasks.findIndex((t) => t.id === task.id)
       if (idx !== -1) {
         store.tasks[idx]!.progress = Math.round(progress)
       }
     },
-    on_view_change: (mode: any) => {
+    on_view_change: (mode: string | { name: string }) => {
       store.currentViewMode = typeof mode === 'string' ? mode : mode.name
     },
   })
@@ -687,7 +787,7 @@ function initGantt() {
     ganttInstance.change_view_mode(savedMode)
     store.currentViewMode = savedMode
   }
-  
+
   isLoading.value = false
 }
 
@@ -711,7 +811,8 @@ function refreshGantt() {
     return
   }
 
-  const gi = ganttInstance as any
+  const gi = ganttInstance
+  if (!gi) return
   if (gi.gantt_start && gi.gantt_end && store.tasks.length > 0) {
     const rs = new Date(gi.gantt_start).getTime()
     const re = new Date(gi.gantt_end).getTime()
@@ -801,7 +902,7 @@ function openAddTaskModal() {
     color: getDefaultColor(store.tasks.length),
     custom_class: '',
   }
-  ;(taskModal.value as any)?.showModal()
+  taskModal.value?.showModal()
 }
 
 function openEditTaskModal(taskId: string) {
@@ -817,11 +918,11 @@ function openEditTaskModal(taskId: string) {
     color: task.color || getDefaultColor(0),
     custom_class: task.custom_class || '',
   }
-  ;(taskModal.value as any)?.showModal()
+  taskModal.value?.showModal()
 }
 
 function closeTaskModal() {
-  ;(taskModal.value as any)?.close()
+  taskModal.value?.close()
   editingTaskId.value = null
 }
 
@@ -845,9 +946,12 @@ function saveTask() {
 
   if (editingTaskId.value) {
     const idx = store.tasks.findIndex((t) => t.id === editingTaskId.value)
-    if (idx !== -1) {
+    // 先取局部变量再做展开：直接 {...store.tasks[idx]} 在 noUncheckedIndexedAccess
+    // 下类型是「可能 undefined」，展开后会丢掉必填的 id（此前被 as any 掩盖）
+    const existing = idx !== -1 ? store.tasks[idx] : undefined
+    if (existing) {
       store.tasks[idx] = {
-        ...store.tasks[idx],
+        ...existing,
         name: taskForm.value.name,
         start,
         end,
@@ -855,7 +959,7 @@ function saveTask() {
         dependencies: deps,
         color: taskForm.value.color,
         custom_class: taskForm.value.custom_class,
-      } as any
+      }
     }
   } else {
     const newTask: GanttTask = {
@@ -889,16 +993,16 @@ function updateTaskDate(taskId: string, field: 'start' | 'end', value: string) {
   if (!task || !ganttInstance) return
 
   const updates: Record<string, string> = { [field]: value }
-  ;(task as any)[field] = value
+  task[field] = value
 
   // 如果结束早于开始，把另一端也调成同一天
   if (new Date(task.end) < new Date(task.start)) {
     const other = field === 'start' ? 'end' : 'start'
-    ;(task as any)[other] = value
+    task[other] = value
     updates[other] = value
   }
 
-  const internalTask = (ganttInstance as any).tasks.find((t: any) => t.id === taskId)
+  const internalTask = ganttInstance?.tasks.find((t) => t.id === taskId)
   if (internalTask) {
     delete internalTask._start
     delete internalTask._end
@@ -923,11 +1027,15 @@ function updateTaskDeps(taskId: string, depsStr: string) {
   if (!task || !ganttInstance) return
 
   const depsArray = depsStr
-    ? depsStr.split(',').map((s) => s.trim()).filter(Boolean)
+    ? depsStr
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
     : []
   task.dependencies = depsStr
 
-  const gi = ganttInstance as any
+  const gi = ganttInstance
+  if (!gi) return
   gi.update_task(taskId, { dependencies: depsArray })
   gi.layers.arrow.innerHTML = ''
   gi.arrows = []
@@ -1001,12 +1109,25 @@ function collectGanttCSS(): string {
   if (ganttEl) {
     const cs = window.getComputedStyle(ganttEl)
     const varNames = [
-      '--g-arrow-color', '--g-bar-color', '--g-bar-border',
-      '--g-tick-color-thick', '--g-tick-color', '--g-actions-background',
-      '--g-border-color', '--g-text-muted', '--g-text-light', '--g-text-dark',
-      '--g-progress-color', '--g-handle-color', '--g-weekend-label-color',
-      '--g-expected-progress', '--g-header-background', '--g-row-color',
-      '--g-row-border-color', '--g-today-highlight', '--g-popup-actions',
+      '--g-arrow-color',
+      '--g-bar-color',
+      '--g-bar-border',
+      '--g-tick-color-thick',
+      '--g-tick-color',
+      '--g-actions-background',
+      '--g-border-color',
+      '--g-text-muted',
+      '--g-text-light',
+      '--g-text-dark',
+      '--g-progress-color',
+      '--g-handle-color',
+      '--g-weekend-label-color',
+      '--g-expected-progress',
+      '--g-header-background',
+      '--g-row-color',
+      '--g-row-border-color',
+      '--g-today-highlight',
+      '--g-popup-actions',
       '--g-weekend-highlight-color',
     ]
     let rootVars = ':root {\n'
@@ -1020,7 +1141,12 @@ function collectGanttCSS(): string {
     parts.push(rootVars)
 
     // 同时注入 gv- 变量（frappe-gantt 运行时设置的）
-    const gvNames = ['--gv-grid-height', '--gv-column-width', '--gv-upper-header-height', '--gv-lower-header-height']
+    const gvNames = [
+      '--gv-grid-height',
+      '--gv-column-width',
+      '--gv-upper-header-height',
+      '--gv-lower-header-height',
+    ]
     let gvVars = '.gantt-container {\n'
     for (const name of gvNames) {
       const value = cs.getPropertyValue(name).trim()
@@ -1049,8 +1175,7 @@ function injectHeaderToSvg(svg: SVGSVGElement) {
   const headerCS = window.getComputedStyle(gridHeader)
   const headerBg = headerCS.backgroundColor || 'transparent'
 
-  const svgWidth =
-    parseFloat(svg.getAttribute('width') || '0') || svg.viewBox.baseVal.width || 800
+  const svgWidth = parseFloat(svg.getAttribute('width') || '0') || svg.viewBox.baseVal.width || 800
   const svgHeight =
     parseFloat(svg.getAttribute('height') || '0') || svg.viewBox.baseVal.height || 400
 
@@ -1081,7 +1206,7 @@ function injectHeaderToSvg(svg: SVGSVGElement) {
   g.appendChild(line)
 
   // 转换 upper/lower text -> SVG text，同时处理今日高亮背景
-  const appendSvgTexts = (texts: NodeListOf<Element>, _cls: string) => {
+  const appendSvgTexts = (texts: NodeListOf<Element>) => {
     texts.forEach((el) => {
       const htmlEl = el as HTMLElement
       const t = htmlEl.textContent?.trim()
@@ -1119,8 +1244,8 @@ function injectHeaderToSvg(svg: SVGSVGElement) {
       g.appendChild(txt)
     })
   }
-  appendSvgTexts(upperTexts, 'upper-text')
-  appendSvgTexts(lowerTexts, 'lower-text')
+  appendSvgTexts(upperTexts)
+  appendSvgTexts(lowerTexts)
 
   // 找到第一个任务条的 y 坐标，确保头部和内容紧密贴合
   const bars = svg.querySelectorAll('.bar-wrapper .bar')
@@ -1137,8 +1262,8 @@ function injectHeaderToSvg(svg: SVGSVGElement) {
   Array.from(svg.children).forEach((child) => {
     if (child === g) return
     const el = child as HTMLElement & { _shifted?: boolean }
-    if ((el as any)._shifted) return
-    ;(el as any)._shifted = true
+    if (el._shifted) return
+    el._shifted = true
     const cur = el.getAttribute('transform') || ''
     el.setAttribute('transform', (cur ? cur + ' ' : '') + `translate(0, ${shiftY})`)
   })
@@ -1198,8 +1323,6 @@ function cropEmptyDates(svg: SVGSVGElement) {
     svg.setAttribute('height', String(Math.round(cropH)))
   }
 }
-
-
 
 function exportSVG() {
   if (!ganttContainer.value) {
@@ -1280,10 +1403,10 @@ function exportPNG(scale = 2) {
   const url = URL.createObjectURL(blob)
 
   const img = new Image()
-  
+
   img.onload = () => {
     URL.revokeObjectURL(url)
-    
+
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
     if (!ctx) {
@@ -1303,7 +1426,7 @@ function exportPNG(scale = 2) {
 
     const dataUrl = canvas.toDataURL('image/png')
     const imageBlob = dataURLToBlob(dataUrl)
-    
+
     if (!imageBlob) {
       showErrorDialog('error', '导出失败', '图片转换失败')
       return
@@ -1319,31 +1442,31 @@ function exportPNG(scale = 2) {
     document.body.removeChild(a)
     URL.revokeObjectURL(downloadUrl)
   }
-  
+
   img.onerror = (e) => {
     URL.revokeObjectURL(url)
     logger.error('SVG加载失败:', e)
     showErrorDialog('error', '导出失败', '图片转换失败，请检查控制台')
   }
-  
+
   img.src = url
 }
 
 function dataURLToBlob(dataUrl: string): Blob | null {
   const parts = dataUrl.split(',')
   if (parts.length !== 2) return null
-  
+
   const mime = parts[0]!.match(/:(.*?);/)
   if (!mime) return null
-  
+
   const byteString = atob(parts[1]!)
   const arrayBuffer = new ArrayBuffer(byteString.length)
   const uint8Array = new Uint8Array(arrayBuffer)
-  
+
   for (let i = 0; i < byteString.length; i++) {
     uint8Array[i] = byteString.charCodeAt(i)
   }
-  
+
   return new Blob([uint8Array], { type: mime[1] })
 }
 
@@ -1379,10 +1502,10 @@ function exportJPG(scale = 2, quality = 0.92) {
   const url = URL.createObjectURL(blob)
 
   const img = new Image()
-  
+
   img.onload = () => {
     URL.revokeObjectURL(url)
-    
+
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
     if (!ctx) {
@@ -1402,7 +1525,7 @@ function exportJPG(scale = 2, quality = 0.92) {
 
     const dataUrl = canvas.toDataURL('image/jpeg', quality)
     const imageBlob = dataURLToBlob(dataUrl)
-    
+
     if (!imageBlob) {
       showErrorDialog('error', '导出失败', '图片转换失败')
       return
@@ -1418,13 +1541,13 @@ function exportJPG(scale = 2, quality = 0.92) {
     document.body.removeChild(a)
     URL.revokeObjectURL(downloadUrl)
   }
-  
+
   img.onerror = (e) => {
     URL.revokeObjectURL(url)
     logger.error('SVG加载失败:', e)
     showErrorDialog('error', '导出失败', '图片转换失败，请检查控制台')
   }
-  
+
   img.src = url
 }
 
@@ -1471,12 +1594,66 @@ function loadDemoData() {
   pushUndo()
   store.nextTaskId = 7
   store.tasks = [
-    { id: '1', name: '需求分析', start: d(-8), end: d(-2), progress: 100, dependencies: '', color: '#10b981', custom_class: '' },
-    { id: '2', name: '架构设计', start: d(-5), end: d(3), progress: 80, dependencies: '1', color: '#3b82f6', custom_class: '' },
-    { id: '3', name: '前端开发', start: d(1), end: d(14), progress: 30, dependencies: '2', color: '#f59e0b', custom_class: '' },
-    { id: '4', name: '后端开发', start: d(2), end: d(12), progress: 45, dependencies: '2', color: '#8b5cf6', custom_class: '' },
-    { id: '5', name: '集成测试', start: d(14), end: d(20), progress: 0, dependencies: '3,4', color: '#ef4444', custom_class: '' },
-    { id: '6', name: '上线部署', start: d(21), end: d(23), progress: 0, dependencies: '5', color: '#ec4899', custom_class: '' },
+    {
+      id: '1',
+      name: '需求分析',
+      start: d(-8),
+      end: d(-2),
+      progress: 100,
+      dependencies: '',
+      color: '#10b981',
+      custom_class: '',
+    },
+    {
+      id: '2',
+      name: '架构设计',
+      start: d(-5),
+      end: d(3),
+      progress: 80,
+      dependencies: '1',
+      color: '#3b82f6',
+      custom_class: '',
+    },
+    {
+      id: '3',
+      name: '前端开发',
+      start: d(1),
+      end: d(14),
+      progress: 30,
+      dependencies: '2',
+      color: '#f59e0b',
+      custom_class: '',
+    },
+    {
+      id: '4',
+      name: '后端开发',
+      start: d(2),
+      end: d(12),
+      progress: 45,
+      dependencies: '2',
+      color: '#8b5cf6',
+      custom_class: '',
+    },
+    {
+      id: '5',
+      name: '集成测试',
+      start: d(14),
+      end: d(20),
+      progress: 0,
+      dependencies: '3,4',
+      color: '#ef4444',
+      custom_class: '',
+    },
+    {
+      id: '6',
+      name: '上线部署',
+      start: d(21),
+      end: d(23),
+      progress: 0,
+      dependencies: '5',
+      color: '#ec4899',
+      custom_class: '',
+    },
   ]
   refreshGantt()
 }
@@ -1521,7 +1698,7 @@ function performInit() {
   logger.log('开始执行甘特图初始化...')
   logger.log('store.tasks.length:', store.tasks.length)
   logger.log('ganttContainer.value:', ganttContainer.value)
-  
+
   try {
     if (store.tasks.length === 0) {
       logger.log('任务列表为空，加载示例数据...')
@@ -1539,14 +1716,14 @@ function performInit() {
 // ── 生命周期 ──
 onMounted(() => {
   logger.log('GanttChartPage mounted')
-  
+
   themeObserver.observe(document.documentElement, {
     attributes: true,
     attributeFilter: ['data-theme'],
   })
 
   window.addEventListener('keydown', handleKeydown)
-  
+
   setTimeout(() => {
     performInit()
   }, 100)

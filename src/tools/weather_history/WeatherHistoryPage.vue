@@ -106,34 +106,30 @@
       </div>
 
       <div class="flex flex-wrap gap-3">
-        <button
-          @click="queryWeather"
-          :disabled="isLoading || !isValid"
-          class="btn btn-primary"
-        >
+        <button @click="queryWeather" :disabled="isLoading || !isValid" class="btn btn-primary">
           <span v-if="isLoading" class="loading loading-spinner loading-sm mr-2"></span>
           {{ isLoading ? '查询中...' : '查询天气数据' }}
         </button>
-        <button
-          @click="downloadJson"
-          :disabled="!weatherData"
-          class="btn btn-success"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        <button @click="downloadJson" :disabled="!weatherData" class="btn btn-success">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5 mr-2"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+            />
           </svg>
           下载 JSON
         </button>
-        <button
-          @click="clearResults"
-          class="btn btn-outline"
-        >
-          清除结果
-        </button>
+        <button @click="clearResults" class="btn btn-outline">清除结果</button>
       </div>
     </div>
-
-    
 
     <div v-if="weatherData" class="space-y-6">
       <div class="bg-base-200/40 rounded-lg p-6">
@@ -141,11 +137,15 @@
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div class="stat bg-base-200 rounded-lg">
             <div class="stat-title">位置</div>
-            <div class="stat-value text-lg">{{ weatherData.longitude.toFixed(4) }}, {{ weatherData.latitude.toFixed(4) }}</div>
+            <div class="stat-value text-lg">
+              {{ weatherData.longitude.toFixed(4) }}, {{ weatherData.latitude.toFixed(4) }}
+            </div>
           </div>
           <div class="stat bg-base-200 rounded-lg">
             <div class="stat-title">海拔</div>
-            <div class="stat-value text-lg">{{ weatherData.elevation.toFixed(1) }} <span class="text-sm">m</span></div>
+            <div class="stat-value text-lg">
+              {{ weatherData.elevation.toFixed(1) }} <span class="text-sm">m</span>
+            </div>
           </div>
           <div class="stat bg-base-200 rounded-lg">
             <div class="stat-title">时区</div>
@@ -160,7 +160,7 @@
 
       <div class="bg-base-200/40 rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-4">可视化图表</h2>
-        
+
         <div class="flex flex-wrap gap-2 mb-4">
           <button
             v-for="chartType in availableCharts"
@@ -173,7 +173,10 @@
           </button>
         </div>
 
-        <div v-if="chartLoading" class="w-full h-[400px] flex flex-col items-center justify-center gap-3">
+        <div
+          v-if="chartLoading"
+          class="w-full h-[400px] flex flex-col items-center justify-center gap-3"
+        >
           <span class="loading loading-spinner loading-lg text-primary"></span>
           <span class="text-base-content/60 text-sm">正在加载图表...</span>
         </div>
@@ -194,11 +197,7 @@ import {
   downloadJson as downloadJsonFile,
   type WeatherApiResponse,
 } from './weatherHistoryService'
-import {
-  chartConfigs,
-  getAvailableCharts,
-  type ChartType,
-} from './weatherHistoryChart'
+import { chartConfigs, getAvailableCharts, type ChartType } from './weatherHistoryChart'
 import { useDaisyTheme } from '@/composables/useDaisyTheme'
 import { useECharts } from '@/composables/useECharts'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
@@ -235,8 +234,6 @@ const errorDialogOpen = ref(false)
 const weatherData = ref<WeatherApiResponse | null>(null)
 
 const activeChart = ref<ChartType>('temperature')
-
-
 
 const dateRangeMessage = computed(() => {
   if (!startDateModel.value || !endDateModel.value) return ''
@@ -309,12 +306,15 @@ async function queryWeather() {
   weatherData.value = null
 
   try {
-    const result = await fetchWeatherHistory({
-      longitude: form.value.longitude,
-      latitude: form.value.latitude,
-      startDate: startDateModel.value,
-      endDate: endDateModel.value,
-    }, selectedVariables.value)
+    const result = await fetchWeatherHistory(
+      {
+        longitude: form.value.longitude,
+        latitude: form.value.latitude,
+        startDate: startDateModel.value,
+        endDate: endDateModel.value,
+      },
+      selectedVariables.value,
+    )
 
     if (result.success && result.data) {
       weatherData.value = result.data
@@ -351,13 +351,16 @@ function downloadJson() {
   }
 }
 
-const getChartOption = (data: WeatherApiResponse, theme: Record<string, string>): EChartsOption | null => {
+const getChartOption = (
+  data: WeatherApiResponse,
+  theme: Record<string, string>,
+): EChartsOption | null => {
   const config = chartConfigs[activeChart.value]
   if (!config) return null
   return config.generator(data, theme as unknown as ChartThemeColors)
 }
 
-const { chartContainer, chartLoading, initChart, disposeChart } = useECharts({
+const { chartContainer, chartLoading, initChart } = useECharts({
   data: weatherData,
   getChartOption,
   themeVariables: {

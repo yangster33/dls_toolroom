@@ -240,7 +240,10 @@
                   </span>
                 </td>
                 <td>{{ feature.properties.place }}</td>
-                <td>{{ feature.geometry.coordinates[0].toFixed(4) }}, {{ feature.geometry.coordinates[1].toFixed(4) }}</td>
+                <td>
+                  {{ feature.geometry.coordinates[0].toFixed(4) }},
+                  {{ feature.geometry.coordinates[1].toFixed(4) }}
+                </td>
                 <td>{{ formatTime(feature.properties.time) }}</td>
                 <td>{{ feature.geometry.coordinates[2] }} km</td>
                 <td>{{ getMagnitudeLevel(feature.properties.mag) }}</td>
@@ -316,8 +319,6 @@ const errorDialogOpen = ref(false)
 const earthquakeData = ref<EarthquakeApiResponse | null>(null)
 
 const activeChart = ref<ChartType>('magnitudeTime')
-
-
 
 const dateRangeMessage = computed(() => {
   if (!startDateModel.value || !endDateModel.value) return ''
@@ -422,13 +423,16 @@ function downloadJson() {
   }
 }
 
-const getChartOption = (data: EarthquakeApiResponse, theme: Record<string, string>): EChartsOption | null => {
+const getChartOption = (
+  data: EarthquakeApiResponse,
+  theme: Record<string, string>,
+): EChartsOption | null => {
   const config = chartConfigs[activeChart.value]
   if (!config) return null
   return config.generator(data, theme as unknown as ChartThemeColors)
 }
 
-const { chartContainer, chartLoading, initChart, disposeChart } = useECharts({
+const { chartContainer, chartLoading, initChart } = useECharts({
   data: earthquakeData,
   getChartOption,
   themeVariables: {

@@ -43,7 +43,14 @@ export function createToolNavItems(toolPage: Component | null, toolName: string)
     },
   ]
 
-  const enableMomentTab = import.meta.env.VITE_ENABLE_MOMENT_TAB === 'true'
+  /**
+   * 「势」tab 开关。
+   *
+   * 默认「开」，只有显式设 VITE_ENABLE_MOMENT_TAB=false 才关闭。
+   * 旧写法 `=== 'true'` 在 .env 不入库时取到 undefined → CI 产物不含
+   * 「势」tab，与本地不一致（审计 P2-7：CI 产物与本地行为分叉）。
+   */
+  const enableMomentTab = import.meta.env.VITE_ENABLE_MOMENT_TAB !== 'false'
 
   if (enableMomentTab) {
     navItems.push({

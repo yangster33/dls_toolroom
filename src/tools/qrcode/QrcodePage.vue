@@ -11,7 +11,7 @@
           <PhQrCode class="w-5 h-5" />
           生成二维码
         </h2>
-        
+
         <div class="mb-4">
           <label class="label">
             <span class="label-text">输入内容</span>
@@ -89,11 +89,7 @@
           </div>
         </div>
 
-        <button
-          @click="downloadQrCode"
-          :disabled="!qrCodeUrl"
-          class="btn btn-secondary mb-4"
-        >
+        <button @click="downloadQrCode" :disabled="!qrCodeUrl" class="btn btn-secondary mb-4">
           <PhDownload class="w-4 h-4 mr-2" />
           下载二维码
         </button>
@@ -161,10 +157,7 @@
             识别成功
           </h3>
           <p class="text-green-700 break-all">{{ scanResult }}</p>
-          <button
-            @click="copyResult"
-            class="mt-2 btn btn-xs btn-green"
-          >
+          <button @click="copyResult" class="mt-2 btn btn-xs btn-green">
             <PhCopy class="w-3 h-3 mr-1" />
             复制结果
           </button>
@@ -201,7 +194,6 @@ function debounce<T extends (...args: unknown[]) => unknown>(fn: T, delay: numbe
 }
 import {
   PhQrCode,
-  PhArrowRight,
   PhDownload,
   PhMagnifyingGlass,
   PhUpload,

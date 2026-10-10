@@ -86,9 +86,7 @@
         <div class="mt-4">
           <div class="collapse collapse-arrow bg-base-200 border-base-300 border">
             <input type="checkbox" />
-            <div class="collapse-title font-semibold">
-              CGCS2000 投影参数（按需求填写，选填）
-            </div>
+            <div class="collapse-title font-semibold">CGCS2000 投影参数（按需求填写，选填）</div>
             <div class="collapse-content">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 pt-2">
                 <label class="flex flex-col gap-1.5">
@@ -176,28 +174,18 @@
           :disabled="!canUploadFile"
           ref="fileInputRef"
         />
-        <div class="text-sm text-gray-500 mt-2" v-if="!canUploadFile">
-          请先选择输入和输出坐标系
-        </div>
+        <div class="text-sm text-gray-500 mt-2" v-if="!canUploadFile">请先选择输入和输出坐标系</div>
         <div class="text-sm text-gray-500 mt-2" v-else>
           支持 CSV 或 Excel 格式，请确保格式与模板一致
         </div>
 
         <!-- 操作按钮 -->
         <div class="flex flex-wrap gap-3 mt-4">
-          <button
-            :disabled="!canStartConversion"
-            @click="startConversion"
-            class="btn btn-primary"
-          >
+          <button :disabled="!canStartConversion" @click="startConversion" class="btn btn-primary">
             <span v-if="isProcessing" class="loading loading-spinner loading-sm mr-2"></span>
             {{ isProcessing ? '转换中...' : '开始转换' }}
           </button>
-          <button
-            v-if="isProcessing"
-            @click="cancelConversion"
-            class="btn btn-outline btn-warning"
-          >
+          <button v-if="isProcessing" @click="cancelConversion" class="btn btn-outline btn-warning">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               class="h-5 w-5 mr-2"
@@ -398,7 +386,11 @@ const closeErrorDialog = () => {
   errorDialogMessage.value = ''
 }
 
-const showErrorDialog = (type: 'error' | 'warning' | 'success' | 'info', title: string, message: string) => {
+const showErrorDialog = (
+  type: 'error' | 'warning' | 'success' | 'info',
+  title: string,
+  message: string,
+) => {
   errorDialogType.value = type
   errorDialogTitle.value = title
   errorDialogMessage.value = message
@@ -440,10 +432,6 @@ const canStartConversion = computed(() => {
 
 const canDownloadResult = computed(() => {
   return conversionCompleted.value && conversionResultData.value.length > 0
-})
-
-const hasUploadedFile = computed(() => {
-  return validatedDataRows.value.length > 0
 })
 
 // 模板下载
@@ -587,8 +575,12 @@ const downloadResult = (format: 'csv' | 'xlsx' = 'csv') => {
         URL.revokeObjectURL(url)
       }, 100)
     }
-  } catch (error) {
-    showErrorDialog('error', '下载失败', `下载${format === 'csv' ? 'CSV' : 'Excel'}结果时发生错误，请检查控制台`)
+  } catch {
+    showErrorDialog(
+      'error',
+      '下载失败',
+      `下载${format === 'csv' ? 'CSV' : 'Excel'}结果时发生错误，请检查控制台`,
+    )
   }
 }
 

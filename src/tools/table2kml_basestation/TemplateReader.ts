@@ -5,6 +5,7 @@ import {
   readAndValidateTemplate,
   type TemplateReadResult,
   type CellValue,
+  type DataRow,
 } from '@/utils/TemplateReader'
 import { TEMPLATE_HEADERS } from './TemplateExporter'
 
@@ -40,7 +41,7 @@ export interface BasestationReadResult {
 /**
  * 验证单行数据
  */
-export function validateRow(row: any, _rowIndex: number): string[] {
+export function validateRow(row: DataRow, _rowIndex: number): string[] {
   const errors: string[] = []
 
   // 扇区名称（必填）
@@ -164,7 +165,8 @@ export async function readAndValidateBasestationTemplate(
     }
 
     // 可选字段
-    if (rawRow['是否室分'] && rawRow['是否室分'] !== '') row['是否室分'] = String(rawRow['是否室分'])
+    if (rawRow['是否室分'] && rawRow['是否室分'] !== '')
+      row['是否室分'] = String(rawRow['是否室分'])
     if (rawRow['区域'] && rawRow['区域'] !== '') row['区域'] = String(rawRow['区域'])
     if (rawRow['小区覆盖类型'] && rawRow['小区覆盖类型'] !== '')
       row['小区覆盖类型'] = String(rawRow['小区覆盖类型'])

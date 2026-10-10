@@ -1,5 +1,19 @@
 import * as turf from '@turf/turf'
 import type { PointFeature, LineFeature, PolygonFeature, AnalysisResult } from './geoDataService'
+import type { Feature, LineString } from 'geojson'
+
+/**
+ * turf.polygonToLine 返回 `Feature<LineString|MultiLineString> | FeatureCollection<...>`，
+ * 前者有 coordinates（booleanPointOnLine 只接受它），后者只有 features。
+ * 做一次运行时判别后收窄，替代原来的 `as any`。
+ */
+function asLineFeature(value: unknown): Feature<LineString, GeoJSON.GeoJsonProperties> | null {
+  if (value === null || typeof value !== 'object') return null
+  const feature = value as { type?: unknown; geometry?: { type?: unknown } | null }
+  if (feature.type !== 'Feature' || feature.geometry == null) return null
+  if (feature.geometry.type !== 'LineString') return null
+  return value as Feature<LineString, GeoJSON.GeoJsonProperties>
+}
 
 export interface AnalysisProgressCallback {
   (progress: number, taskName: string): void
@@ -12,7 +26,7 @@ export interface AnalysisCancelCallback {
 export async function analyzePoints(
   points: PointFeature[],
   onProgress?: AnalysisProgressCallback,
-  isCanceled?: AnalysisCancelCallback
+  isCanceled?: AnalysisCancelCallback,
 ): Promise<AnalysisResult> {
   const data: Record<string, unknown>[] = []
   const total = points.length
@@ -43,7 +57,7 @@ export async function analyzePoints(
 export async function analyzeLines(
   lines: LineFeature[],
   onProgress?: AnalysisProgressCallback,
-  isCanceled?: AnalysisCancelCallback
+  isCanceled?: AnalysisCancelCallback,
 ): Promise<AnalysisResult> {
   const data: Record<string, unknown>[] = []
   const total = lines.length
@@ -76,14 +90,24 @@ export async function analyzeLines(
     type: 'line_analysis',
     label: '单线分析',
     data,
-    columns: ['序号', '名称', '类型', '长度_km', '点数', '起点经度', '起点纬度', '终点经度', '终点纬度'],
+    columns: [
+      '序号',
+      '名称',
+      '类型',
+      '长度_km',
+      '点数',
+      '起点经度',
+      '起点纬度',
+      '终点经度',
+      '终点纬度',
+    ],
   }
 }
 
 export async function analyzePolygons(
   polygons: PolygonFeature[],
   onProgress?: AnalysisProgressCallback,
-  isCanceled?: AnalysisCancelCallback
+  isCanceled?: AnalysisCancelCallback,
 ): Promise<AnalysisResult> {
   const data: Record<string, unknown>[] = []
   const total = polygons.length
@@ -123,7 +147,7 @@ export async function analyzePolygons(
 export async function analyzePointToPoint(
   points: PointFeature[],
   onProgress?: AnalysisProgressCallback,
-  isCanceled?: AnalysisCancelCallback
+  isCanceled?: AnalysisCancelCallback,
 ): Promise<AnalysisResult> {
   const data: Record<string, unknown>[] = []
   const total = (points.length * (points.length - 1)) / 2
@@ -164,7 +188,17 @@ export async function analyzePointToPoint(
     type: 'point_to_point',
     label: '点与点关系',
     data,
-    columns: ['点A名称', '点A经度', '点A纬度', '点B名称', '点B经度', '点B纬度', '距离_km', '方位角_度', '是否重合'],
+    columns: [
+      '点A名称',
+      '点A经度',
+      '点A纬度',
+      '点B名称',
+      '点B经度',
+      '点B纬度',
+      '距离_km',
+      '方位角_度',
+      '是否重合',
+    ],
   }
 }
 
@@ -172,7 +206,7 @@ export async function analyzePointToLine(
   points: PointFeature[],
   lines: LineFeature[],
   onProgress?: AnalysisProgressCallback,
-  isCanceled?: AnalysisCancelCallback
+  isCanceled?: AnalysisCancelCallback,
 ): Promise<AnalysisResult> {
   const data: Record<string, unknown>[] = []
   const total = points.length * lines.length
@@ -211,7 +245,16 @@ export async function analyzePointToLine(
     type: 'point_to_line',
     label: '点与线关系',
     data,
-    columns: ['点名称', '点经度', '点纬度', '线名称', '是否在线上', '到线距离_m', '最近点经度', '最近点纬度'],
+    columns: [
+      '点名称',
+      '点经度',
+      '点纬度',
+      '线名称',
+      '是否在线上',
+      '到线距离_m',
+      '最近点经度',
+      '最近点纬度',
+    ],
   }
 }
 
@@ -219,7 +262,7 @@ export async function analyzePointToPolygon(
   points: PointFeature[],
   polygons: PolygonFeature[],
   onProgress?: AnalysisProgressCallback,
-  isCanceled?: AnalysisCancelCallback
+  isCanceled?: AnalysisCancelCallback,
 ): Promise<AnalysisResult> {
   const data: Record<string, unknown>[] = []
   const total = points.length * polygons.length
@@ -235,7 +278,10 @@ export async function analyzePointToPolygon(
       const isInside = turf.booleanPointInPolygon(pt, polygonFeature)
       const distance = turf.pointToPolygonDistance(pt, polygonFeature, { units: 'meters' })
       const polygonLine = turf.polygonToLine(polygonFeature)
-      const isOnBoundary = turf.booleanPointOnLine(pt, polygonLine as any)
+      const isOnBoundary = (() => {
+        const lf = asLineFeature(polygonLine)
+        return lf ? turf.booleanPointOnLine(pt, lf) : false
+      })()
 
       const ptCoords = point.coordinates
 
@@ -265,7 +311,7 @@ export async function analyzePointToPolygon(
 export async function analyzeLineToLine(
   lines: LineFeature[],
   onProgress?: AnalysisProgressCallback,
-  isCanceled?: AnalysisCancelCallback
+  isCanceled?: AnalysisCancelCallback,
 ): Promise<AnalysisResult> {
   const data: Record<string, unknown>[] = []
   const total = (lines.length * (lines.length - 1)) / 2
@@ -307,7 +353,18 @@ export async function analyzeLineToLine(
     type: 'line_to_line',
     label: '线与线关系',
     data,
-    columns: ['线A名称', '线A长度_km', '线B名称', '线B长度_km', '是否相交', '是否交叉', '是否平行', '是否相等', '是否重叠', '交点数量'],
+    columns: [
+      '线A名称',
+      '线A长度_km',
+      '线B名称',
+      '线B长度_km',
+      '是否相交',
+      '是否交叉',
+      '是否平行',
+      '是否相等',
+      '是否重叠',
+      '交点数量',
+    ],
   }
 }
 
@@ -315,7 +372,7 @@ export async function analyzeLineToPolygon(
   lines: LineFeature[],
   polygons: PolygonFeature[],
   onProgress?: AnalysisProgressCallback,
-  isCanceled?: AnalysisCancelCallback
+  isCanceled?: AnalysisCancelCallback,
 ): Promise<AnalysisResult> {
   const data: Record<string, unknown>[] = []
   const total = lines.length * polygons.length
@@ -355,14 +412,24 @@ export async function analyzeLineToPolygon(
     type: 'line_to_polygon',
     label: '线与面关系',
     data,
-    columns: ['线名称', '线长度_km', '面名称', '面面积_km2', '是否相交', '是否穿越', '线是否在面内', '面是否包含线', '交点数量'],
+    columns: [
+      '线名称',
+      '线长度_km',
+      '面名称',
+      '面面积_km2',
+      '是否相交',
+      '是否穿越',
+      '线是否在面内',
+      '面是否包含线',
+      '交点数量',
+    ],
   }
 }
 
 export async function analyzePolygonToPolygon(
   polygons: PolygonFeature[],
   onProgress?: AnalysisProgressCallback,
-  isCanceled?: AnalysisCancelCallback
+  isCanceled?: AnalysisCancelCallback,
 ): Promise<AnalysisResult> {
   const data: Record<string, unknown>[] = []
   const total = (polygons.length * (polygons.length - 1)) / 2
@@ -383,8 +450,7 @@ export async function analyzePolygonToPolygon(
 
       let intersectionArea = '0'
       try {
-        const fc = turf.featureCollection([polyA, polyB])
-        const intersection = turf.intersect(fc as any) as any
+        const intersection = turf.intersect(turf.featureCollection([polyA, polyB]))
         if (intersection) {
           intersectionArea = (turf.area(intersection) / 1000000).toFixed(4)
         }
@@ -415,7 +481,19 @@ export async function analyzePolygonToPolygon(
     type: 'polygon_to_polygon',
     label: '面与面关系',
     data,
-    columns: ['面A名称', '面A面积_km2', '面B名称', '面B面积_km2', '是否相交', '是否重叠', 'A是否在B内', 'A是否包含B', '是否分离', '是否相等', '交叠面积_km2'],
+    columns: [
+      '面A名称',
+      '面A面积_km2',
+      '面B名称',
+      '面B面积_km2',
+      '是否相交',
+      '是否重叠',
+      'A是否在B内',
+      'A是否包含B',
+      '是否分离',
+      '是否相等',
+      '交叠面积_km2',
+    ],
   }
 }
 
@@ -458,12 +536,14 @@ export function getAnalysisLabel(type: AnalysisType): string {
 export function getAvailableAnalysisTypes(
   totalPoints: number,
   totalLines: number,
-  totalPolygons: number
+  totalPolygons: number,
 ): AnalysisType[] {
-  return analysisConfigs.filter((config) => {
-    if (config.minPoints && totalPoints < config.minPoints) return false
-    if (config.minLines && totalLines < config.minLines) return false
-    if (config.minPolygons && totalPolygons < config.minPolygons) return false
-    return true
-  }).map((c) => c.type)
+  return analysisConfigs
+    .filter((config) => {
+      if (config.minPoints && totalPoints < config.minPoints) return false
+      if (config.minLines && totalLines < config.minLines) return false
+      if (config.minPolygons && totalPolygons < config.minPolygons) return false
+      return true
+    })
+    .map((c) => c.type)
 }

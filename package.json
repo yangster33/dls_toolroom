@@ -5,18 +5,22 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "run-s build-only prerender",
+    "build": "run-s lint type-check test:unit build-only prerender",
     "build:fast": "run-p type-check \"build-only {@}\" --",
     "prerender": "node scripts/prerender.mjs",
     "preview": "vite preview",
-    "test:unit": "vitest",
+    "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/"
+    "lint:check": "run-s lint:check:*",
+    "lint:check:oxlint": "oxlint .",
+    "lint:check:eslint": "eslint .",
+    "format": "prettier --write --experimental-cli .",
+    "format:check": "prettier --check --experimental-cli ."
   },
   "dependencies": {
     "@ckpack/vue-color": "^1.6.0",
@@ -113,6 +117,6 @@
     "vue-tsc": "^3.2.6"
   },
   "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+    "node": ">=22.17.0"
   }
 }

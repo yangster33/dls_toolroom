@@ -7,49 +7,53 @@ import * as XLSX from 'xlsx'
 import * as Papa from 'papaparse'
 import expressions from 'angular-expressions'
 import { logger } from '@/utils/logger'
+// exceljs 约 900KB，运行时用动态 import 懒加载；这里只取类型（编译期擦除，不进 bundle）
+import type * as ExcelJS from 'exceljs'
 
 export type ExportFormat = 'docx' | 'xlsx'
 
-function ensureString(input: any): string {
+function ensureString(input: unknown): string {
   if (input === null || input === undefined) return ''
   return String(input)
 }
 
-function ensureNumber(input: any): number {
+function ensureNumber(input: unknown): number {
   const n = Number(input)
   return isNaN(n) ? 0 : n
 }
 
-expressions.filters.upper = (input: any) => ensureString(input).toUpperCase()
-expressions.filters.lower = (input: any) => ensureString(input).toLowerCase()
-expressions.filters.capitalize = (input: any) => {
+expressions.filters.upper = (input: unknown) => ensureString(input).toUpperCase()
+expressions.filters.lower = (input: unknown) => ensureString(input).toLowerCase()
+expressions.filters.capitalize = (input: unknown) => {
   const str = ensureString(input)
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
 }
-expressions.filters.number = (input: any, decimals: any) => {
+expressions.filters.number = (input: unknown, decimals: unknown) => {
   const n = ensureNumber(input)
   const d = ensureNumber(decimals)
   return n.toFixed(d)
 }
-expressions.filters.currency = (input: any, symbol: any) => {
+expressions.filters.currency = (input: unknown, symbol: unknown) => {
   const n = ensureNumber(input)
   const s = symbol != null ? String(symbol) : '¥'
   return s + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
-expressions.filters.percent = (input: any, decimals: any) => {
+expressions.filters.percent = (input: unknown, decimals: unknown) => {
   const n = ensureNumber(input) * 100
   const d = decimals != null ? ensureNumber(decimals) : 0
   return n.toFixed(d) + '%'
 }
-expressions.filters.date = (input: any, format: any) => {
+expressions.filters.date = (input: unknown, format: unknown) => {
   if (input === null || input === undefined) return ''
   const fmt = format != null ? String(format) : 'yyyy-mm-dd'
   let d: Date
   if (input instanceof Date) {
     d = input
-  } else {
+  } else if (typeof input === 'string' || typeof input === 'number') {
     d = new Date(input)
     if (isNaN(d.getTime())) return ensureString(input)
+  } else {
+    return ensureString(input)
   }
   const year = d.getFullYear()
   const month = d.getMonth() + 1
@@ -67,19 +71,19 @@ expressions.filters.date = (input: any, format: any) => {
     .replace(/ii/g, minutes)
     .replace(/ss/g, seconds)
 }
-expressions.filters.default = (input: any, fallback: any) => {
+expressions.filters.default = (input: unknown, fallback: unknown) => {
   if (input === null || input === undefined || input === '') {
     return fallback != null ? fallback : ''
   }
   return input
 }
-expressions.filters.truncate = (input: any, length: any) => {
+expressions.filters.truncate = (input: unknown, length: unknown) => {
   const str = ensureString(input)
   const len = ensureNumber(length) || 10
   return str.length > len ? str.substring(0, len) + '...' : str
 }
-expressions.filters.trim = (input: any) => ensureString(input).trim()
-expressions.filters.split = (input: any, delimiter: any, index: any) => {
+expressions.filters.trim = (input: unknown) => ensureString(input).trim()
+expressions.filters.split = (input: unknown, delimiter: unknown, index: unknown) => {
   const str = ensureString(input)
   const delim = delimiter != null ? String(delimiter) : ' '
   const i = ensureNumber(index)
@@ -90,7 +94,7 @@ expressions.filters.split = (input: any, delimiter: any, index: any) => {
 function angularParser(tag: string) {
   const expr = expressions.compile(tag)
   return {
-    get(scope: Record<string, any>) {
+    get(scope: Record<string, unknown>) {
       try {
         const result = expr(scope)
         if (result instanceof Date) {
@@ -113,9 +117,9 @@ function angularParser(tag: string) {
   }
 }
 
-function convertDatesInData(data: Record<string, any>[]): Record<string, any>[] {
+function convertDatesInData(data: Record<string, unknown>[]): Record<string, unknown>[] {
   return data.map((row) => {
-    const convertedRow: Record<string, any> = {}
+    const convertedRow: Record<string, unknown> = {}
     for (const key in row) {
       convertedRow[key] = convertDateValue(row[key])
     }
@@ -123,7 +127,7 @@ function convertDatesInData(data: Record<string, any>[]): Record<string, any>[] 
   })
 }
 
-function convertDateValue(value: any): any {
+function convertDateValue(value: unknown): unknown {
   if (value instanceof Date) {
     const year = value.getFullYear()
     const month = value.getMonth() + 1
@@ -188,7 +192,12 @@ function convertDateValue(value: any): any {
 /** 导出以便单测（这些纯函数此前只在已删除的 docx/xlsxTemplateFunctions.ts 中有测试，
  *  而那份是重构残留的死代码副本；导出后 live 实现重新获得覆盖） */
 export function sanitizeFilename(name: string): string {
-  return name.replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim() || '未命名'
+  return (
+    name
+      .replace(/[\\/:*?"<>|]/g, '-')
+      .replace(/\s+/g, ' ')
+      .trim() || '未命名'
+  )
 }
 
 export function validateFilenameTemplate(template: string): { valid: boolean; error?: string } {
@@ -216,7 +225,7 @@ export function validateFilenameTemplate(template: string): { valid: boolean; er
 }
 
 export function generateFilename(
-  row: Record<string, any>,
+  row: Record<string, unknown>,
   template: string,
   index: number,
 ): string {
@@ -288,13 +297,27 @@ function dateStringToSerial(trimmed: string): number | null {
   return null
 }
 
+/**
+ * 把 resolveValue 的结果转成 exceljs 的 CellValue。
+ *
+ * resolveValue 返回 unknown（数据来自用户表格，类型不可知），而
+ * ExcelJS.Cell.value 只接受 string/number/boolean/Date/null 等，
+ * 直接赋值过不了类型检查——此处显式收窄，非标量统一转字符串。
+ */
+function toCellValue(v: unknown): ExcelJS.CellValue {
+  if (v === null || v === undefined) return null
+  if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') return v
+  if (v instanceof Date) return v
+  return String(v)
+}
+
 function resolveValue(
   key: string,
-  rowData: Record<string, any>,
+  rowData: Record<string, unknown>,
   index: number,
-  dataList: Record<string, any>[],
-): any {
-  let v: any = undefined
+  dataList: Record<string, unknown>[],
+): unknown {
+  let v: unknown = undefined
 
   if (rowData[key] !== undefined && rowData[key] !== null) {
     v = rowData[key]
@@ -329,7 +352,7 @@ export function useTemplateExport(format: ExportFormat) {
   const dataRowCount = ref(0)
   const detectedFields = ref<string[]>([])
   const skipRows = ref(1)
-  const rawDataList = ref<Record<string, any>[]>([])
+  const rawDataList = ref<Record<string, unknown>[]>([])
 
   const filenameTemplate = ref('')
   const duplicateStrategy = ref<'appendIndex' | 'rowPrefix'>('appendIndex')
@@ -375,7 +398,7 @@ export function useTemplateExport(format: ExportFormat) {
     detectedFields.value = []
 
     try {
-      let data: Record<string, any>[] = []
+      let data: Record<string, unknown>[] = []
 
       // 扩展名判断必须忽略大小写，否则 DATA.CSV / DATA.XLSX 会两个分支都不匹配，
       // 导致 data 保持 [] 且不报错，界面表现为「什么都没发生」（见审计 P1-11）
@@ -384,7 +407,7 @@ export function useTemplateExport(format: ExportFormat) {
       if (lowerName.endsWith('.csv')) {
         const text = await file.text()
         const parsed = Papa.parse(text, { header: true, skipEmptyLines: true })
-        data = parsed.data as Record<string, any>[]
+        data = parsed.data as Record<string, unknown>[]
         // 畸形 CSV（参差行、未闭合引号）此前从不检查 errors，静默产出半截数据
         if (parsed.errors.length > 0) {
           logger.warn('CSV 解析存在问题（已尽量恢复）:', parsed.errors.slice(0, 5))
@@ -402,7 +425,7 @@ export function useTemplateExport(format: ExportFormat) {
           throw new Error('Excel 文件中没有工作表')
         }
         const firstSheet = workbook.Sheets[sheetName] as XLSX.WorkSheet
-        data = XLSX.utils.sheet_to_json(firstSheet, { raw: true }) as Record<string, any>[]
+        data = XLSX.utils.sheet_to_json(firstSheet, { raw: true }) as Record<string, unknown>[]
         if (format === 'docx') {
           data = convertDatesInData(data)
         }
@@ -463,13 +486,14 @@ export function useTemplateExport(format: ExportFormat) {
 
   const previewFilenames = computed(() => {
     if (actualDataList.value.length === 0) return [] as string[]
-    return actualDataList.value.slice(0, 3).map((row, i) =>
-      generateFilename(row, filenameTemplate.value, i),
-    )
+    return actualDataList.value
+      .slice(0, 3)
+      .map((row, i) => generateFilename(row, filenameTemplate.value, i))
   })
 
   const duplicateWarnings = computed(() => {
-    if (actualDataList.value.length === 0 || !filenameTemplate.value) return [] as { name: string; count: number }[]
+    if (actualDataList.value.length === 0 || !filenameTemplate.value)
+      return [] as { name: string; count: number }[]
     const allNames = actualDataList.value.map((row, i) =>
       generateFilename(row, filenameTemplate.value, i),
     )
@@ -488,9 +512,7 @@ export function useTemplateExport(format: ExportFormat) {
     if (!templateContent.value || dataRowCount.value === 0) return
 
     const dataList = actualDataList.value
-    const rawNames = dataList.map((row, i) =>
-      generateFilename(row, filenameTemplate.value, i),
-    )
+    const rawNames = dataList.map((row, i) => generateFilename(row, filenameTemplate.value, i))
     const finalNames = resolveDuplicates(rawNames, duplicateStrategy.value)
 
     renderResults.value = []
@@ -536,9 +558,7 @@ export function useTemplateExport(format: ExportFormat) {
     if (!templateContent.value || dataRowCount.value === 0) return
 
     const dataList = actualDataList.value
-    const rawNames = dataList.map((row, i) =>
-      generateFilename(row, filenameTemplate.value, i),
-    )
+    const rawNames = dataList.map((row, i) => generateFilename(row, filenameTemplate.value, i))
     const finalNames = resolveDuplicates(rawNames, duplicateStrategy.value)
 
     renderResults.value = []
@@ -555,8 +575,8 @@ export function useTemplateExport(format: ExportFormat) {
       const worksheet = workbook.getWorksheet(1)
       if (!worksheet) throw new Error('模板中没有工作表')
 
-      worksheet.eachRow((row: any) => {
-        row.eachCell((cell: any) => {
+      worksheet.eachRow((row: ExcelJS.Row) => {
+        row.eachCell((cell: ExcelJS.Cell) => {
           const val = cell.value
           if (typeof val !== 'string') return
 
@@ -566,7 +586,7 @@ export function useTemplateExport(format: ExportFormat) {
           if (singleKeyMatch) {
             const v = resolveValue(singleKeyMatch[1]!, rowData!, i, dataList)
             if (v !== '' && v !== undefined && v !== null) {
-              cell.value = v
+              cell.value = toCellValue(v)
               cell.numFmt = origNumFmt
             }
           } else {

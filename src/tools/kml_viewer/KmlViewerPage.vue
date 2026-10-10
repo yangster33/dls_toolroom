@@ -18,7 +18,11 @@
     <div
       class="bg-base-100 rounded-lg overflow-hidden"
       :class="isMapFullscreen ? '!rounded-none fixed inset-0 z-50 m-0' : ''"
-      :style="isMapFullscreen ? {} : { height: `calc(100vh - ${isWebFullscreen ? '40px' : '220px'})`, minHeight: '500px' }"
+      :style="
+        isMapFullscreen
+          ? {}
+          : { height: `calc(100vh - ${isWebFullscreen ? '40px' : '220px'})`, minHeight: '500px' }
+      "
     >
       <div class="flex h-full">
         <!-- Left Panel -->
@@ -73,16 +77,26 @@
               <label class="block text-sm font-semibold mb-2">📂 加载 KML</label>
               <div
                 class="border-2 border-dashed rounded-lg p-3 text-center cursor-pointer transition-colors"
-                :class="dragActive ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50 hover:bg-base-200'"
+                :class="
+                  dragActive
+                    ? 'border-primary bg-primary/10'
+                    : 'border-base-300 hover:border-primary/50 hover:bg-base-200'
+                "
                 @dragover.prevent="onDragOver"
                 @dragleave.prevent="onDragLeave"
                 @drop.prevent="onDrop"
                 @click="openFilePicker"
               >
                 <p class="text-xs text-base-content/50">拖拽 .kml 文件到此处 或点击选择</p>
-                <input ref="fileInputRef" type="file" accept=".kml" multiple class="hidden" @change="onFileSelect" />
+                <input
+                  ref="fileInputRef"
+                  type="file"
+                  accept=".kml"
+                  multiple
+                  class="hidden"
+                  @change="onFileSelect"
+                />
               </div>
-              
             </div>
 
             <!-- Layer Tree -->
@@ -93,9 +107,14 @@
                   v-if="flatPlacemarks.length > 0"
                   class="btn btn-ghost btn-xs"
                   @click="toggleAllPlacemarks"
-                >{{ allVisible ? '全部隐藏' : '全部显示' }}</button>
+                >
+                  {{ allVisible ? '全部隐藏' : '全部显示' }}
+                </button>
               </div>
-              <div v-if="flatPlacemarks.length === 0" class="text-xs text-base-content/40 text-center py-4">
+              <div
+                v-if="flatPlacemarks.length === 0"
+                class="text-xs text-base-content/40 text-center py-4"
+              >
                 加载 KML 后显示图层树
               </div>
               <!-- Tree: iterate tree roots -->
@@ -124,9 +143,21 @@
               :title="isWebFullscreen ? '退出网页全屏' : '网页全屏'"
               @click="toggleWebFullscreen"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 256" fill="currentColor">
-                <path v-if="isWebFullscreen" d="M96,160H56a8,8,0,0,1-8-8V112a8,8,0,0,1,16,0v24h32a8,8,0,0,1,0,16Zm64-64h40V56a8,8,0,0,1,16,0v40a8,8,0,0,1-8,8H160a8,8,0,0,1,0-16Zm-64-32H56a8,8,0,0,1,0-16H96a8,8,0,0,1,0,16Zm104,56a8,8,0,0,1-8,8H56a8,8,0,0,1,0-16H192A8,8,0,0,1,200,120Z"/>
-                <path v-else d="M40,80V56A16,16,0,0,1,56,40H80a8,8,0,0,1,0,16H56V80a8,8,0,0,1-16,0Zm136-24h24V80a8,8,0,0,0,16,0V56a16,16,0,0,0-16-16H176a8,8,0,0,0,0,16ZM80,200H56V176a8,8,0,0,0-16,0v24a16,16,0,0,0,16,16H80a8,8,0,0,0,0-16Zm120-24v24H176a8,8,0,0,0,0,16h24a16,16,0,0,0,16-16V176a8,8,0,0,0-16,0Z"/>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 256 256"
+                fill="currentColor"
+              >
+                <path
+                  v-if="isWebFullscreen"
+                  d="M96,160H56a8,8,0,0,1-8-8V112a8,8,0,0,1,16,0v24h32a8,8,0,0,1,0,16Zm64-64h40V56a8,8,0,0,1,16,0v40a8,8,0,0,1-8,8H160a8,8,0,0,1,0-16Zm-64-32H56a8,8,0,0,1,0-16H96a8,8,0,0,1,0,16Zm104,56a8,8,0,0,1-8,8H56a8,8,0,0,1,0-16H192A8,8,0,0,1,200,120Z"
+                />
+                <path
+                  v-else
+                  d="M40,80V56A16,16,0,0,1,56,40H80a8,8,0,0,1,0,16H56V80a8,8,0,0,1-16,0Zm136-24h24V80a8,8,0,0,0,16,0V56a16,16,0,0,0-16-16H176a8,8,0,0,0,0,16ZM80,200H56V176a8,8,0,0,0-16,0v24a16,16,0,0,0,16,16H80a8,8,0,0,0,0-16Zm120-24v24H176a8,8,0,0,0,0,16h24a16,16,0,0,0,16-16V176a8,8,0,0,0-16,0Z"
+                />
               </svg>
             </button>
             <!-- Map Fullscreen -->
@@ -135,9 +166,21 @@
               :title="isMapFullscreen ? '退出全屏地图' : '全屏地图'"
               @click="toggleMapFullscreen"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 256" fill="currentColor">
-                <path v-if="isMapFullscreen" d="M160,48v40a8,8,0,0,1-8,8H112a8,8,0,0,1,0-16h28.69L112,51.31A8,8,0,0,1,123.31,40L152,68.69V48a8,8,0,0,1,16,0ZM88,200H59.31L88,171.31A8,8,0,0,0,76.69,160L48,188.69V168a8,8,0,0,0-16,0v40a8,8,0,0,0,8,8H88a8,8,0,0,0,0-16Z"/>
-                <path v-else d="M88,48H48V88a8,8,0,0,0,16,0V59.31L92.69,88A8,8,0,0,0,104,76.69L75.31,48H88a8,8,0,0,0,0-16Zm80,160H208V168a8,8,0,0,0-16,0v28.69L163.31,168A8,8,0,0,0,152,179.31L180.69,208H168a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V168a8,8,0,0,0-16,0Z"/>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 256 256"
+                fill="currentColor"
+              >
+                <path
+                  v-if="isMapFullscreen"
+                  d="M160,48v40a8,8,0,0,1-8,8H112a8,8,0,0,1,0-16h28.69L112,51.31A8,8,0,0,1,123.31,40L152,68.69V48a8,8,0,0,1,16,0ZM88,200H59.31L88,171.31A8,8,0,0,0,76.69,160L48,188.69V168a8,8,0,0,0-16,0v40a8,8,0,0,0,8,8H88a8,8,0,0,0,0-16Z"
+                />
+                <path
+                  v-else
+                  d="M88,48H48V88a8,8,0,0,0,16,0V59.31L92.69,88A8,8,0,0,0,104,76.69L75.31,48H88a8,8,0,0,0,0-16Zm80,160H208V168a8,8,0,0,0-16,0v28.69L163.31,168A8,8,0,0,0,152,179.31L180.69,208H168a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V168a8,8,0,0,0-16,0Z"
+                />
               </svg>
             </button>
             <!-- Fit all layers -->
@@ -147,8 +190,16 @@
               title="缩放到全部图层"
               @click="fitAllLayers"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 256" fill="currentColor">
-                <path d="M152,112a8,8,0,0,1,8-8h32a8,8,0,0,1,0,16H168v24a8,8,0,0,1-16,0Zm-48,40H72V128a8,8,0,0,0-16,0v32a8,8,0,0,0,8,8h40a8,8,0,0,0,0-16Zm80-88H152a8,8,0,0,0,0,16h24v24a8,8,0,0,0,16,0V72A8,8,0,0,0,184,64ZM72,152a8,8,0,0,0-8,8v24a8,8,0,0,0,8,8h32a8,8,0,0,0,0-16H80V160A8,8,0,0,0,72,152Z"/>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 256 256"
+                fill="currentColor"
+              >
+                <path
+                  d="M152,112a8,8,0,0,1,8-8h32a8,8,0,0,1,0,16H168v24a8,8,0,0,1-16,0Zm-48,40H72V128a8,8,0,0,0-16,0v32a8,8,0,0,0,8,8h40a8,8,0,0,0,0-16Zm80-88H152a8,8,0,0,0,0,16h24v24a8,8,0,0,0,16,0V72A8,8,0,0,0,184,64ZM72,152a8,8,0,0,0-8,8v24a8,8,0,0,0,8,8h32a8,8,0,0,0,0-16H80V160A8,8,0,0,0,72,152Z"
+                />
               </svg>
             </button>
           </div>
@@ -161,32 +212,43 @@
               :class="measureMode === 'length' ? 'btn-primary' : 'btn-ghost bg-base-100'"
               title="测量长度（单击加点，双击结束）"
               @click="toggleMeasureMode('length')"
-            >📏 测距</button>
+            >
+              📏 测距
+            </button>
             <!-- Measure Area -->
             <button
               class="btn btn-xs shadow"
               :class="measureMode === 'area' ? 'btn-primary' : 'btn-ghost bg-base-100'"
               title="测量面积（单击加点，双击闭合）"
               @click="toggleMeasureMode('area')"
-            >📐 测面积</button>
+            >
+              📐 测面积
+            </button>
             <!-- Measure Angle -->
             <button
               class="btn btn-xs shadow"
               :class="measureMode === 'angle' ? 'btn-primary' : 'btn-ghost bg-base-100'"
               title="测量角度（依次点三个点）"
               @click="toggleMeasureMode('angle')"
-            >📏↗ 测角</button>
+            >
+              📏↗ 测角
+            </button>
             <!-- Coordinate Picker -->
             <button
               class="btn btn-xs shadow"
               :class="pickerActive ? 'btn-secondary' : 'btn-ghost bg-base-100'"
               title="经纬度采集（点击地图采集 WGS84 坐标）"
               @click="togglePicker"
-            >📍 采点</button>
+            >
+              📍 采点
+            </button>
           </div>
 
           <!-- Measure Result -->
-          <div v-if="measureResult" class="absolute top-2 left-2 z-[1000] bg-base-100 shadow-lg rounded-lg px-3 py-2 text-sm font-mono">
+          <div
+            v-if="measureResult"
+            class="absolute top-2 left-2 z-[1000] bg-base-100 shadow-lg rounded-lg px-3 py-2 text-sm font-mono"
+          >
             {{ measureResult }}
             <button class="btn btn-ghost btn-xs ml-1 text-error" @click="clearMeasure">✕</button>
           </div>
@@ -195,18 +257,30 @@
           <div
             v-if="pickedCoords.length > 0"
             class="absolute bottom-10 left-2 z-[1000] bg-base-100 shadow-lg rounded-lg p-3 max-h-48 overflow-y-auto text-xs"
-            style="min-width: 280px;"
+            style="min-width: 280px"
           >
             <div class="flex items-center justify-between mb-1">
               <span class="font-semibold">采集坐标 (WGS84)</span>
-              <button class="btn btn-ghost btn-xs text-error" @click="clearPickedCoords">清空</button>
+              <button class="btn btn-ghost btn-xs text-error" @click="clearPickedCoords">
+                清空
+              </button>
             </div>
-            <div v-for="(coord, idx) in pickedCoords" :key="idx" class="flex items-center gap-1 py-0.5 hover:bg-base-200 rounded px-1">
+            <div
+              v-for="(coord, idx) in pickedCoords"
+              :key="idx"
+              class="flex items-center gap-1 py-0.5 hover:bg-base-200 rounded px-1"
+            >
               <span class="text-base-content/50 w-5">{{ idx + 1 }}</span>
-              <span class="flex-1 font-mono">{{ coord.lat.toFixed(6) }}, {{ coord.lng.toFixed(6) }}</span>
-              <button class="btn btn-ghost btn-xs text-primary" @click="copyCoord(coord)">复制</button>
+              <span class="flex-1 font-mono"
+                >{{ coord.lat.toFixed(6) }}, {{ coord.lng.toFixed(6) }}</span
+              >
+              <button class="btn btn-ghost btn-xs text-primary" @click="copyCoord(coord)">
+                复制
+              </button>
             </div>
-            <button class="btn btn-xs btn-ghost mt-1 w-full" @click="copyAllCoords">复制全部</button>
+            <button class="btn btn-xs btn-ghost mt-1 w-full" @click="copyAllCoords">
+              复制全部
+            </button>
           </div>
 
           <!-- Angle measurement hint -->
@@ -230,9 +304,25 @@ import DOMPurify from 'dompurify'
 import { getToolById } from '../toolData'
 import { tileProviders, type TileProvider } from './tileProviders'
 import KmlTreeNode from './KmlTreeNode.vue'
-import type { KmlTreeNodeData } from './types'
+import type { KmlTreeNodeData, LeafletLayerLike, LatLngBoundsLike } from './types'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
 import { parseKmlCoordinates } from '@/utils/kmlCoordinates'
+
+/**
+ * 把 LeafletLayerLike 收窄成 leaflet 的 L.Layer，供 map.addLayer() 使用。
+ *
+ * KmlTreeNodeData 不用 L.Layer 声明 props，因为 @types/leaflet 的 Layer 是
+ * 带 protected 成员的 class，跨 .vue 组件边界会在结构上不兼容
+ * （"Property '_map' is missing"）。这里集中做一次断言。
+ */
+function asLeafletLayer(layer: LeafletLayerLike): L.Layer {
+  return layer as unknown as L.Layer
+}
+
+/** 同理，把 LatLngBoundsLike 收窄成 L.LatLngBounds，供 map.fitBounds() 使用 */
+function asLeafletBounds(bounds: LatLngBoundsLike): L.LatLngBounds {
+  return bounds as unknown as L.LatLngBounds
+}
 
 // ===================== Tool Config =====================
 const toolConfig = getToolById('kml_viewer')
@@ -270,7 +360,9 @@ const flatPlacemarks = computed(() => {
   return result
 })
 
-const allVisible = computed(() => flatPlacemarks.value.length > 0 && flatPlacemarks.value.every((n) => n.visible))
+const allVisible = computed(
+  () => flatPlacemarks.value.length > 0 && flatPlacemarks.value.every((n) => n.visible),
+)
 
 // ===================== Measure State =====================
 type MeasureMode = 'length' | 'area' | 'angle' | null
@@ -458,18 +550,30 @@ function setTileLayer() {
   const url = buildTileUrl(provider)
 
   if (provider.yFlip) {
-    const TencentTileLayer = L.TileLayer.extend({
-      getTileUrl(this: L.TileLayer, coords: L.Coords): string {
-        const flippedY = Math.pow(2, coords.z) - 1 - coords.y
-        const data = { ...coords, y: flippedY, s: (this as any)._getSubdomain(coords) }
-        return L.Util.template(url, data as any)
-      },
-    })
-    tileLayer = new (TencentTileLayer as any)(url, {
+    /** Leaflet 的 TileLayer 有 _getSubdomain（下划线命名即内部 API），
+     *  @types/leaflet 未声明它。用最小接口声明，替代原来的 `as any`。 */
+    interface SubdomainTileLayer extends L.TileLayer {
+      _getSubdomain(coords: L.Coords): string
+    }
+
+    /**
+     * 腾讯/高德的瓦片 Y 轴需要翻转。
+     *
+     * 不用 L.TileLayer.extend()：它的返回类型在 @types/leaflet 里推断不出
+     * 构造签名（"Expected 0 arguments, but got 2"）。改为创建一个普通实例后
+     * 覆写其 getTileUrl 方法——原型方法替换，行为等价且类型正确。
+     */
+    const layer = L.tileLayer(url, {
       subdomains: provider.subdomains,
       attribution: provider.attribution,
       maxZoom: provider.maxZoom,
-    }).addTo(map)
+    })
+    layer.getTileUrl = function (this: SubdomainTileLayer, coords: L.Coords): string {
+      const flippedY = Math.pow(2, coords.z) - 1 - coords.y
+      const data = { ...coords, y: flippedY, s: this._getSubdomain(coords) }
+      return L.Util.template(url, data as Record<string, unknown>)
+    }
+    tileLayer = layer.addTo(map)
   } else {
     tileLayer = L.tileLayer(url, {
       subdomains: provider.subdomains.length > 0 ? provider.subdomains : undefined,
@@ -594,7 +698,7 @@ async function loadKmlFile(file: File) {
   // Fit to bounds of first file
   nextTick(() => {
     if (fileNode.bounds?.isValid()) {
-      map?.fitBounds(fileNode.bounds, { padding: [50, 50] })
+      map?.fitBounds(asLeafletBounds(fileNode.bounds), { padding: [50, 50] })
     }
   })
 }
@@ -623,15 +727,18 @@ function parseKmlNode(xmlEl: Element, parent: KmlTreeNodeData, styles: Map<strin
         parent.children.push(pmNode)
         // Extend bounds
         if (pmNode.bounds?.isValid()) {
-          if (!parent.bounds) parent.bounds = L.latLngBounds(pmNode.bounds! as any, pmNode.bounds! as any)
-          else parent.bounds.extend(pmNode.bounds!)
+          // L.latLngBounds() 的类型签名漏了接收 LatLngBounds 的重载（运行时支持），
+          // 用「空 bounds + extend()」构造，绕开签名缺口也无需 as any
+          if (!parent.bounds)
+            parent.bounds = L.latLngBounds([]).extend(asLeafletBounds(pmNode.bounds))
+          else parent.bounds.extend(asLeafletBounds(pmNode.bounds))
         }
         // Propagate bounds up
         let p = parent
         while (p) {
           if (pmNode.bounds?.isValid()) {
-            if (!p.bounds) p.bounds = L.latLngBounds(pmNode.bounds! as any, pmNode.bounds! as any)
-            else p.bounds.extend(pmNode.bounds!)
+            if (!p.bounds) p.bounds = L.latLngBounds([]).extend(asLeafletBounds(pmNode.bounds))
+            else p.bounds.extend(asLeafletBounds(pmNode.bounds))
           }
           p = p.parent!
         }
@@ -651,7 +758,9 @@ function createPlacemarkNode(el: Element, styles: Map<string, string>): KmlTreeN
   // 1. Try inline <Style> inside Placemark
   const inlineStyle = el.getElementsByTagName('Style')[0]
   if (inlineStyle) {
-    const iconColor = parseKmlColorEl(inlineStyle.getElementsByTagName('IconStyle')[0] || inlineStyle)
+    const iconColor = parseKmlColorEl(
+      inlineStyle.getElementsByTagName('IconStyle')[0] || inlineStyle,
+    )
     if (iconColor) color = iconColor
   }
   // 2. Try styleUrl reference
@@ -664,7 +773,14 @@ function createPlacemarkNode(el: Element, styles: Map<string, string>): KmlTreeN
   }
 
   // Determine geometry type
-  const geometryTypes = ['Point', 'LineString', 'Polygon', 'MultiGeometry', 'Track', 'GroundOverlay']
+  const geometryTypes = [
+    'Point',
+    'LineString',
+    'Polygon',
+    'MultiGeometry',
+    'Track',
+    'GroundOverlay',
+  ]
   let geometryType = ''
   for (const gt of geometryTypes) {
     if (el.getElementsByTagName(gt).length > 0) {
@@ -674,19 +790,24 @@ function createPlacemarkNode(el: Element, styles: Map<string, string>): KmlTreeN
   }
 
   // Create Leaflet layer for this placemark
-  const leafletLayer = createLayerForPlacemark(el, color, name, descr)
+  // createLayerForPlacemark 已声明返回 L.Layer | null，这里显式收窄为 L.Layer，
+  // 避免 TS 把 bindPopup() 的 this 类型推断成结构体而与 KmlTreeNodeData 冲突
+  const leafletLayer: L.Layer | null = createLayerForPlacemark(el, color, name, descr)
   if (!leafletLayer) return null
 
   leafletLayer.addTo(map!)
 
   let bounds: L.LatLngBounds | undefined
   if ('getLatLng' in leafletLayer) {
-    bounds = L.latLngBounds([(leafletLayer as L.Marker).getLatLng(), (leafletLayer as L.Marker).getLatLng()])
+    bounds = L.latLngBounds([
+      (leafletLayer as L.Marker).getLatLng(),
+      (leafletLayer as L.Marker).getLatLng(),
+    ])
   } else if ('getBounds' in leafletLayer) {
     bounds = (leafletLayer as L.Polyline).getBounds()
   }
 
-  return {
+  const node: KmlTreeNodeData = {
     id: 'pm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
     name,
     type: 'placemark',
@@ -697,6 +818,7 @@ function createPlacemarkNode(el: Element, styles: Map<string, string>): KmlTreeN
     children: [],
     bounds,
   }
+  return node
 }
 
 function createLayerForPlacemark(
@@ -716,7 +838,9 @@ function createLayerForPlacemark(
     const points = parseKmlCoordinates(coordEl?.textContent)
     if (points.length > 0) {
       const first = points[0]!
-      return L.marker(L.latLng(first.lat, first.lng), { icon: getMarkerIcon(color) }).bindPopup(popupContent)
+      const marker = L.marker(L.latLng(first.lat, first.lng), { icon: getMarkerIcon(color) })
+      marker.bindPopup(popupContent)
+      return marker
     }
   }
 
@@ -726,7 +850,9 @@ function createLayerForPlacemark(
     const latlngs = parseCoords(lineEls[0]!)
     if (latlngs.length > 1) {
       const opts: L.PolylineOptions = { color: color || '#3388ff' }
-      return L.polyline(latlngs, opts).bindPopup(popupContent)
+      const line = L.polyline(latlngs, opts)
+      line.bindPopup(popupContent)
+      return line
     }
   }
 
@@ -737,8 +863,14 @@ function createLayerForPlacemark(
     if (outerEl) {
       const outerCoords = parseCoords(outerEl)
       if (outerCoords.length > 2) {
-        const opts: L.PolylineOptions = { color: color || '#3388ff', fillColor: color || '#3388ff', fillOpacity: 0.2 }
-        return L.polygon(outerCoords, opts).bindPopup(popupContent)
+        const opts: L.PolylineOptions = {
+          color: color || '#3388ff',
+          fillColor: color || '#3388ff',
+          fillOpacity: 0.2,
+        }
+        const poly = L.polygon(outerCoords, opts)
+        poly.bindPopup(popupContent)
+        return poly
       }
     }
   }
@@ -764,7 +896,9 @@ function createLayerForPlacemark(
       })
       .filter(Boolean) as L.LatLng[]
     if (latlngs.length > 1) {
-      return L.polyline(latlngs, { color: color || '#3388ff' }).bindPopup(popupContent)
+      const track = L.polyline(latlngs, { color: color || '#3388ff' })
+      track.bindPopup(popupContent)
+      return track
     }
   }
 
@@ -797,8 +931,8 @@ function onNodeToggle(node: KmlTreeNodeData) {
   if (node.type === 'placemark') {
     node.visible = !node.visible
     if (node.leafletLayer) {
-      if (node.visible) map?.addLayer(node.leafletLayer)
-      else map?.removeLayer(node.leafletLayer)
+      if (node.visible) map?.addLayer(asLeafletLayer(node.leafletLayer))
+      else map?.removeLayer(asLeafletLayer(node.leafletLayer))
     }
   } else {
     // Toggle folder/file → toggle all children recursively
@@ -811,15 +945,15 @@ function toggleChildrenRecursive(node: KmlTreeNodeData, visible: boolean) {
   for (const child of node.children) {
     child.visible = visible
     if (child.type === 'placemark' && child.leafletLayer) {
-      if (visible) map?.addLayer(child.leafletLayer)
-      else map?.removeLayer(child.leafletLayer)
+      if (visible) map?.addLayer(asLeafletLayer(child.leafletLayer))
+      else map?.removeLayer(asLeafletLayer(child.leafletLayer))
     }
     toggleChildrenRecursive(child, visible)
   }
 }
 
 function onNodeZoom(node: KmlTreeNodeData) {
-  if (node.bounds?.isValid()) map?.fitBounds(node.bounds, { padding: [50, 50] })
+  if (node.bounds?.isValid()) map?.fitBounds(asLeafletBounds(node.bounds), { padding: [50, 50] })
   else if (node.type === 'placemark' && 'getLatLng' in (node.leafletLayer || {})) {
     map?.setView((node.leafletLayer as L.Marker).getLatLng(), 15)
   }
@@ -839,7 +973,7 @@ function onNodeRemove(node: KmlTreeNodeData) {
 
 function removeNodeLayersRecursive(node: KmlTreeNodeData) {
   if (node.type === 'placemark' && node.leafletLayer) {
-    map?.removeLayer(node.leafletLayer)
+    map?.removeLayer(asLeafletLayer(node.leafletLayer))
   }
   for (const child of node.children) {
     removeNodeLayersRecursive(child)
@@ -851,8 +985,8 @@ function toggleAllPlacemarks() {
   for (const n of flatPlacemarks.value) {
     n.visible = target
     if (n.leafletLayer) {
-      if (target) map?.addLayer(n.leafletLayer)
-      else map?.removeLayer(n.leafletLayer)
+      if (target) map?.addLayer(asLeafletLayer(n.leafletLayer))
+      else map?.removeLayer(asLeafletLayer(n.leafletLayer))
     }
   }
   // Also update folder nodes
@@ -876,7 +1010,7 @@ function fitAllLayers() {
   let hasBounds = false
   for (const n of flatPlacemarks.value) {
     if (!n.visible || !n.bounds?.isValid()) continue
-    bounds.extend(n.bounds)
+    bounds.extend(asLeafletBounds(n.bounds))
     hasBounds = true
   }
   if (hasBounds) map.fitBounds(bounds, { padding: [50, 50] })
@@ -1070,7 +1204,7 @@ function togglePicker() {
     map!.on('click', handler)
     drawHandler = () => {
       map!.off('click', handler)
-      map!.off('dblclick', null as any)
+      map!.off('dblclick')
     }
   }
 }

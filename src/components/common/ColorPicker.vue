@@ -11,20 +11,13 @@
 
     <!-- 弹出 Sketch 颜色选择器 (Teleport 到 body 避免裁剪) -->
     <Teleport to="body">
-      <div
-        v-if="open"
-        class="fixed inset-0 z-[100]"
-        @click.self="closePicker"
-      >
+      <div v-if="open" class="fixed inset-0 z-[100]" @click.self="closePicker">
         <div
           ref="dropdownRef"
           class="absolute color-picker-dd rounded-xl overflow-hidden"
           :style="dropdownStyle"
         >
-          <Sketch
-            :modelValue="modelValue"
-            @update:modelValue="onColorChange"
-          />
+          <Sketch :modelValue="modelValue" @update:modelValue="onColorChange" />
         </div>
       </div>
     </Teleport>
@@ -102,12 +95,22 @@ function togglePicker() {
 // 颜色变更
 // ============================================================
 
-function onColorChange(value: any) {
+/**
+ * @ckpack/vue-color 的 Sketch 组件 update:modelValue 载荷是对象（含 hex/hex8/rgba），
+ * 不是字符串。原签名写 `value: string` 与库的真实载荷不符（运行时靠 typeof 分支兜住）。
+ * 这里按库的真实载荷声明，顺带消掉 no-explicit-any。
+ */
+interface SketchPayload {
+  hex: string
+  hex8?: string
+}
+
+function onColorChange(value: string | SketchPayload) {
   let hex = ''
   if (typeof value === 'string') {
     hex = value
-  } else if (value && typeof value === 'object') {
-    hex = value.hex || value.hex8 || ''
+  } else if (value) {
+    hex = value.hex8 || value.hex || ''
   }
   if (hex && hex !== props.modelValue) {
     emit('update:modelValue', hex)
@@ -164,7 +167,7 @@ onUnmounted(() => {
 }
 @media (prefers-color-scheme: dark) {
   .color-picker-dd {
-    background-color: #2a303c;   /* daisyUI dark base-100 等价色 */
+    background-color: #2a303c; /* daisyUI dark base-100 等价色 */
     color: #e5e7eb;
   }
 }

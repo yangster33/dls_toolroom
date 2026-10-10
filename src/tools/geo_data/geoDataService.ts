@@ -2,6 +2,21 @@ import * as turf from '@turf/turf'
 import toGeoJSON from 'togeojson'
 import JSZip from 'jszip'
 import * as XLSX from 'xlsx'
+import type { Feature, LineString } from 'geojson'
+
+/**
+ * turf.polygonToLine 的返回类型是
+ * `Feature<LineString|MultiLineString> | FeatureCollection<...>`
+ * —— 前者有 coordinates，后者只有 features。booleanPointOnLine 只接受前者。
+ * 这里做运行时判别后收窄，替代原来的 `as any`。
+ */
+function asLineFeature(value: unknown): Feature<LineString, GeoJSON.GeoJsonProperties> | null {
+  if (value === null || typeof value !== 'object') return null
+  const feature = value as { type?: unknown; geometry?: { type?: unknown } | null }
+  if (feature.type !== 'Feature' || feature.geometry == null) return null
+  if (feature.geometry.type !== 'LineString') return null
+  return value as Feature<LineString, GeoJSON.GeoJsonProperties>
+}
 
 // toGeoJSON 使用
 const toGeoJson = toGeoJSON as unknown as { kml: (doc: Document) => GeoJSON.FeatureCollection }
@@ -163,10 +178,7 @@ export interface PolygonToPolygonData {
 /**
  * 解析 KML 文件
  */
-export async function parseKML(
-  file: File,
-  onProgress?: ProgressCallback
-): Promise<ParseResult> {
+export async function parseKML(file: File, onProgress?: ProgressCallback): Promise<ParseResult> {
   const errors: string[] = []
   const features: GeoFeature[] = []
 
@@ -182,7 +194,14 @@ export async function parseKML(
     const parseError = xmlDoc.querySelector('parsererror')
     if (parseError) {
       errors.push('KML 文件格式不正确，无法解析')
-      return { success: false, features: [], errors, totalPoints: 0, totalLines: 0, totalPolygons: 0 }
+      return {
+        success: false,
+        features: [],
+        errors,
+        totalPoints: 0,
+        totalLines: 0,
+        totalPolygons: 0,
+      }
     }
 
     onProgress?.(50, '正在转换为 GeoJSON...')
@@ -190,7 +209,14 @@ export async function parseKML(
 
     if (!geojson.features || geojson.features.length === 0) {
       errors.push('文件中未找到有效的地理要素')
-      return { success: false, features: [], errors, totalPoints: 0, totalLines: 0, totalPolygons: 0 }
+      return {
+        success: false,
+        features: [],
+        errors,
+        totalPoints: 0,
+        totalLines: 0,
+        totalPolygons: 0,
+      }
     }
 
     onProgress?.(70, '正在处理要素...')
@@ -256,10 +282,7 @@ export async function parseKML(
 /**
  * 解析 KMZ 文件
  */
-export async function parseKMZ(
-  file: File,
-  onProgress?: ProgressCallback
-): Promise<ParseResult> {
+export async function parseKMZ(file: File, onProgress?: ProgressCallback): Promise<ParseResult> {
   const errors: string[] = []
 
   try {
@@ -273,7 +296,14 @@ export async function parseKMZ(
     const kmlFile = zip.file(/\.kml$/i)[0]
     if (!kmlFile) {
       errors.push('KMZ 文件中未找到 KML 文件')
-      return { success: false, features: [], errors, totalPoints: 0, totalLines: 0, totalPolygons: 0 }
+      return {
+        success: false,
+        features: [],
+        errors,
+        totalPoints: 0,
+        totalLines: 0,
+        totalPolygons: 0,
+      }
     }
 
     onProgress?.(60, '正在解析 KML 内容...')
@@ -286,7 +316,14 @@ export async function parseKMZ(
     const parseError = xmlDoc.querySelector('parsererror')
     if (parseError) {
       errors.push('KML 内容格式不正确')
-      return { success: false, features: [], errors, totalPoints: 0, totalLines: 0, totalPolygons: 0 }
+      return {
+        success: false,
+        features: [],
+        errors,
+        totalPoints: 0,
+        totalLines: 0,
+        totalPolygons: 0,
+      }
     }
 
     onProgress?.(80, '正在转换为 GeoJSON...')
@@ -356,7 +393,7 @@ export async function parseKMZ(
 export async function performAnalysis(
   features: GeoFeature[],
   analysisTypes: string[],
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
 ): Promise<AnalysisResult[]> {
   const results: AnalysisResult[] = []
   const points = features.filter((f): f is PointFeature => f.type === 'Point')
@@ -473,7 +510,17 @@ async function analyzeLines(lines: LineFeature[]): Promise<AnalysisResult> {
     type: 'line_analysis',
     label: '单线分析',
     data: data as unknown as Record<string, unknown>[],
-    columns: ['序号', '名称', '类型', '长度_km', '点数', '起点经度', '起点纬度', '终点经度', '终点纬度'],
+    columns: [
+      '序号',
+      '名称',
+      '类型',
+      '长度_km',
+      '点数',
+      '起点经度',
+      '起点纬度',
+      '终点经度',
+      '终点纬度',
+    ],
   }
 }
 
@@ -546,14 +593,27 @@ async function analyzePointToPoint(points: PointFeature[]): Promise<AnalysisResu
     type: 'point_to_point',
     label: '点与点关系',
     data: data as unknown as Record<string, unknown>[],
-    columns: ['点A名称', '点A经度', '点A纬度', '点B名称', '点B经度', '点B纬度', '距离_km', '方位角_度', '是否重合'],
+    columns: [
+      '点A名称',
+      '点A经度',
+      '点A纬度',
+      '点B名称',
+      '点B经度',
+      '点B纬度',
+      '距离_km',
+      '方位角_度',
+      '是否重合',
+    ],
   }
 }
 
 /**
  * 点与线关系分析
  */
-async function analyzePointToLine(points: PointFeature[], lines: LineFeature[]): Promise<AnalysisResult> {
+async function analyzePointToLine(
+  points: PointFeature[],
+  lines: LineFeature[],
+): Promise<AnalysisResult> {
   const data: PointToLineData[] = []
 
   for (const point of points) {
@@ -585,14 +645,26 @@ async function analyzePointToLine(points: PointFeature[], lines: LineFeature[]):
     type: 'point_to_line',
     label: '点与线关系',
     data: data as unknown as Record<string, unknown>[],
-    columns: ['点名称', '点经度', '点纬度', '线名称', '是否在线上', '到线距离_m', '最近点经度', '最近点纬度'],
+    columns: [
+      '点名称',
+      '点经度',
+      '点纬度',
+      '线名称',
+      '是否在线上',
+      '到线距离_m',
+      '最近点经度',
+      '最近点纬度',
+    ],
   }
 }
 
 /**
  * 点与面关系分析
  */
-async function analyzePointToPolygon(points: PointFeature[], polygons: PolygonFeature[]): Promise<AnalysisResult> {
+async function analyzePointToPolygon(
+  points: PointFeature[],
+  polygons: PolygonFeature[],
+): Promise<AnalysisResult> {
   const data: PointToPolygonData[] = []
 
   for (const point of points) {
@@ -604,7 +676,10 @@ async function analyzePointToPolygon(points: PointFeature[], polygons: PolygonFe
       const isInside = turf.booleanPointInPolygon(pt, polygonFeature)
       const distance = turf.pointToPolygonDistance(pt, polygonFeature, { units: 'meters' })
       const polygonLine = turf.polygonToLine(polygonFeature)
-      const isOnBoundary = turf.booleanPointOnLine(pt, polygonLine as any)
+      const isOnBoundary = (() => {
+        const lf = asLineFeature(polygonLine)
+        return lf ? turf.booleanPointOnLine(pt, lf) : false
+      })()
 
       const ptCoords = point.coordinates
 
@@ -666,14 +741,28 @@ async function analyzeLineToLine(lines: LineFeature[]): Promise<AnalysisResult> 
     type: 'line_to_line',
     label: '线与线关系',
     data: data as unknown as Record<string, unknown>[],
-    columns: ['线A名称', '线A长度_km', '线B名称', '线B长度_km', '是否相交', '是否交叉', '是否平行', '是否相等', '是否重叠', '交点数量'],
+    columns: [
+      '线A名称',
+      '线A长度_km',
+      '线B名称',
+      '线B长度_km',
+      '是否相交',
+      '是否交叉',
+      '是否平行',
+      '是否相等',
+      '是否重叠',
+      '交点数量',
+    ],
   }
 }
 
 /**
  * 线与面关系分析
  */
-async function analyzeLineToPolygon(lines: LineFeature[], polygons: PolygonFeature[]): Promise<AnalysisResult> {
+async function analyzeLineToPolygon(
+  lines: LineFeature[],
+  polygons: PolygonFeature[],
+): Promise<AnalysisResult> {
   const data: LineToPolygonData[] = []
 
   for (const line of lines) {
@@ -706,7 +795,17 @@ async function analyzeLineToPolygon(lines: LineFeature[], polygons: PolygonFeatu
     type: 'line_to_polygon',
     label: '线与面关系',
     data: data as unknown as Record<string, unknown>[],
-    columns: ['线名称', '线长度_km', '面名称', '面面积_km2', '是否相交', '是否穿越', '线是否在面内', '面是否包含线', '交点数量'],
+    columns: [
+      '线名称',
+      '线长度_km',
+      '面名称',
+      '面面积_km2',
+      '是否相交',
+      '是否穿越',
+      '线是否在面内',
+      '面是否包含线',
+      '交点数量',
+    ],
   }
 }
 
@@ -730,10 +829,9 @@ async function analyzePolygonToPolygon(polygons: PolygonFeature[]): Promise<Anal
 
       let intersectionArea = '0'
       try {
-        const fcA = turf.featureCollection([polyA])
-        const fcB = turf.featureCollection([polyB])
-        const intersection = turf.intersect(fcA as any, fcB as any) as any
-        if (intersection && intersection.features && intersection.features.length > 0) {
+        const intersection = turf.intersect(turf.featureCollection([polyA, polyB]))
+        if (intersection) {
+          // turf v7 的 intersect 只接受一个 FeatureCollection，返回 Feature | null
           intersectionArea = (turf.area(intersection) / 1000000).toFixed(4)
         }
       } catch {
@@ -760,7 +858,19 @@ async function analyzePolygonToPolygon(polygons: PolygonFeature[]): Promise<Anal
     type: 'polygon_to_polygon',
     label: '面与面关系',
     data: data as unknown as Record<string, unknown>[],
-    columns: ['面A名称', '面A面积_km2', '面B名称', '面B面积_km2', '是否相交', '是否重叠', 'A是否在B内', 'A是否包含B', '是否分离', '是否相等', '交叠面积_km2'],
+    columns: [
+      '面A名称',
+      '面A面积_km2',
+      '面B名称',
+      '面B面积_km2',
+      '是否相交',
+      '是否重叠',
+      'A是否在B内',
+      'A是否包含B',
+      '是否分离',
+      '是否相等',
+      '交叠面积_km2',
+    ],
   }
 }
 

@@ -28,6 +28,22 @@ import { useDaisyTheme } from '@/composables/useDaisyTheme'
 import { parseOklch, oklchToHex } from '@/utils/colorUtils'
 import { logger } from '@/utils/logger'
 
+/**
+ * echarts 不把回调参数类型从主入口导出（只在本包 types 内部声明），
+ * 这里按本项目实际用到的字段声明最小类型，避免为过 lint 而写 `as any`。
+ */
+interface ChartCallbackParams {
+  data?: unknown
+  name?: unknown
+}
+
+/** 归一化回调参数：多序列时 echarts 传数组，取第一个 */
+function normalizeCallback(raw: unknown): ChartCallbackParams | null {
+  if (Array.isArray(raw)) return (raw[0] as ChartCallbackParams | undefined) ?? null
+  if (raw !== null && typeof raw === 'object') return raw as ChartCallbackParams
+  return null
+}
+
 const props = defineProps<{
   toolId?: string
 }>()
@@ -101,9 +117,11 @@ const generateChartOption = (): EChartsOption => {
       borderColor: oklchToHex(base300.value),
       borderWidth: 1,
       textStyle: { color: baseContent.value },
-      formatter: (params: any) => {
-        const data = nameToData.value.get(params.name)
-        if (!data) return params.name
+      formatter: (raw: unknown) => {
+        const params = normalizeCallback(raw)
+        const name = typeof params?.name === 'string' ? params.name : undefined
+        const data = name !== undefined ? nameToData.value.get(name) : undefined
+        if (!data) return params?.name === undefined ? '' : String(params.name)
         return `
           <div style="padding: 8px;">
             <div style="font-weight: bold; margin-bottom: 8px; font-size: 14px;">${data.name}</div>
@@ -176,15 +194,20 @@ const generateChartOption = (): EChartsOption => {
 const applyChartOption = () => {
   if (!chartInstance) return
 
-  const prevOpt = chartInstance.getOption() as any
-  const prevZoom = prevOpt?.series?.[0]?.zoom
-  const prevCenter = prevOpt?.series?.[0]?.center
+  const prevOpt = chartInstance.getOption() as EChartsOption | undefined
+  // SeriesOption 是联合类型（line/bar/scatter...），map 系列的 zoom/center
+  // 只在 MapSeriesOption 上存在，这里显式收窄到 map 系列再读。
+  const prevSeries = Array.isArray(prevOpt?.series) ? prevOpt.series[0] : undefined
+  const prevMap = prevSeries?.type === 'map' ? prevSeries : undefined
+  const prevZoom = prevMap?.zoom
+  const prevCenter = prevMap?.center
 
   const newOpt = generateChartOption()
-  if ((newOpt.series as any)?.[0]) {
-    const s = (newOpt.series as any)[0] as any
-    if (prevZoom != null) s.zoom = prevZoom
-    if (prevCenter != null) s.center = prevCenter
+  const newSeries = Array.isArray(newOpt.series) ? newOpt.series[0] : undefined
+  const newMap = newSeries?.type === 'map' ? newSeries : undefined
+  if (newMap) {
+    if (prevZoom != null) newMap.zoom = prevZoom
+    if (prevCenter != null) newMap.center = prevCenter
   }
 
   chartInstance.setOption(newOpt, true)
@@ -225,10 +248,7 @@ const fetchMapData = async () => {
 
 async function loadChinaMap() {
   try {
-    const [_, resp] = await Promise.all([
-      fetchMapData(),
-      fetch('/map/china.json'),
-    ])
+    const [, resp] = await Promise.all([fetchMapData(), fetch('/map/china.json')])
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
     const geoJson = await resp.json()
 
@@ -256,7 +276,7 @@ watch(
   async () => {
     await fetchMapData()
     applyChartOption()
-  }
+  },
 )
 
 onMounted(async () => {

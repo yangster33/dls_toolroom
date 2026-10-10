@@ -185,13 +185,8 @@ const isMatch = (part: string) => {
   return query && part.toLowerCase() === query
 }
 
-const tools = computed<ToolConfig[]>({
-  get: () => store.getOrderedTools(),
-  set: (value) => {
-    store.updateOrder(value.map((t) => t.id))
-  },
-})
-
+// 注意：原 `tools` computed 声明后从未被使用（模板用的是 filteredTools /
+// orderedTools），已删除。eslint no-unused-vars。
 const filteredTools = computed<ToolConfig[]>(() => {
   let list = store.getOrderedTools()
 

@@ -3,6 +3,30 @@ import * as echarts from 'echarts'
 import type { GdacsEvent } from './gdacsService'
 import { getAlertLevelColor, getEventTypeLabel } from './gdacsService'
 
+/**
+ * echarts 不把回调参数类型（TopLevelFormatterParams / CallbackDataParams）
+ * 从主入口导出，只在本包 types 内部声明。这里按本项目实际用到的字段声明
+ * 最小类型，避免为此引入 `as any`。
+ */
+interface ChartCallbackParams {
+  data?: unknown
+}
+
+/** 归一化回调参数：多序列时 echarts 传数组，取第一个 */
+function normalizeCallback(raw: unknown): ChartCallbackParams | null {
+  if (Array.isArray(raw)) return (raw[0] as ChartCallbackParams | undefined) ?? null
+  if (raw !== null && typeof raw === 'object') return raw as ChartCallbackParams
+  return null
+}
+
+/** 从回调参数取出 series data 并收窄为对象；非对象返回 null */
+function extractSeriesData<T>(params: ChartCallbackParams): T | null {
+  const raw = params.data
+  if (raw === null || raw === undefined) return null
+  if (typeof raw !== 'object' || Array.isArray(raw)) return null
+  return raw as T
+}
+
 export interface ChartThemeColors {
   base100: string
   base200: string
@@ -65,10 +89,7 @@ export function oklchToHex(color: string): string {
   return `#${hex(r)}${hex(g)}${hex(bl)}`
 }
 
-export function generateEventTypeChart(
-  data: GdacsEvent[],
-  theme: ChartThemeColors
-): EChartsOption {
+export function generateEventTypeChart(data: GdacsEvent[], theme: ChartThemeColors): EChartsOption {
   if (!data || data.length === 0) {
     return {}
   }
@@ -134,7 +155,7 @@ export function generateEventTypeChart(
 
 export function generateAlertLevelChart(
   data: GdacsEvent[],
-  theme: ChartThemeColors
+  theme: ChartThemeColors,
 ): EChartsOption {
   if (!data || data.length === 0) {
     return {}
@@ -199,15 +220,14 @@ export function generateAlertLevelChart(
   }
 }
 
-export function generateTimeChart(
-  data: GdacsEvent[],
-  theme: ChartThemeColors
-): EChartsOption {
+export function generateTimeChart(data: GdacsEvent[], theme: ChartThemeColors): EChartsOption {
   if (!data || data.length === 0) {
     return {}
   }
 
-  const sortedEvents = [...data].sort((a, b) => new Date(a.fromdate).getTime() - new Date(b.fromdate).getTime())
+  const sortedEvents = [...data].sort(
+    (a, b) => new Date(a.fromdate).getTime() - new Date(b.fromdate).getTime(),
+  )
 
   return {
     backgroundColor: 'transparent',
@@ -221,13 +241,20 @@ export function generateTimeChart(
       borderColor: oklchToHex(theme.base300),
       borderWidth: 1,
       textStyle: { color: theme.baseContent },
-      formatter: (params: any) => {
+      formatter: (raw: unknown) => {
+        const ev = extractSeriesData<{
+          title: string
+          type: string
+          alertlevel: string
+          country: string
+        }>(normalizeCallback(raw) ?? {})
+        if (!ev) return ''
         return `
           <div style="padding: 8px;">
-            <div style="font-weight: bold; margin-bottom: 4px;">${params.data.title}</div>
-            <div>类型: ${getEventTypeLabel(params.data.type)}</div>
-            <div>级别: <span style="color: ${getAlertLevelColor(params.data.alertlevel)}; font-weight: bold;">${params.data.alertlevel}</span></div>
-            <div>国家: ${params.data.country}</div>
+            <div style="font-weight: bold; margin-bottom: 4px;">${ev.title}</div>
+            <div>类型: ${getEventTypeLabel(ev.type)}</div>
+            <div>级别: <span style="color: ${getAlertLevelColor(ev.alertlevel)}; font-weight: bold;">${ev.alertlevel}</span></div>
+            <div>国家: ${ev.country}</div>
           </div>
         `
       },
@@ -271,7 +298,10 @@ export function generateTimeChart(
         })),
         symbolSize: 20,
         itemStyle: {
-          color: (params: any) => getAlertLevelColor(params.data.alertlevel),
+          color: (raw: unknown) => {
+            const ev = extractSeriesData<{ alertlevel: string }>(normalizeCallback(raw) ?? {})
+            return getAlertLevelColor(ev?.alertlevel ?? '')
+          },
           shadowBlur: 10,
           shadowColor: 'rgba(0, 0, 0, 0.3)',
         },
@@ -282,7 +312,10 @@ export function generateTimeChart(
 
 export type ChartType = 'eventType' | 'alertLevel' | 'time'
 
-export const chartConfigs: Record<ChartType, { title: string; generator: typeof generateEventTypeChart }> = {
+export const chartConfigs: Record<
+  ChartType,
+  { title: string; generator: typeof generateEventTypeChart }
+> = {
   eventType: { title: '事件类型分布', generator: generateEventTypeChart },
   alertLevel: { title: '警报级别统计', generator: generateAlertLevelChart },
   time: { title: '时间分布', generator: generateTimeChart },

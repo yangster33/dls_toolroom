@@ -33,7 +33,12 @@ export interface GdacsFeature {
     countrycode: string
     population: number
     url: string
-    geometry: {
+    /** GDACS 的 GeoJSON 响应里这些字段是可选的，代码里有 `|| 兜底` */
+    id?: string
+    type?: string
+    latitude?: number
+    longitude?: number
+    geometry?: {
       type: string
       coordinates: number[]
     }
@@ -93,6 +98,46 @@ export interface GdacsApiResponse {
   total?: number
 }
 
+/**
+ * GDACS 的旧版接口会直接返回事件数组（而不是 GeoJSON FeatureCollection），
+ * 元素字段扁平。显式声明它，避免为解析这个分支而写 `any`。
+ */
+export interface GdacsLegacyEventItem {
+  eventid?: string
+  eventtype?: string
+  name?: string
+  title?: string
+  country?: string
+  countrycode?: string
+  fromdate?: string
+  todate?: string
+  alertlevel?: string
+  severity?: string
+  population?: number
+  latitude?: number
+  longitude?: number
+  /** 旧版接口用 lat/lon 而不是 latitude/longitude */
+  lat?: number
+  lon?: number
+  description?: string
+  htmldescription?: string
+  url?: string
+}
+
+/**
+ * 把可能是 number / string / undefined 的值转成有限数字；不可解析返回 null。
+ * 替代 `parseFloat(x)` —— 后者只接受 string，遇到 undefined 会类型报错，
+ * 且 parseFloat('116abc') 会宽松地返回 116。
+ */
+function toFiniteNumber(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (trimmed === '') return null
+  const n = Number(trimmed)
+  return Number.isFinite(n) ? n : null
+}
+
 export async function fetchGdacsData(formData: GdacsFormData): Promise<QueryResult> {
   try {
     const today = new Date().toISOString().split('T')[0]
@@ -139,13 +184,15 @@ export async function fetchGdacsData(formData: GdacsFormData): Promise<QueryResu
 
     if (jsonData.type === 'FeatureCollection' && jsonData.features) {
       total = jsonData.features.length
-      events = jsonData.features.map((feature: any) => {
+      events = jsonData.features.map((feature: GdacsFeature) => {
         const props = feature.properties || {}
         const coords = feature.geometry?.coordinates || []
 
         const propsUrl = typeof props.url === 'string' ? props.url : ''
-        const eventUrl = propsUrl || `https://www.gdacs.org/report.aspx?eventid=${props.eventid}&eventtype=${props.eventtype}`
-        
+        const eventUrl =
+          propsUrl ||
+          `https://www.gdacs.org/report.aspx?eventid=${props.eventid}&eventtype=${props.eventtype}`
+
         return {
           id: props.eventid || props.id || '',
           title: props.title || props.name || '',
@@ -157,18 +204,20 @@ export async function fetchGdacsData(formData: GdacsFormData): Promise<QueryResu
           alertlevel: props.alertlevel || '',
           severity: props.severity || '',
           population: props.population || 0,
-          latitude: parseFloat(props.latitude) || parseFloat(coords[1]) || 0,
-          longitude: parseFloat(props.longitude) || parseFloat(coords[0]) || 0,
+          latitude: toFiniteNumber(props.latitude ?? coords[1]) ?? 0,
+          longitude: toFiniteNumber(props.longitude ?? coords[0]) ?? 0,
           description: props.description || props.htmldescription || '',
           url: eventUrl,
         }
       })
     } else if (Array.isArray(jsonData)) {
       total = jsonData.length
-      events = jsonData.map((item: any) => {
+      events = jsonData.map((item: GdacsLegacyEventItem) => {
         const itemUrl = typeof item.url === 'string' ? item.url : ''
-        const eventUrl = itemUrl || `https://www.gdacs.org/report.aspx?eventid=${item.eventid}&eventtype=${item.eventtype}`
-        
+        const eventUrl =
+          itemUrl ||
+          `https://www.gdacs.org/report.aspx?eventid=${item.eventid}&eventtype=${item.eventtype}`
+
         return {
           id: item.eventid || '',
           title: item.title || item.name || '',
@@ -180,8 +229,8 @@ export async function fetchGdacsData(formData: GdacsFormData): Promise<QueryResu
           alertlevel: item.alertlevel || '',
           severity: item.severity || '',
           population: item.population || 0,
-          latitude: parseFloat(item.latitude) || parseFloat(item.lat) || 0,
-          longitude: parseFloat(item.longitude) || parseFloat(item.lon) || 0,
+          latitude: toFiniteNumber(item.latitude ?? item.lat) ?? 0,
+          longitude: toFiniteNumber(item.longitude ?? item.lon) ?? 0,
           description: item.description || '',
           url: eventUrl,
         }

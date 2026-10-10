@@ -2,6 +2,37 @@ import type { EChartsOption } from 'echarts'
 import * as echarts from 'echarts'
 import type { EarthquakeApiResponse } from './earthquakeService'
 
+/**
+ * echarts 不把回调参数类型（TopLevelFormatterParams / CallbackDataParams）
+ * 从主入口导出，只在本包 types 内部声明。这里按本项目**实际用到**的字段
+ * 声明最小类型，避免为此引入 `as any`。
+ */
+interface ChartCallbackParams {
+  data?: unknown
+  name?: unknown
+}
+
+/**
+ * 归一化回调参数。
+ *
+ * echarts 的 TopLevelFormatterParams 是 `CallbackDataParams | CallbackDataParams[]`
+ * （多序列时是数组）。对外声明成 `(raw: unknown)` 以兼容这个联合，
+ * 进来后再收窄。
+ */
+function normalizeCallback(raw: unknown): ChartCallbackParams | null {
+  if (Array.isArray(raw)) return (raw[0] as ChartCallbackParams | undefined) ?? null
+  if (raw !== null && typeof raw === 'object') return raw as ChartCallbackParams
+  return null
+}
+
+/** 从回调参数取出 series data 并收窄为对象；非对象返回 null */
+function extractSeriesData<T>(params: ChartCallbackParams): T | null {
+  const raw = params.data
+  if (raw === null || raw === undefined) return null
+  if (typeof raw !== 'object' || Array.isArray(raw)) return null
+  return raw as T
+}
+
 export interface ChartThemeColors {
   base100: string
   base200: string
@@ -77,7 +108,7 @@ export function getMagnitudeColor(mag: number): string {
 
 export function generateMagnitudeTimeChart(
   data: EarthquakeApiResponse,
-  theme: ChartThemeColors
+  theme: ChartThemeColors,
 ): EChartsOption {
   const features = data.features
   if (!features || features.length === 0) {
@@ -87,7 +118,7 @@ export function generateMagnitudeTimeChart(
   const sortedFeatures = [...features].sort((a, b) => a.properties.time - b.properties.time)
 
   const dateStrings = sortedFeatures.map((f) =>
-    new Date(f.properties.time).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+    new Date(f.properties.time).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }),
   )
 
   const seriesData = sortedFeatures.map((f, i) => ({
@@ -115,16 +146,20 @@ export function generateMagnitudeTimeChart(
       borderColor: oklchToHex(theme.base300),
       borderWidth: 1,
       textStyle: { color: theme.baseContent },
-      formatter: (params: { data: { mag: number; time: string; place: string } }) => {
+      formatter: (raw: unknown) => {
+        const params = normalizeCallback(raw)
+        if (!params) return ''
+        const d = extractSeriesData<{ place: string; mag: number; time: string }>(params)
+        if (!d) return ''
         return `
           <div style="padding: 8px;">
-            <div style="font-weight: bold; margin-bottom: 4px;">${params.data.place}</div>
-            <div>震级: <span style="color: ${getMagnitudeColor(params.data.mag)}; font-weight: bold;">${params.data.mag}</span></div>
-            <div>时间: ${params.data.time}</div>
+            <div style="font-weight: bold; margin-bottom: 4px;">${d.place}</div>
+            <div>震级: <span style="color: ${getMagnitudeColor(d.mag)}; font-weight: bold;">${d.mag}</span></div>
+            <div>时间: ${d.time}</div>
           </div>
         `
       },
-    } as any,
+    },
     grid: {
       left: '3%',
       right: '4%',
@@ -157,18 +192,21 @@ export function generateMagnitudeTimeChart(
         data: seriesData,
         symbolSize: (data: { mag: number }) => Math.max(10, data.mag * 5),
         itemStyle: {
-          color: (params: { data: { mag: number } }) => getMagnitudeColor(params.data.mag),
+          color: (raw: unknown) => {
+            const mag = extractSeriesData<{ mag: number }>(normalizeCallback(raw) ?? {})?.mag
+            return mag !== undefined ? getMagnitudeColor(mag) : '#999'
+          },
           shadowBlur: 10,
           shadowColor: 'rgba(0, 0, 0, 0.3)',
         },
       },
-    ] as any,
+    ],
   }
 }
 
 export function generateMagnitudeDistributionChart(
   data: EarthquakeApiResponse,
-  theme: ChartThemeColors
+  theme: ChartThemeColors,
 ): EChartsOption {
   const features = data.features
   if (!features || features.length === 0) {
@@ -186,11 +224,21 @@ export function generateMagnitudeDistributionChart(
     { min: 8, max: 10, label: '8级+' },
   ]
 
-  const counts = bins.map((bin) =>
-    features.filter((f) => f.properties.mag >= bin.min && f.properties.mag < bin.max).length
+  const counts = bins.map(
+    (bin) =>
+      features.filter((f) => f.properties.mag >= bin.min && f.properties.mag < bin.max).length,
   )
 
-  const colors = ['#8b5cf6', '#22c55e', '#84cc16', '#eab308', '#f59e0b', '#f97316', '#ef4444', '#dc2626']
+  const colors = [
+    '#8b5cf6',
+    '#22c55e',
+    '#84cc16',
+    '#eab308',
+    '#f59e0b',
+    '#f97316',
+    '#ef4444',
+    '#dc2626',
+  ]
 
   return {
     backgroundColor: 'transparent',
@@ -249,7 +297,7 @@ export function generateMagnitudeDistributionChart(
 
 export function generateDepthChart(
   data: EarthquakeApiResponse,
-  theme: ChartThemeColors
+  theme: ChartThemeColors,
 ): EChartsOption {
   const features = data.features
   if (!features || features.length === 0) {
@@ -259,7 +307,7 @@ export function generateDepthChart(
   const sortedFeatures = [...features].sort((a, b) => a.properties.time - b.properties.time)
 
   const dateStrings = sortedFeatures.map((f) =>
-    new Date(f.properties.time).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+    new Date(f.properties.time).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }),
   )
 
   const seriesData = sortedFeatures.map((f, i) => ({
@@ -287,16 +335,20 @@ export function generateDepthChart(
       borderColor: oklchToHex(theme.base300),
       borderWidth: 1,
       textStyle: { color: theme.baseContent },
-      formatter: (params: { data: { mag: number; depth: number; time: string } }) => {
+      formatter: (raw: unknown) => {
+        const params = normalizeCallback(raw)
+        if (!params) return ''
+        const d = extractSeriesData<{ mag: number; depth: number; time: string }>(params)
+        if (!d) return ''
         return `
           <div style="padding: 8px;">
-            <div>震级: <span style="color: ${getMagnitudeColor(params.data.mag)}; font-weight: bold;">${params.data.mag}</span></div>
-            <div>深度: ${params.data.depth} km</div>
-            <div>时间: ${params.data.time}</div>
+            <div>震级: <span style="color: ${getMagnitudeColor(d.mag)}; font-weight: bold;">${d.mag}</span></div>
+            <div>深度: ${d.depth} km</div>
+            <div>时间: ${d.time}</div>
           </div>
         `
       },
-    } as any,
+    },
     grid: {
       left: '3%',
       right: '4%',
@@ -328,18 +380,24 @@ export function generateDepthChart(
         data: seriesData,
         symbolSize: (data: { mag: number }) => Math.max(8, data.mag * 4),
         itemStyle: {
-          color: (params: { data: { mag: number } }) => getMagnitudeColor(params.data.mag),
+          color: (raw: unknown) => {
+            const mag = extractSeriesData<{ mag: number }>(normalizeCallback(raw) ?? {})?.mag
+            return mag !== undefined ? getMagnitudeColor(mag) : '#999'
+          },
           shadowBlur: 8,
           shadowColor: 'rgba(0, 0, 0, 0.2)',
         },
       },
-    ] as any,
+    ],
   }
 }
 
 export type ChartType = 'magnitudeTime' | 'magnitudeDist' | 'depth'
 
-export const chartConfigs: Record<ChartType, { title: string; generator: typeof generateMagnitudeTimeChart }> = {
+export const chartConfigs: Record<
+  ChartType,
+  { title: string; generator: typeof generateMagnitudeTimeChart }
+> = {
   magnitudeTime: { title: '震级时间分布', generator: generateMagnitudeTimeChart },
   magnitudeDist: { title: '震级分布统计', generator: generateMagnitudeDistributionChart },
   depth: { title: '震源深度分布', generator: generateDepthChart },

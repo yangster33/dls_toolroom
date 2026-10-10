@@ -12,14 +12,14 @@ concurrency:
 
 jobs:
   verify:
-    name: 类型检查 / Lint / 单元测试
+    name: 类型检查 / Lint / 格式 / 单元测试
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - run: npm ci
@@ -28,8 +28,16 @@ jobs:
       - name: 类型检查
         run: npm run type-check
 
+      # 两个 linter 都要跑：oxlint 管 correctness，eslint 管 type-aware 规则。
+      # 只跑 oxlint 会漏掉全部 no-explicit-any（曾积压 133 个）。
       - name: Lint (oxlint)
         run: npx oxlint .
+
+      - name: Lint (eslint)
+        run: npx eslint .
+
+      - name: Prettier 格式检查
+        run: npx prettier --check --experimental-cli .
 
       - name: 单元测试
         run: npx vitest run --reporter=dot
@@ -43,12 +51,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - run: npm ci
 
-      # playwright.config.ts 里 channel: 'msedge'，CI 上换成官方 chromium
       - name: 安装 chromium
         run: npx playwright install --with-deps chromium
 
@@ -70,10 +77,18 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - run: npm ci
 
       - name: 构建 + 预渲染
         run: npm run build
+
+      - name: 校验「势」tab 已包含（P2-7 回归）
+        run: |
+          # 无 .env 时也应包含势 tab；若这里失败说明默认值被改回了 '=== true'
+          if ! grep -q "DlsMoment\|势" dist/index.html; then
+            echo "::error::dist/index.html 未包含「势」tab —— VITE_ENABLE_MOMENT_TAB 默认值回归"
+            exit 1
+          fi

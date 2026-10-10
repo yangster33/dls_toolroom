@@ -26,20 +26,20 @@ export function parseKmlXml(xmlString: string, basePath: string = ''): GisFeatur
   const features: GisFeature[] = []
   const parser = new DOMParser()
   const xmlDoc = parser.parseFromString(xmlString, 'application/xml')
-  
+
   const documentElement = xmlDoc.documentElement
-  
+
   function traverseElement(element: Element, currentPath: string) {
     if (element.tagName === 'Placemark') {
       const name = element.querySelector('name')?.textContent || `要素${features.length + 1}`
-      
+
       const pointElement = element.querySelector('Point')
       const lineElement = element.querySelector('LineString')
       const polygonElement = element.querySelector('Polygon')
-      
+
       let type: 'Point' | 'LineString' | 'Polygon' = 'Point'
       let coordinates: string = ''
-      
+
       if (pointElement) {
         type = 'Point'
         const coordsText = pointElement.querySelector('coordinates')?.textContent || ''
@@ -61,12 +61,12 @@ export function parseKmlXml(xmlString: string, basePath: string = ''): GisFeatur
           coordinates = formatCoordinates(parseKmlCoordinates(coordsText))
         }
       }
-      
+
       const properties: Record<string, unknown> = {}
       const extendedData = element.querySelector('ExtendedData')
       if (extendedData) {
         const dataElements = extendedData.querySelectorAll('Data')
-        dataElements.forEach(data => {
+        dataElements.forEach((data) => {
           const dataName = data.getAttribute('name')
           const value = data.querySelector('value')?.textContent
           if (dataName && value) {
@@ -74,7 +74,7 @@ export function parseKmlXml(xmlString: string, basePath: string = ''): GisFeatur
           }
         })
       }
-      
+
       if (coordinates) {
         features.push({
           id: `feature_${features.length + 1}`,
@@ -87,8 +87,12 @@ export function parseKmlXml(xmlString: string, basePath: string = ''): GisFeatur
       }
     } else if (element.tagName === 'Folder') {
       const folderName = element.querySelector('name')?.textContent || ''
-      const newPath = folderName ? (currentPath ? `${currentPath}/${folderName}` : folderName) : currentPath
-      
+      const newPath = folderName
+        ? currentPath
+          ? `${currentPath}/${folderName}`
+          : folderName
+        : currentPath
+
       for (let i = 0; i < element.children.length; i++) {
         const child = element.children[i]
         if (child instanceof Element) {
@@ -104,18 +108,18 @@ export function parseKmlXml(xmlString: string, basePath: string = ''): GisFeatur
       }
     }
   }
-  
+
   if (documentElement) {
     traverseElement(documentElement, basePath)
   }
-  
+
   return features
 }
 
 async function parseKmzFile(file: File): Promise<GisFeature[]> {
   const features: GisFeature[] = []
   const zip = await JSZip.loadAsync(file)
-  
+
   for (const [filename, fileObject] of Object.entries(zip.files)) {
     if (!fileObject.dir && filename.toLowerCase().endsWith('.kml')) {
       const content = await fileObject.async('string')
@@ -124,7 +128,7 @@ async function parseKmzFile(file: File): Promise<GisFeature[]> {
       features.push(...kmlFeatures)
     }
   }
-  
+
   return features
 }
 
@@ -140,7 +144,10 @@ export async function parseShpFile(file: File | File[]): Promise<GisFeature[]> {
     const dbfFile = file.find((f) => f.name.toLowerCase().endsWith('.dbf'))
     if (!shpFile) throw new Error('未找到 .shp 文件')
 
-    logger.log('[parseShpFile] 多文件模式:', file.map(f => f.name))
+    logger.log(
+      '[parseShpFile] 多文件模式:',
+      file.map((f) => f.name),
+    )
     logger.log('[parseShpFile] 找到 shp:', shpFile.name, 'dbf:', dbfFile?.name || '(无)')
 
     const shpBuf = await shpFile.arrayBuffer()
@@ -178,42 +185,69 @@ export async function parseShpFile(file: File | File[]): Promise<GisFeature[]> {
   return result
 }
 
-export function convertGeoJsonToFeatures(geojson: any): GisFeature[] {
-  const collections: any[] = Array.isArray(geojson) ? geojson : [geojson]
+/**
+ * 接受 FeatureCollection / Feature / 它们的数组。
+ *
+ * 这里刻意用宽松的记录类型而不是 GeoJSON.FeatureCollection：
+ * 上游数据来自用户上传的 KML/SHP 转 GeoJSON 或 shpjs 输出，`type` 字段在
+ * 运行时才可确定（ fixture 里也常写成 string）。函数内部会自行判别。
+ */
+type GeoJsonLike = {
+  type?: unknown
+  features?: unknown
+  geometry?: unknown
+  coordinates?: unknown
+  properties?: unknown
+}
+
+type GeoJsonInput = GeoJsonLike | GeoJsonLike[]
+
+export function convertGeoJsonToFeatures(geojson: GeoJsonInput): GisFeature[] {
+  const collections: GeoJsonLike[] = (Array.isArray(geojson) ? geojson : [geojson]) as GeoJsonLike[]
   const features: GisFeature[] = []
 
   for (const col of collections) {
-    const fc = col.features || (col.type === 'Feature' ? [col] : [])
+    // col 可能是 FeatureCollection（有 features 数组）、单个 Feature，或都不是
+    const nested = col.features
+    const fc: unknown[] = Array.isArray(nested) ? nested : col.type === 'Feature' ? [col] : []
     if (!Array.isArray(fc)) continue
 
     for (let i = 0; i < fc.length; i++) {
-      const feat = fc[i]
-      const geom = feat.geometry
-      if (!geom) continue
+      // 元素来自用户上传/第三方解析结果，逐个判别而非信任类型
+      const feat = fc[i] as GeoJsonLike | undefined
+      const geom = feat?.geometry as { type?: unknown; coordinates?: unknown } | undefined
+      if (!geom || typeof geom.type !== 'string') continue
+      const geometryType = geom.type
 
       let type: 'Point' | 'LineString' | 'Polygon'
       let coordinates: string
 
-      if (geom.type === 'Point' || geom.type === 'MultiPoint') {
+      if (geometryType === 'Point' || geometryType === 'MultiPoint') {
         type = 'Point'
-        const pt = geom.type === 'Point' ? geom.coordinates : geom.coordinates[0]
+        const pt = (
+          geometryType === 'Point' ? geom.coordinates : (geom.coordinates as unknown[])?.[0]
+        ) as number[]
         coordinates = `${pt[0]},${pt[1]}`
-      } else if (geom.type === 'LineString' || geom.type === 'MultiLineString') {
+      } else if (geometryType === 'LineString' || geometryType === 'MultiLineString') {
         type = 'LineString'
-        const flatLines: number[][] = geom.type === 'LineString'
-          ? geom.coordinates
-          : (geom.coordinates as number[][][]).reduce<number[][]>((a, b) => a.concat(b), [])
+        const flatLines: number[][] =
+          geometryType === 'LineString'
+            ? (geom.coordinates as number[][])
+            : (geom.coordinates as number[][][]).reduce<number[][]>((a, b) => a.concat(b), [])
         coordinates = flatLines.map((c: number[]) => `${c[0]},${c[1]}`).join(';')
-      } else if (geom.type === 'Polygon' || geom.type === 'MultiPolygon') {
+      } else if (geometryType === 'Polygon' || geometryType === 'MultiPolygon') {
         type = 'Polygon'
-        const rings: number[][][] = geom.type === 'Polygon' ? geom.coordinates : geom.coordinates[0]
+        const rings: number[][][] =
+          geometryType === 'Polygon'
+            ? (geom.coordinates as number[][][])
+            : ((geom.coordinates as unknown[])?.[0] as number[][][])
         const outerRing = rings[0]
         coordinates = outerRing!.map((c: number[]) => `${c[0]},${c[1]}`).join(';')
       } else {
         continue
       }
 
-      const props = feat.properties || {}
+      const props = (feat?.properties ?? {}) as Record<string, unknown>
       const featId = features.length + 1
       const name = String(props.name || props.NAME || props.Name || `要素${featId}`)
 
@@ -242,10 +276,15 @@ export function convertGeoJsonToFeatures(geojson: any): GisFeature[] {
 export async function readAndValidateGisFile(file: File): Promise<GisValidationResult> {
   const errors: string[] = []
   const features: GisFeature[] = []
-  
+
   const fileName = file.name.toLowerCase()
-  
-  if (!fileName.endsWith('.shp') && !fileName.endsWith('.kml') && !fileName.endsWith('.kmz') && !fileName.endsWith('.zip')) {
+
+  if (
+    !fileName.endsWith('.shp') &&
+    !fileName.endsWith('.kml') &&
+    !fileName.endsWith('.kmz') &&
+    !fileName.endsWith('.zip')
+  ) {
     errors.push('不支持的文件格式，请上传SHP、KML、KMZ或ZIP文件')
     return {
       isValid: false,
@@ -257,7 +296,7 @@ export async function readAndValidateGisFile(file: File): Promise<GisValidationR
       polygonCount: 0,
     }
   }
-  
+
   try {
     if (fileName.endsWith('.shp') || fileName.endsWith('.zip')) {
       const shpFeatures = await parseShpFile(file)
@@ -281,7 +320,7 @@ export async function readAndValidateGisFile(file: File): Promise<GisValidationR
       polygonCount: 0,
     }
   }
-  
+
   if (features.length === 0) {
     errors.push('文件中未找到任何地理要素')
     return {
@@ -294,11 +333,11 @@ export async function readAndValidateGisFile(file: File): Promise<GisValidationR
       polygonCount: 0,
     }
   }
-  
-  const pointCount = features.filter(f => f.type === 'Point').length
-  const lineCount = features.filter(f => f.type === 'LineString').length
-  const polygonCount = features.filter(f => f.type === 'Polygon').length
-  
+
+  const pointCount = features.filter((f) => f.type === 'Point').length
+  const lineCount = features.filter((f) => f.type === 'LineString').length
+  const polygonCount = features.filter((f) => f.type === 'Polygon').length
+
   return {
     isValid: true,
     errors: [],

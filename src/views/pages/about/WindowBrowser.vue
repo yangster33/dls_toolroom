@@ -276,7 +276,7 @@ const onIframeLoad = () => {
       if (iframeUrl !== historyStack.value[historyIndex.value]) {
         addToHistory(iframeUrl)
       }
-    } catch (e) {
+    } catch {
       // 跨域访问会报错，忽略
     }
   }

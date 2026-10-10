@@ -26,13 +26,6 @@ const variantClass = computed(() => {
   }
   return map[props.variant] || map.text
 })
-
-const inlineStyle = computed(() => {
-  const style: Record<string, string> = {}
-  if (props.width) style.width = props.width
-  if (props.height) style.height = props.height
-  return style
-})
 </script>
 
 <style scoped>
@@ -48,7 +41,11 @@ const inlineStyle = computed(() => {
 }
 
 @keyframes skeleton-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 </style>

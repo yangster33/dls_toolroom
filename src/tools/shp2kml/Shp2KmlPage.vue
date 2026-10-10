@@ -80,7 +80,10 @@
                   />
                 </svg>
               </span>
-              <span v-else class="flex-shrink-0 w-7 h-7 rounded-full bg-error/20 text-error flex items-center justify-center">
+              <span
+                v-else
+                class="flex-shrink-0 w-7 h-7 rounded-full bg-error/20 text-error flex items-center justify-center"
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   class="h-4 w-4"
@@ -110,10 +113,7 @@
               </span>
 
               <!-- 要素数量 -->
-              <span
-                v-if="entry.isValid"
-                class="text-sm text-base-content/60 flex-shrink-0"
-              >
+              <span v-if="entry.isValid" class="text-sm text-base-content/60 flex-shrink-0">
                 {{ entry.featureCount }} 个要素
               </span>
             </div>
@@ -142,15 +142,8 @@
           </div>
 
           <!-- 无效文件错误信息 -->
-          <div
-            v-if="!entry.isValid"
-            class="text-sm text-error bg-error/10 rounded-lg p-3"
-          >
-            <p
-              v-for="(err, i) in entry.errors"
-              :key="i"
-              class="mb-0.5 last:mb-0"
-            >
+          <div v-if="!entry.isValid" class="text-sm text-error bg-error/10 rounded-lg p-3">
+            <p v-for="(err, i) in entry.errors" :key="i" class="mb-0.5 last:mb-0">
               {{ err }}
             </p>
           </div>
@@ -222,14 +215,17 @@
               </div>
               <div class="flex items-center gap-2">
                 <label class="text-sm font-medium whitespace-nowrap">
-                  边框线宽: <span class="font-bold">{{ (entry.style as PolygonStyle).strokeWidth }}</span>
+                  边框线宽:
+                  <span class="font-bold">{{ (entry.style as PolygonStyle).strokeWidth }}</span>
                 </label>
                 <input
                   type="range"
                   min="1"
                   max="8"
                   :value="(entry.style as PolygonStyle).strokeWidth"
-                  @input="(e) => updatePolygonStrokeWidth(entry.id, +(e.target as HTMLInputElement).value)"
+                  @input="
+                    (e) => updatePolygonStrokeWidth(entry.id, +(e.target as HTMLInputElement).value)
+                  "
                   class="range range-xs w-24"
                 />
               </div>
@@ -249,7 +245,9 @@
 
             <!-- 元素名称模板 -->
             <div>
-              <label class="text-sm font-medium mb-1 block">KML 元素名称（支持 {field} 模板语法）</label>
+              <label class="text-sm font-medium mb-1 block"
+                >KML 元素名称（支持 {field} 模板语法）</label
+              >
               <input
                 type="text"
                 :value="entry.nameTemplate"
@@ -259,7 +257,9 @@
               />
               <!-- 字段列表 - 放在输入框下方 -->
               <div v-if="entry.fields.length > 0" class="mt-2">
-                <label class="text-xs font-medium mb-1 block text-base-content/70">点击插入字段：</label>
+                <label class="text-xs font-medium mb-1 block text-base-content/70"
+                  >点击插入字段：</label
+                >
                 <div class="flex flex-wrap gap-1">
                   <button
                     v-for="field in entry.fields"
@@ -274,13 +274,22 @@
               <div v-else class="mt-2 text-xs text-warning bg-warning/10 rounded-lg p-2">
                 未检测到属性字段。请确保选择了完整的 Shapefile 文件组（.shp + .dbf 一起选中）。
               </div>
-              <div v-if="validateNameTemplate(entry.nameTemplate, entry.fields).error" class="text-error text-xs mt-1">
-                {{ validateNameTemplate(entry.nameTemplate, entry.fields).error }}
+              <div
+                v-if="validateNameTemplate(entry.nameTemplate).error"
+                class="text-error text-xs mt-1"
+              >
+                {{ validateNameTemplate(entry.nameTemplate).error }}
               </div>
               <!-- 预览 -->
               <div v-if="entry.features.length > 0" class="mt-2 text-sm text-base-content/70">
                 <span class="font-medium">预览: </span>
-                {{ generateNameFromTemplate(entry.features[0]!.properties, entry.features[0]!.name, entry.nameTemplate) }}
+                {{
+                  generateNameFromTemplate(
+                    entry.features[0]!.properties,
+                    entry.features[0]!.name,
+                    entry.nameTemplate,
+                  )
+                }}
               </div>
             </div>
           </div>
@@ -289,11 +298,7 @@
 
       <!-- 操作按钮 -->
       <div v-if="fileEntries.length > 0" class="flex flex-wrap gap-3 pt-2">
-        <button
-          :disabled="!canExport"
-          @click="handleExport"
-          class="btn btn-success"
-        >
+        <button :disabled="!canExport" @click="handleExport" class="btn btn-success">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             class="h-5 w-5 mr-2"
@@ -310,9 +315,7 @@
           </svg>
           导出 KML 文件
         </button>
-        <button @click="handleClear" class="btn btn-outline btn-warning">
-          清空全部
-        </button>
+        <button @click="handleClear" class="btn btn-outline btn-warning">清空全部</button>
       </div>
 
       <ErrorDialog
@@ -330,7 +333,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed } from 'vue'
 import { getToolById } from '../toolData'
 import { parseShpFile, type GisFeature } from '../gis2excel/GisFileReader'
 import { logger } from '@/utils/logger'
@@ -422,7 +425,9 @@ function getDefaultFolderName(fileName: string): string {
   return fileName.replace(/\.shp$/i, '')
 }
 
-function getDefaultStyleForType(type: 'Point' | 'LineString' | 'Polygon'): PointStyle | LineStyle | PolygonStyle {
+function getDefaultStyleForType(
+  type: 'Point' | 'LineString' | 'Polygon',
+): PointStyle | LineStyle | PolygonStyle {
   switch (type) {
     case 'Point':
       return { color: '#E74C3C' }
@@ -453,11 +458,14 @@ async function onFilesSelected(event: Event) {
   if (!target.files || target.files.length === 0) return
 
   const files = Array.from(target.files)
-  logger.log('选择的文件:', files.map(f => f.name))
+  logger.log(
+    '选择的文件:',
+    files.map((f) => f.name),
+  )
 
   // 检查是否有 zip 文件
-  const zipFiles = files.filter(f => f.name.toLowerCase().endsWith('.zip'))
-  
+  const zipFiles = files.filter((f) => f.name.toLowerCase().endsWith('.zip'))
+
   if (zipFiles.length > 0) {
     // 处理 zip 文件
     for (const zipFile of zipFiles) {
@@ -466,22 +474,25 @@ async function onFilesSelected(event: Event) {
     }
   } else {
     // 检查是否有多个相关的 Shapefile 文件
-    const shpFiles = files.filter(f => f.name.toLowerCase().endsWith('.shp'))
-    const otherFiles = files.filter(f => !f.name.toLowerCase().endsWith('.shp'))
-    
+    const shpFiles = files.filter((f) => f.name.toLowerCase().endsWith('.shp'))
+    const otherFiles = files.filter((f) => !f.name.toLowerCase().endsWith('.shp'))
+
     if (shpFiles.length === 1) {
       // 只有一个 shp 文件，尝试将相关文件一起处理
       const baseName = shpFiles[0]!.name.replace(/\.shp$/i, '')
       const relatedFiles = [shpFiles[0]]
-      
+
       for (const file of otherFiles) {
         const fileBaseName = file.name.replace(/\.[^/.]+$/, '')
         if (fileBaseName.toLowerCase() === baseName.toLowerCase()) {
           relatedFiles.push(file)
         }
       }
-      
-      logger.log('相关文件:', relatedFiles.map(f => f!.name))
+
+      logger.log(
+        '相关文件:',
+        relatedFiles.map((f) => f!.name),
+      )
       const entry = await createEntryFromMultipleFiles(relatedFiles as File[])
       fileEntries.value.push(entry)
     } else {
@@ -499,7 +510,7 @@ async function onFilesSelected(event: Event) {
 
 async function createEntryFromMultipleFiles(files: File[]): Promise<ShpFileEntry> {
   const id = genId()
-  const shpFile = files.find(f => f.name.toLowerCase().endsWith('.shp'))
+  const shpFile = files.find((f) => f.name.toLowerCase().endsWith('.shp'))
   const fileName = shpFile ? shpFile.name : files[0]!.name
   const folderName = getDefaultFolderName(fileName)
   const errors: string[] = []
@@ -508,9 +519,7 @@ async function createEntryFromMultipleFiles(files: File[]): Promise<ShpFileEntry
   try {
     features = await parseShpFile(files)
   } catch (err) {
-    errors.push(
-      `解析失败: ${err instanceof Error ? err.message : String(err)}`
-    )
+    errors.push(`解析失败: ${err instanceof Error ? err.message : String(err)}`)
     return {
       id,
       file: files[0]!,
@@ -595,8 +604,9 @@ async function createEntry(file: File): Promise<ShpFileEntry> {
   const folderName = getDefaultFolderName(fileName)
   const errors: string[] = []
 
-  const isValidFile = fileName.toLowerCase().endsWith('.shp') || fileName.toLowerCase().endsWith('.zip')
-  
+  const isValidFile =
+    fileName.toLowerCase().endsWith('.shp') || fileName.toLowerCase().endsWith('.zip')
+
   if (!isValidFile) {
     return {
       id,
@@ -618,9 +628,7 @@ async function createEntry(file: File): Promise<ShpFileEntry> {
   try {
     features = await parseShpFile(file)
   } catch (err) {
-    errors.push(
-      `解析失败: ${err instanceof Error ? err.message : String(err)}`
-    )
+    errors.push(`解析失败: ${err instanceof Error ? err.message : String(err)}`)
     return {
       id,
       file,
@@ -686,46 +694,46 @@ function findEntry(id: string): ShpFileEntry | undefined {
 function updatePointColor(id: string, color: string) {
   const entry = findEntry(id)
   if (entry && entry.type === 'Point') {
-    (entry.style as PointStyle).color = color
+    ;(entry.style as PointStyle).color = color
   }
 }
 
 function updateLineColor(id: string, color: string) {
   const entry = findEntry(id)
   if (entry && entry.type === 'LineString') {
-    (entry.style as LineStyle).color = color
+    ;(entry.style as LineStyle).color = color
   }
 }
 
 function updateLineWidth(id: string, width: number) {
   const entry = findEntry(id)
   if (entry && entry.type === 'LineString') {
-    (entry.style as LineStyle).width = width
+    ;(entry.style as LineStyle).width = width
   }
 }
 
 function updatePolygonStrokeColor(id: string, color: string) {
   const entry = findEntry(id)
   if (entry && entry.type === 'Polygon') {
-    (entry.style as PolygonStyle).strokeColor = color
+    ;(entry.style as PolygonStyle).strokeColor = color
   }
 }
 
 function updatePolygonFillColor(id: string, color: string) {
   const entry = findEntry(id)
   if (entry && entry.type === 'Polygon') {
-    (entry.style as PolygonStyle).fillColor = color
+    ;(entry.style as PolygonStyle).fillColor = color
   }
 }
 
 function updatePolygonStrokeWidth(id: string, width: number) {
   const entry = findEntry(id)
   if (entry && entry.type === 'Polygon') {
-    (entry.style as PolygonStyle).strokeWidth = width
+    ;(entry.style as PolygonStyle).strokeWidth = width
   }
 }
 
-function validateNameTemplate(template: string, fields: string[]): { valid: boolean; error?: string } {
+function validateNameTemplate(template: string): { valid: boolean; error?: string } {
   let depth = 0
   for (const ch of template) {
     if (ch === '{') depth++
@@ -750,7 +758,7 @@ function validateNameTemplate(template: string, fields: string[]): { valid: bool
 function generateNameFromTemplate(
   properties: Record<string, unknown>,
   name: string,
-  template: string
+  template: string,
 ): string {
   if (!template) return name
 

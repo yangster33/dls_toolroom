@@ -5,8 +5,12 @@ export interface DlsMdPageProps extends Record<string, unknown> {
   basePath?: string
 }
 
-export interface DlsMomentProps extends Record<string, unknown> {
-}
+/**
+ * 「势」tab 无自有 props，透传 Record<string, unknown>。
+ * 用 type alias 而非 interface：空 interface 继承一个索引签名等价于其超类型，
+ * 是冗余写法（eslint no-empty-object-type）。
+ */
+export type DlsMomentProps = Record<string, unknown>
 
 export type NavItemProps = DlsMdPageProps | DlsMomentProps
 

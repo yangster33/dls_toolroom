@@ -32,7 +32,7 @@ export async function readAndValidateKmlTemplate(file: File): Promise<TableKmlRe
     const { readAndValidateTemplate } = await import('@/utils/TemplateReader')
 
     const templateResult = await readAndValidateTemplate(file, TEMPLATE_HEADERS, {
-      validateRow: (row) => validateKmlRow(row as any),
+      validateRow: (row) => validateKmlRow(row as Record<string, unknown>),
     })
 
     if (!templateResult.isValid) {
@@ -106,9 +106,7 @@ export function validateKmlRow(row: Record<string, unknown>): string[] {
 
   // 验证颜色
   if (colorRaw && !parseColor(colorRaw)) {
-    errors.push(
-      `颜色"${colorRaw}"无法识别。支持中文颜色名或十六进制（如"#FF0000"）。`,
-    )
+    errors.push(`颜色"${colorRaw}"无法识别。支持中文颜色名或十六进制（如"#FF0000"）。`)
   }
 
   return errors

@@ -9,7 +9,9 @@
       <h2 class="text-xl font-semibold mb-4">批量高程查询</h2>
 
       <div class="mb-6">
-        <label class="block text-sm font-medium text-gray-700 mb-2">输入格式：每行一个坐标，格式为 经度,纬度</label>
+        <label class="block text-sm font-medium text-gray-700 mb-2"
+          >输入格式：每行一个坐标，格式为 经度,纬度</label
+        >
         <textarea
           v-model="inputText"
           rows="8"
@@ -28,24 +30,14 @@
           {{ isLoading ? '查询中...' : '批量查询高程' }}
         </button>
 
-        <button
-          @click="clearAll"
-          class="btn btn-ghost"
-        >
-          清空
-        </button>
+        <button @click="clearAll" class="btn btn-ghost">清空</button>
       </div>
     </div>
 
     <div v-if="results.length > 0" class="bg-base-200/40 rounded-lg p-6">
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-xl font-semibold">查询结果</h2>
-        <button
-          @click="exportResults"
-          class="btn btn-secondary btn-sm"
-        >
-          导出 Excel
-        </button>
+        <button @click="exportResults" class="btn btn-secondary btn-sm">导出 Excel</button>
       </div>
 
       <div class="overflow-x-auto">
@@ -103,7 +95,16 @@ const toolConfig = getToolById('elevations_convert')
 
 const inputText = ref<string>('')
 const isLoading = ref(false)
-const results = ref<Array<{ longitude: number; latitude: number; elevation: number; error?: string }>>([])
+/** 单条高程查询结果（含失败行） */
+interface ElevationRow {
+  longitude: number
+  latitude: number
+  elevation: number
+  /** 有值表示该行查询失败 */
+  error?: string
+}
+
+const results = ref<ElevationRow[]>([])
 const error = ref<string>('')
 const errorDialogOpen = ref(false)
 
@@ -116,7 +117,7 @@ interface ParsedPoint {
 
 const parsePoints = (): ParsedPoint[] => {
   const lines = inputText.value.trim().split('\n')
-  return lines.map(line => {
+  return lines.map((line) => {
     const parts = line.trim().split(',')
     if (parts.length !== 2) {
       return { longitude: 0, latitude: 0, valid: false, error: '格式错误' }
@@ -134,15 +135,15 @@ const parsePoints = (): ParsedPoint[] => {
 }
 
 const hasValidPoints = computed(() => {
-  return parsePoints().some(p => p.valid)
+  return parsePoints().some((p) => p.valid)
 })
 
 const successCount = computed(() => {
-  return results.value.filter(r => !r.error).length
+  return results.value.filter((r) => !r.error).length
 })
 
 const failCount = computed(() => {
-  return results.value.filter(r => r.error).length
+  return results.value.filter((r) => r.error).length
 })
 
 const MAX_POINTS = 100
@@ -154,7 +155,7 @@ const closeErrorDialog = () => {
 
 const queryElevations = async () => {
   const points = parsePoints()
-  const validPoints = points.filter(p => p.valid)
+  const validPoints = points.filter((p) => p.valid)
 
   if (validPoints.length === 0) {
     error.value = '请输入有效的经纬度坐标'
@@ -176,13 +177,18 @@ const queryElevations = async () => {
     const validResults = await elevationService.getElevations(validPoints)
 
     let validIndex = 0
-    results.value = points.map(point => {
+    results.value = points.map((point) => {
       if (!point.valid) {
-        return { longitude: point.longitude, latitude: point.latitude, elevation: 0, error: point.error }
+        return {
+          longitude: point.longitude,
+          latitude: point.latitude,
+          elevation: 0,
+          error: point.error,
+        }
       }
       const result = validResults[validIndex++]
       return result!
-    }) as any
+    }) as ElevationRow[]
   } catch (err) {
     error.value = err instanceof Error ? err.message : '查询失败，请稍后重试'
     errorDialogOpen.value = true
@@ -204,9 +210,9 @@ const exportResults = () => {
     result.longitude.toFixed(6),
     result.latitude.toFixed(6),
     result.error ? '查询失败' : `${result.elevation.toFixed(2)} 米`,
-    result.error ? '失败' : '成功'
+    result.error ? '失败' : '成功',
   ])
-  
+
   exportData(headers, dataRows, 'xlsx', '批量高程查询结果')
 }
 </script>

@@ -114,8 +114,6 @@
       </div>
     </div>
 
-    
-
     <div v-if="events && events.length > 0" class="space-y-6">
       <div class="bg-base-200/40 rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-4">数据概览</h2>
@@ -219,7 +217,7 @@
           </p>
         </div>
 
-    <div v-if="total > (form as any).pageSize" class="mt-4 flex justify-center">
+        <div v-if="total > form.pageSize" class="mt-4 flex justify-center">
           <div class="join">
             <button
               @click="prevPage"
@@ -300,6 +298,8 @@ const defaultStartDate = toDateString(new Date(Date.now() - 30 * 86400000))
 const form = ref({
   eventType: '',
   alertLevel: '',
+  /** 每页条数，totalPages / 分页器都用它 */
+  pageSize: 20,
 })
 
 const startDateModel = ref<string>(defaultStartDate)
@@ -311,8 +311,6 @@ const errorDialogOpen = ref(false)
 const events = ref<GdacsEvent[] | null>(null)
 const total = ref(0)
 const currentPage = ref(1)
-
-
 
 const dateRangeMessage = computed(() => {
   if (!startDateModel.value || !endDateModel.value) return ''
@@ -362,7 +360,7 @@ const greenAlerts = computed(() => {
 })
 
 const totalPages = computed(() => {
-  return Math.ceil(total.value / (form.value as any).pageSize)
+  return Math.ceil(total.value / form.value.pageSize)
 })
 
 const visiblePages = computed(() => {
@@ -482,13 +480,16 @@ function downloadData() {
   }
 }
 
-const getChartOption = (data: GdacsEvent[], theme: Record<string, string>): EChartsOption | null => {
+const getChartOption = (
+  data: GdacsEvent[],
+  theme: Record<string, string>,
+): EChartsOption | null => {
   const config = chartConfigs[activeChart.value]
   if (!config) return null
   return config.generator(data, theme as unknown as ChartThemeColors)
 }
 
-const { chartContainer, chartLoading, initChart, disposeChart } = useECharts({
+const { chartContainer, chartLoading, initChart } = useECharts({
   data: events,
   getChartOption,
   themeVariables: {
