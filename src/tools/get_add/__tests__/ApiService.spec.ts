@@ -133,7 +133,18 @@ describe('exportResultsToRows', () => {
       [RESULT],
       ['address', 'province', 'city', 'district', 'formattedAddress', 'adcode', 'provider'],
     )
-    expect(rows[0]).toEqual(['名称', '经度', '纬度', 'address', 'province', 'city', 'district', 'formattedAddress', 'adcode', 'provider'])
+    expect(rows[0]).toEqual([
+      '名称',
+      '经度',
+      '纬度',
+      'address',
+      'province',
+      'city',
+      'district',
+      'formattedAddress',
+      'adcode',
+      'provider',
+    ])
     expect(rows[1]).toEqual([
       '点位甲',
       '116.4',

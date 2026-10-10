@@ -78,9 +78,7 @@ export const magnitudeOptions = [
   { value: '8', label: '8 级及以上' },
 ]
 
-export async function fetchEarthquakeData(
-  formData: EarthquakeFormData
-): Promise<QueryResult> {
+export async function fetchEarthquakeData(formData: EarthquakeFormData): Promise<QueryResult> {
   const params = new URLSearchParams({
     format: 'geojson',
     starttime: formData.startDate,
@@ -128,7 +126,10 @@ export async function fetchEarthquakeData(
   }
 }
 
-export function downloadJson(data: EarthquakeApiResponse, filename: string = 'earthquake_data.json'): void {
+export function downloadJson(
+  data: EarthquakeApiResponse,
+  filename: string = 'earthquake_data.json',
+): void {
   const jsonStr = JSON.stringify(data, null, 2)
   const blob = new Blob([jsonStr], { type: 'application/json' })
   const url = URL.createObjectURL(blob)

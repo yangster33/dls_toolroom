@@ -1,8 +1,16 @@
 import * as XLSX from 'xlsx'
 import { convert, type CoordinateSystemType, COORDINATE_SYSTEMS } from '@/utils/coordinateConverter'
-import { type CGCS2000Params, DEFAULT_CGCS2000_PARAMS, computeCentralMeridian } from '@/utils/coordTransform'
+import {
+  type CGCS2000Params,
+  DEFAULT_CGCS2000_PARAMS,
+  computeCentralMeridian,
+} from '@/utils/coordTransform'
 
-export { type CGCS2000Params, DEFAULT_CGCS2000_PARAMS, computeCentralMeridian } from '@/utils/coordTransform'
+export {
+  type CGCS2000Params,
+  DEFAULT_CGCS2000_PARAMS,
+  computeCentralMeridian,
+} from '@/utils/coordTransform'
 
 export interface ConversionResult {
   success: boolean
@@ -120,7 +128,8 @@ export async function batchConvertCoordinates(
 
               const lngVal = row[lngHeader]
               const latVal = row[latHeader]
-              const nameVal = nameIndex !== -1 && row[nameHeader] ? row[nameHeader] : `点位${rowNum}`
+              const nameVal =
+                nameIndex !== -1 && row[nameHeader] ? row[nameHeader] : `点位${rowNum}`
 
               const lngNum = typeof lngVal === 'number' ? lngVal : parseFloat(String(lngVal || ''))
               const latNum = typeof latVal === 'number' ? latVal : parseFloat(String(latVal || ''))
@@ -188,7 +197,9 @@ export async function batchConvertCoordinates(
         const progress = Math.floor((result.processedRows / result.totalRows) * 100)
         const estimatedRemainingTime =
           result.processedRows > 0
-            ? Math.round((elapsedTime * (result.totalRows - result.processedRows)) / result.processedRows)
+            ? Math.round(
+                (elapsedTime * (result.totalRows - result.processedRows)) / result.processedRows,
+              )
             : 0
 
         options.onProgress({

@@ -15,7 +15,7 @@ export type { TemplateValidationResult }
 // 验证单个数据行
 function validateRow(
   row: Record<string, string | number>,
-  rowIndex: number
+  rowIndex: number,
 ): { valid: boolean; data?: FullAddress; error?: string } {
   // 尝试获取地址字段
   const getField = (aliases: string[]): string => {
@@ -54,7 +54,7 @@ function validateRow(
 
 // 读取并验证模板数据
 export function readAndValidateTemplate(
-  rows: Record<string, string | number>[]
+  rows: Record<string, string | number>[],
 ): TemplateValidationResult<FullAddress> {
   const data: FullAddress[] = []
   const errors: string[] = []

@@ -2,15 +2,19 @@
   <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4">
     <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || '高程查询' }}</h1>
     <p class="text-base-content/70">
-      {{ toolConfig?.description || '输入经纬度查询海拔高度，数据来源于 Open-Meteo Elevation API。' }}
+      {{
+        toolConfig?.description || '输入经纬度查询海拔高度，数据来源于 Open-Meteo Elevation API。'
+      }}
     </p>
 
     <div class="bg-base-200/40 rounded-lg p-6">
       <h2 class="text-xl font-semibold mb-4">高程查询</h2>
-      
+
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div>
-          <label class="block text-sm font-medium text-base-content/80 mb-1">经度 (Longitude)</label>
+          <label class="block text-sm font-medium text-base-content/80 mb-1"
+            >经度 (Longitude)</label
+          >
           <input
             v-model="longitude"
             type="number"
@@ -43,7 +47,7 @@
 
     <div v-if="result" class="bg-base-200/40 rounded-lg p-6">
       <h2 class="text-xl font-semibold mb-4">查询结果</h2>
-      
+
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="stat">
           <div class="stat-title">经度</div>
@@ -55,7 +59,9 @@
         </div>
         <div class="stat">
           <div class="stat-title">海拔高度</div>
-          <div class="stat-value text-primary">{{ result.elevation }} <span class="text-sm text-base-content/50">米</span></div>
+          <div class="stat-value text-primary">
+            {{ result.elevation }} <span class="text-sm text-base-content/50">米</span>
+          </div>
         </div>
       </div>
     </div>
@@ -110,7 +116,7 @@ const queryElevation = async () => {
   try {
     const data = await elevationService.getElevation(
       parseFloat(longitude.value),
-      parseFloat(latitude.value)
+      parseFloat(latitude.value),
     )
     result.value = data
   } catch (err) {

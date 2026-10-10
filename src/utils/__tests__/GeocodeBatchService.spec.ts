@@ -23,7 +23,11 @@ interface BatchResult {
 }
 
 const singleQueryFn = vi.fn(
-  async (_item: string, apiKey: string, _provider: ApiProvider): Promise<{ apiKey: string; ok: boolean }> => ({
+  async (
+    _item: string,
+    apiKey: string,
+    _provider: ApiProvider,
+  ): Promise<{ apiKey: string; ok: boolean }> => ({
     apiKey,
     ok: true,
   }),
@@ -35,7 +39,9 @@ const mergeResult = vi.fn(
     provider,
   }),
 )
-const onErrorResult = vi.fn((item: string, provider: ApiProvider): BatchResult => ({ item, error: true, provider }))
+const onErrorResult = vi.fn(
+  (item: string, provider: ApiProvider): BatchResult => ({ item, error: true, provider }),
+)
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -58,7 +64,14 @@ describe('batchGeocodeQuery - 前置校验', () => {
   })
 
   it('空条目列表返回空结果', async () => {
-    const results = await batchGeocodeQuery([], [KEY_A], OPTIONS, singleQueryFn, mergeResult, onErrorResult)
+    const results = await batchGeocodeQuery(
+      [],
+      [KEY_A],
+      OPTIONS,
+      singleQueryFn,
+      mergeResult,
+      onErrorResult,
+    )
     expect(results).toEqual([])
   })
 })
@@ -94,7 +107,14 @@ describe('batchGeocodeQuery - 查询循环', () => {
   })
 
   it('非混合模式始终使用第一个有效 Key', async () => {
-    await batchGeocodeQuery(['甲', '乙'], [KEY_A, KEY_B], OPTIONS, singleQueryFn, mergeResult, onErrorResult)
+    await batchGeocodeQuery(
+      ['甲', '乙'],
+      [KEY_A, KEY_B],
+      OPTIONS,
+      singleQueryFn,
+      mergeResult,
+      onErrorResult,
+    )
     expect(singleQueryFn.mock.calls.map((c) => c[1])).toEqual(['key-a', 'key-a'])
   })
 

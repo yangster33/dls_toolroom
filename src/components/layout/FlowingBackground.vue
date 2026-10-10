@@ -1,12 +1,12 @@
 <template>
-  <div 
-    v-if="enabled" 
-    class="flowing-background-container" 
+  <div
+    v-if="enabled"
+    class="flowing-background-container"
     :class="{ 'flowing-background-absolute': positionMode === 'absolute' }"
     :style="containerStyle"
   >
     <div class="flowing-gradient" :style="gradientStyle"></div>
-    
+
     <div class="flowing-blobs">
       <div
         v-for="(blob, index) in computedBlobs"
@@ -51,34 +51,34 @@ const props = withDefaults(defineProps<Props>(), {
   blobOpacity: 0.15,
   blurRadius: 60,
   blobs: () => [],
-  positionMode: 'fixed'
+  positionMode: 'fixed',
 })
 
 const containerStyle = computed(() => ({
-  '--blur-radius': `${props.blurRadius}px`
+  '--blur-radius': `${props.blurRadius}px`,
 }))
 
 const gradientStyle = computed(() => {
   const colors = props.colors
-  const stops = colors.flatMap((color, i) => [
-    color,
-    `${(i + 1) / colors.length * 100}%`
-  ])
-  
+  const stops = colors.flatMap((color, i) => [color, `${((i + 1) / colors.length) * 100}%`])
+
   return {
     background: `linear-gradient(135deg, ${stops.join(', ')})`,
     backgroundSize: '400% 400%',
     opacity: props.gradientOpacity,
-    animationDuration: props.gradientDuration
+    animationDuration: props.gradientDuration,
   }
 })
 
-const defaultBlobs = computed<BlobConfig[]>(() => [
-  { size: 400, color: props.colors[0]!, top: -150, left: -150 },
-  { size: 350, color: props.colors[1]!, bottom: -100, right: -100 },
-  { size: 300, color: props.colors[2]!, top: '50%', right: '10%' },
-  { size: 250, color: props.colors[0]!, bottom: '20%', left: '15%' },
-] as BlobConfig[])
+const defaultBlobs = computed<BlobConfig[]>(
+  () =>
+    [
+      { size: 400, color: props.colors[0]!, top: -150, left: -150 },
+      { size: 350, color: props.colors[1]!, bottom: -100, right: -100 },
+      { size: 300, color: props.colors[2]!, top: '50%', right: '10%' },
+      { size: 250, color: props.colors[0]!, bottom: '20%', left: '15%' },
+    ] as BlobConfig[],
+)
 
 const computedBlobs = computed(() => {
   return props.blobs.length > 0 ? props.blobs : defaultBlobs.value
@@ -97,7 +97,7 @@ const getBlobStyle = (blob: BlobConfig, index: number) => {
     opacity: props.blobOpacity,
     animationDuration: props.blobDuration,
     animationDelay: `${delay}s`,
-    filter: `blur(${props.blurRadius}px)`
+    filter: `blur(${props.blurRadius}px)`,
   }
 }
 </script>
@@ -145,7 +145,8 @@ const getBlobStyle = (blob: BlobConfig, index: number) => {
 }
 
 @keyframes blobFloat {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(0, 0) scale(1);
   }
   25% {

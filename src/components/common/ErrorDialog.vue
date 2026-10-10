@@ -11,12 +11,7 @@
             viewBox="0 0 24 24"
             stroke="currentColor"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              :d="iconPath"
-            />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="iconPath" />
           </svg>
           <div>
             <h3 class="text-xl font-bold" :class="titleClass">{{ title }}</h3>
@@ -44,11 +39,7 @@
           <button @click="handleClose" class="btn" :class="confirmButtonClass">
             {{ confirmButtonText }}
           </button>
-          <button
-            v-if="showCancel"
-            @click="handleCancel"
-            class="btn btn-outline"
-          >
+          <button v-if="showCancel" @click="handleCancel" class="btn btn-outline">
             {{ cancelButtonText }}
           </button>
         </div>

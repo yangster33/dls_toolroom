@@ -1,0 +1,27 @@
+# 构建产物与依赖
+dist/
+dist-ssr/
+node_modules/
+coverage/
+
+# Playwright / 测试产物
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# 本地调试与抓取产物
+*.log
+.scrape/
+
+# 设计与审计文档内容里有意保留的换行/表格，交给人工排版
+docs/
+plan/
+*.md
+
+# Vite 预渲染生成的 sitemap / robots（由脚本产出，非手写）
+public/sitemap.xml
+public/robots.txt
+
+# 锁文件由 npm 管理
+package-lock.json

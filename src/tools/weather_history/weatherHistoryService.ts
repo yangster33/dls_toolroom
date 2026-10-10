@@ -64,7 +64,7 @@ export interface QueryResult {
 
 export async function fetchWeatherHistory(
   formData: WeatherFormData,
-  variables: string[]
+  variables: string[],
 ): Promise<QueryResult> {
   const params = new URLSearchParams({
     latitude: formData.latitude,
@@ -101,7 +101,10 @@ export async function fetchWeatherHistory(
   }
 }
 
-export function downloadJson(data: WeatherApiResponse, filename: string = 'weather_history.json'): void {
+export function downloadJson(
+  data: WeatherApiResponse,
+  filename: string = 'weather_history.json',
+): void {
   const jsonStr = JSON.stringify(data, null, 2)
   const blob = new Blob([jsonStr], { type: 'application/json' })
   const url = URL.createObjectURL(blob)

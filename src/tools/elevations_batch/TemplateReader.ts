@@ -1,7 +1,4 @@
-import {
-  type TemplateValidationResult,
-  COORDINATE_POINT_FIELDS,
-} from '@/utils/templateHandler'
+import { type TemplateValidationResult, COORDINATE_POINT_FIELDS } from '@/utils/templateHandler'
 import type { CoordinatePoint } from '@/utils/templateHandler'
 import { parseCoordinateValue } from '@/utils/coordinateValue'
 

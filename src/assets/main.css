@@ -22,11 +22,16 @@
 }
 
 @keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
-:root, [data-theme] {
+:root,
+[data-theme] {
   --dp-primary-color: var(--color-primary);
   --dp-primary-text-color: var(--color-primary-content);
   --dp-secondary-color: var(--color-secondary);
@@ -123,7 +128,11 @@
   --dp-scroll-bar-color: color-mix(in oklch, var(--color-base-content) 30%, transparent);
   --dp-tooltip-color: var(--color-base-100);
   --dp-highlight-color: color-mix(in oklch, var(--color-primary) 20%, transparent);
-  --dp-range-between-dates-background-color: color-mix(in oklch, var(--color-primary) 15%, transparent);
+  --dp-range-between-dates-background-color: color-mix(
+    in oklch,
+    var(--color-primary) 15%,
+    transparent
+  );
   --dp-range-between-dates-text-color: var(--color-base-content);
   --dp-range-between-border-color: color-mix(in oklch, var(--color-primary) 30%, transparent);
   --dp-success-color: var(--color-success);
@@ -156,7 +165,9 @@
   background-color: var(--color-base-100);
   border: 1px solid color-mix(in oklch, var(--color-base-content) 30%, transparent);
   border-radius: var(--dp-border-radius);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -2px rgba(0, 0, 0, 0.1);
 }
 
 .dp--instance-calendar {

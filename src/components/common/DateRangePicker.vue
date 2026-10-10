@@ -86,8 +86,6 @@ const minDate = new Date('1940-01-01')
 const startDateModel = ref<Date | null>(null)
 const endDateModel = ref<Date | null>(null)
 
-
-
 const daysDiff = computed(() => {
   if (!startDateModel.value || !endDateModel.value) return null
   const diffTime = endDateModel.value.getTime() - startDateModel.value.getTime()
@@ -148,12 +146,16 @@ watch(endDateModel, (newVal) => {
   emitUpdate()
 })
 
-watch(() => props.modelValue, (newVal) => {
-  if (newVal) {
-    startDateModel.value = parseDate(newVal.start)
-    endDateModel.value = parseDate(newVal.end)
-  }
-}, { immediate: true })
+watch(
+  () => props.modelValue,
+  (newVal) => {
+    if (newVal) {
+      startDateModel.value = parseDate(newVal.start)
+      endDateModel.value = parseDate(newVal.end)
+    }
+  },
+  { immediate: true },
+)
 
 const emitUpdate = () => {
   const value: DateRange = {
@@ -163,5 +165,3 @@ const emitUpdate = () => {
   emit('update:modelValue', value)
 }
 </script>
-
-

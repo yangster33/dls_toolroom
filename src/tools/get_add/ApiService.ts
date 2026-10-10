@@ -151,10 +151,7 @@ export function getAvailableFields(): { value: string; label: string }[] {
   ]
 }
 
-export function exportResultsToRows(
-  results: QueryResult[],
-  selectedFields: string[],
-): string[][] {
+export function exportResultsToRows(results: QueryResult[], selectedFields: string[]): string[][] {
   const headers = ['名称', '经度', '纬度', ...selectedFields]
   const rows: string[][] = [headers]
 

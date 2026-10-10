@@ -32,12 +32,15 @@ export interface FieldMapping {
 export function validateCoordinate(
   value: unknown,
   type: 'longitude' | 'latitude',
-  rowIndex: number
+  rowIndex: number,
 ): { valid: boolean; error?: string; value?: number } {
   const numValue = typeof value === 'number' ? value : parseFloat(String(value))
 
   if (isNaN(numValue)) {
-    return { valid: false, error: `第 ${rowIndex + 1} 行：${type === 'longitude' ? '经度' : '纬度'}必须是数字` }
+    return {
+      valid: false,
+      error: `第 ${rowIndex + 1} 行：${type === 'longitude' ? '经度' : '纬度'}必须是数字`,
+    }
   }
 
   if (type === 'longitude' && (numValue < -180 || numValue > 180)) {
@@ -57,7 +60,7 @@ export function validateCoordinate(
 export function validateRow(
   row: Record<string, string | number>,
   rowIndex: number,
-  fieldMappings: Record<string, FieldMapping>
+  fieldMappings: Record<string, FieldMapping>,
 ): { valid: boolean; data?: Record<string, unknown>; errors: string[] } {
   const data: Record<string, unknown> = {}
   const errors: string[] = []
@@ -111,7 +114,7 @@ export function validateRow(
 export function readAndValidateTemplate<T extends Record<string, unknown>>(
   rows: Record<string, string | number>[],
   fieldMappings: Record<string, FieldMapping>,
-  dataTransformer: (data: Record<string, unknown>) => T
+  dataTransformer: (data: Record<string, unknown>) => T,
 ): TemplateValidationResult<T> {
   const data: T[] = []
   const errors: string[] = []

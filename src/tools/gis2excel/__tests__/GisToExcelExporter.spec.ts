@@ -117,15 +117,9 @@ describe('exportToExcel / exportSeparateFiles', () => {
   })
 
   it('xlsx 导出：生成 xlsx Blob 并下载', () => {
-    exportToExcel(
-      [[makeFeature('Point', '站点A', '116.4,39.9')]],
-      'xlsx',
-      defaultOptions,
-    )
+    exportToExcel([[makeFeature('Point', '站点A', '116.4,39.9')]], 'xlsx', defaultOptions)
     const blob = createObjectURL.mock.calls[0]![0] as Blob
-    expect(blob.type).toBe(
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    )
+    expect(blob.type).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     expect(anchors[0]!.getAttribute('download')).toBe('gis_export.xlsx')
   })
 
@@ -135,21 +129,14 @@ describe('exportToExcel / exportSeparateFiles', () => {
       [makeFeature('LineString', '线1', '1,2;3,4')],
     ]
     exportSeparateFiles(groups, 'csv', defaultOptions)
-    expect(anchors.map((a) => a.getAttribute('download'))).toEqual([
-      'gis_点.csv',
-      'gis_线.csv',
-    ])
+    expect(anchors.map((a) => a.getAttribute('download'))).toEqual(['gis_点.csv', 'gis_线.csv'])
     const text = await (createObjectURL.mock.calls[0]![0] as Blob).text()
     expect(text).toContain('站点A,"116.4,39.9",')
     vi.advanceTimersByTime(200)
   })
 
   it('exportSeparateFiles：xlsx 模式', () => {
-    exportSeparateFiles(
-      [[makeFeature('Point', '站点A', '116.4,39.9')]],
-      'xlsx',
-      defaultOptions,
-    )
+    exportSeparateFiles([[makeFeature('Point', '站点A', '116.4,39.9')]], 'xlsx', defaultOptions)
     expect(anchors[0]!.getAttribute('download')).toBe('gis_点.xlsx')
   })
 

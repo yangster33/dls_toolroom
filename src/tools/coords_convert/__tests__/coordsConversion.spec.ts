@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
-import { batchConvertCoordinates, convertToCsv, convertToXlsx, type DataRow } from '../coordsConversion'
+import {
+  batchConvertCoordinates,
+  convertToCsv,
+  convertToXlsx,
+  type DataRow,
+} from '../coordsConversion'
 
 function row(name: string, lng: string | number, lat: string | number): DataRow {
   return { 名称: name, '经度/X（必填）': lng, '纬度/Y（必填）': lat }
@@ -7,7 +12,10 @@ function row(name: string, lng: string | number, lat: string | number): DataRow 
 
 describe('batchConvertCoordinates - 前置校验', () => {
   it('空数据返回错误', async () => {
-    const result = await batchConvertCoordinates([], { inputSystem: 'wgs84', outputSystem: 'gcj02' })
+    const result = await batchConvertCoordinates([], {
+      inputSystem: 'wgs84',
+      outputSystem: 'gcj02',
+    })
     expect(result.success).toBe(false)
     expect(result.errors).toEqual(['没有可转换的数据'])
   })
@@ -58,12 +66,15 @@ describe('batchConvertCoordinates - 转换', () => {
     const first = result.data[0]!
     expect(first['名称']).toBe('甲')
     expect(first['经度/X（WGS84）']).toBe(116.4)
-    expect(Math.abs(first['经度/X（GCJ-02）'] as number - 116.4)).toBeGreaterThan(0.0005)
+    expect(Math.abs((first['经度/X（GCJ-02）'] as number) - 116.4)).toBeGreaterThan(0.0005)
   })
 
   it('无名称列时使用点位+行号', async () => {
     const rows = [{ '经度/X（必填）': '116.4', '纬度/Y（必填）': '39.9' }]
-    const result = await batchConvertCoordinates(rows, { inputSystem: 'wgs84', outputSystem: 'wgs84' })
+    const result = await batchConvertCoordinates(rows, {
+      inputSystem: 'wgs84',
+      outputSystem: 'wgs84',
+    })
     expect(result.data[0]!['名称']).toBe('点位1')
   })
 

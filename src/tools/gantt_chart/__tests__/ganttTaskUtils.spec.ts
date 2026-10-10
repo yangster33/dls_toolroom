@@ -119,7 +119,12 @@ describe('validateImportedTasks', () => {
   it('接受合法数组并返回规范化结果', () => {
     const result = validateImportedTasks([valid])
     expect(result).toHaveLength(1)
-    expect(result[0]).toMatchObject({ id: '1', name: '设计', start: '2026-09-01', end: '2026-09-05' })
+    expect(result[0]).toMatchObject({
+      id: '1',
+      name: '设计',
+      start: '2026-09-01',
+      end: '2026-09-05',
+    })
   })
 
   it('顶层非数组被拒绝（防 store.tasks 被整体污染）', () => {
@@ -164,9 +169,9 @@ describe('validateImportedTasks', () => {
   })
 
   it('结束早于开始被拒绝', () => {
-    expect(() => validateImportedTasks([{ ...valid, start: '2026-09-10', end: '2026-09-01' }])).toThrow(
-      /结束日期早于开始日期/,
-    )
+    expect(() =>
+      validateImportedTasks([{ ...valid, start: '2026-09-10', end: '2026-09-01' }]),
+    ).toThrow(/结束日期早于开始日期/)
   })
 
   it('progress 归一化到 0–100', () => {
@@ -176,15 +181,12 @@ describe('validateImportedTasks', () => {
   })
 
   it('dependencies 支持数组与逗号字符串，统一为数组', () => {
-    expect(validateImportedTasks([{ ...valid, dependencies: ['1', '2'] }])[0]!.dependencies).toEqual([
-      '1',
-      '2',
-    ])
-    expect(validateImportedTasks([{ ...valid, dependencies: '1, 2 ,3' }])[0]!.dependencies).toEqual([
-      '1',
-      '2',
-      '3',
-    ])
+    expect(
+      validateImportedTasks([{ ...valid, dependencies: ['1', '2'] }])[0]!.dependencies,
+    ).toEqual(['1', '2'])
+    expect(validateImportedTasks([{ ...valid, dependencies: '1, 2 ,3' }])[0]!.dependencies).toEqual(
+      ['1', '2', '3'],
+    )
     expect(validateImportedTasks([valid])[0]!.dependencies).toEqual([])
   })
 

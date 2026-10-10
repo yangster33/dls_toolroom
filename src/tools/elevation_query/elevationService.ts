@@ -12,9 +12,7 @@ export class ElevationService {
   private baseUrl = 'https://api.open-meteo.com/v1/elevation'
 
   async getElevation(longitude: number, latitude: number): Promise<ElevationResult> {
-    const response = await fetch(
-      `${this.baseUrl}?latitude=${latitude}&longitude=${longitude}`
-    )
+    const response = await fetch(`${this.baseUrl}?latitude=${latitude}&longitude=${longitude}`)
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -29,21 +27,21 @@ export class ElevationService {
     return {
       longitude,
       latitude,
-      elevation: data.elevation[0]!
+      elevation: data.elevation[0]!,
     }
   }
 
-  async getElevations(points: { longitude: number; latitude: number }[]): Promise<ElevationResult[]> {
+  async getElevations(
+    points: { longitude: number; latitude: number }[],
+  ): Promise<ElevationResult[]> {
     if (points.length === 0) {
       return []
     }
 
-    const latitudes = points.map(p => p.latitude).join(',')
-    const longitudes = points.map(p => p.longitude).join(',')
+    const latitudes = points.map((p) => p.latitude).join(',')
+    const longitudes = points.map((p) => p.longitude).join(',')
 
-    const response = await fetch(
-      `${this.baseUrl}?latitude=${latitudes}&longitude=${longitudes}`
-    )
+    const response = await fetch(`${this.baseUrl}?latitude=${latitudes}&longitude=${longitudes}`)
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -58,7 +56,7 @@ export class ElevationService {
     return points.map((point, index) => ({
       longitude: point.longitude,
       latitude: point.latitude,
-      elevation: data.elevation[index] ?? 0
+      elevation: data.elevation[index] ?? 0,
     }))
   }
 }

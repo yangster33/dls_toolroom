@@ -29,11 +29,7 @@ export async function batchGeocodeQuery<TInput, TPartial, TResult>(
   items: TInput[],
   apiKeys: ApiKeyInfo[],
   options: BatchQueryOptions,
-  singleQueryFn: (
-    item: TInput,
-    apiKey: string,
-    provider: ApiProvider,
-  ) => Promise<TPartial>,
+  singleQueryFn: (item: TInput, apiKey: string, provider: ApiProvider) => Promise<TPartial>,
   mergeResult: (item: TInput, partial: TPartial, provider: ApiProvider) => TResult,
   onErrorResult: (item: TInput, provider: ApiProvider) => TResult,
   onProgress?: (progress: QueryProgress) => void,
@@ -73,11 +69,7 @@ export async function batchGeocodeQuery<TInput, TPartial, TResult>(
     )
 
     try {
-      const partialResult = await singleQueryFn(
-        item,
-        selectedKey.key,
-        selectedKey.provider!,
-      )
+      const partialResult = await singleQueryFn(item, selectedKey.key, selectedKey.provider!)
       results.push(mergeResult(item, partialResult, selectedKey.provider!))
     } catch {
       results.push(onErrorResult(item, selectedKey.provider!))

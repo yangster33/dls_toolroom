@@ -39,7 +39,9 @@ describe('validateRow - 必填字段', () => {
   it('半功率角必须大于 0 且小于 180', () => {
     expect(validateRow({ ...VALID_ROW, 半功率角: 'abc' }, 0)).toEqual(['半功率角必须是数字'])
     expect(validateRow({ ...VALID_ROW, 半功率角: '0' }, 0)).toEqual(['半功率角必须大于0且小于180'])
-    expect(validateRow({ ...VALID_ROW, 半功率角: '180' }, 0)).toEqual(['半功率角必须大于0且小于180'])
+    expect(validateRow({ ...VALID_ROW, 半功率角: '180' }, 0)).toEqual([
+      '半功率角必须大于0且小于180',
+    ])
   })
 
   it('半径必须大于 0', () => {

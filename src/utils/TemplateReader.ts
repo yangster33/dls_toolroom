@@ -77,10 +77,10 @@ export async function readAndValidateTemplate(
     }
 
     result.rawData = rawData
-    const fileHeaders: string[] = (rawData[0] || []).map(h => String(h || '').trim())
+    const fileHeaders: string[] = (rawData[0] || []).map((h) => String(h || '').trim())
 
     // 2. 检查所有必需字段是否都存在（不要求顺序）
-    const missingHeaders = expectedHeaders.filter(expected => {
+    const missingHeaders = expectedHeaders.filter((expected) => {
       const trimmedExpected = expected.trim()
       return !fileHeaders.includes(trimmedExpected)
     })
@@ -104,14 +104,15 @@ export async function readAndValidateTemplate(
       // 跳过空行
       if (
         skipEmptyRows &&
-        (!rawRow || rawRow.every((cell) => cell === undefined || cell === null || String(cell).trim() === ''))
+        (!rawRow ||
+          rawRow.every((cell) => cell === undefined || cell === null || String(cell).trim() === ''))
       ) {
         continue
       }
 
       // 构建数据行对象（按预期表头顺序整理数据）
       const rowData: DataRow = {}
-      expectedHeaders.forEach(expectedHeader => {
+      expectedHeaders.forEach((expectedHeader) => {
         const trimmedExpected = expectedHeader.trim()
         const colIndex = headerIndexMap.get(trimmedExpected)
         const cellValue = colIndex !== undefined ? rawRow[colIndex] : undefined
@@ -173,7 +174,10 @@ export async function readTemplate(file: File): Promise<{
 
   for (let i = 1; i < rawData.length; i++) {
     const row = rawData[i]
-    if (!row || row.every((cell) => cell === undefined || cell === null || String(cell).trim() === '')) {
+    if (
+      !row ||
+      row.every((cell) => cell === undefined || cell === null || String(cell).trim() === '')
+    ) {
       continue
     }
 

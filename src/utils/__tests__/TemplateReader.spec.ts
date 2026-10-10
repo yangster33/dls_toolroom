@@ -20,9 +20,7 @@ describe('readAndValidateTemplate', () => {
   const headers = ['名称', '经度', '纬度']
 
   it('CSV 合法数据校验通过（字段顺序不要求一致）', async () => {
-    const file = makeCsvFile(
-      '纬度,经度,名称\n39.9,116.4,站点A\n31.2,121.5,站点B',
-    )
+    const file = makeCsvFile('纬度,经度,名称\n39.9,116.4,站点A\n31.2,121.5,站点B')
     const result = await readAndValidateTemplate(file, headers)
     expect(result.isValid).toBe(true)
     expect(result.errors).toEqual([])

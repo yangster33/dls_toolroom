@@ -14,7 +14,7 @@ export const useFlowingBackgroundStore = defineStore('flowingBackground', () => 
     (newValue) => {
       localStorage.setItem('flowing-background-enabled', String(newValue))
     },
-    { immediate: true }
+    { immediate: true },
   )
 
   const toggle = () => {

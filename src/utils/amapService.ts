@@ -57,10 +57,14 @@ export function getRandomDelay(
   delay: number,
   randomDelay: boolean,
   minRandomDelay?: number,
-  maxRandomDelay?: number
+  maxRandomDelay?: number,
 ): number {
   if (randomDelay && minRandomDelay !== undefined && maxRandomDelay !== undefined) {
-    return delay + Math.random() * ((maxRandomDelay as number) - (minRandomDelay as number)) + (minRandomDelay as number)
+    return (
+      delay +
+      Math.random() * ((maxRandomDelay as number) - (minRandomDelay as number)) +
+      (minRandomDelay as number)
+    )
   }
   return delay
 }
@@ -79,7 +83,10 @@ export function buildApiUrl(baseUrl: string, params: Record<string, string | num
 /**
  * 验证 API Key 是否有效（通用版本）
  */
-export async function validateApiKey(key: string, provider: ApiProvider): Promise<ValidationResult> {
+export async function validateApiKey(
+  key: string,
+  provider: ApiProvider,
+): Promise<ValidationResult> {
   const config = PROVIDER_CONFIGS[provider]
 
   const params: Record<string, string | number> = {
@@ -128,14 +135,11 @@ export function getProviderOptions(): { value: ApiProvider; label: string }[] {
 export function isInBounds(
   lng: number,
   lat: number,
-  bounds: { southwest: { lng: number; lat: number }; northeast: { lng: number; lat: number } }
+  bounds: { southwest: { lng: number; lat: number }; northeast: { lng: number; lat: number } },
 ): boolean {
   const { southwest, northeast } = bounds
   return (
-    lng >= southwest.lng &&
-    lng <= northeast.lng &&
-    lat >= southwest.lat &&
-    lat <= northeast.lat
+    lng >= southwest.lng && lng <= northeast.lng && lat >= southwest.lat && lat <= northeast.lat
   )
 }
 
@@ -162,7 +166,7 @@ export function parseLocation(locationStr: string): { lng: number; lat: number }
 export function exportResultsToRows(
   headers: string[],
   results: Record<string, unknown>[],
-  fieldConfigs: Record<string, (result: Record<string, unknown>) => string>
+  fieldConfigs: Record<string, (result: Record<string, unknown>) => string>,
 ): string[][] {
   const rows: string[][] = [headers]
 

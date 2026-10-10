@@ -67,7 +67,10 @@ describe('formatTime', () => {
 describe('magnitudeOptions', () => {
   it('包含不限与各级震级', () => {
     expect(magnitudeOptions[0]).toEqual({ value: '', label: '不限' })
-    expect(magnitudeOptions[magnitudeOptions.length - 1]!).toEqual({ value: '8', label: '8 级及以上' })
+    expect(magnitudeOptions[magnitudeOptions.length - 1]!).toEqual({
+      value: '8',
+      label: '8 级及以上',
+    })
     expect(magnitudeOptions).toHaveLength(10)
   })
 })

@@ -211,11 +211,7 @@ export function exportMatchResultsToRows(
       result.push(row)
     } else {
       // 异站址：源站点（需查找的）+ N组(匹配站名, 匹配经度, 匹配纬度, 距离)
-      const row: string[] = [
-        point1.name,
-        String(point1.longitude),
-        String(point1.latitude),
-      ]
+      const row: string[] = [point1.name, String(point1.longitude), String(point1.latitude)]
 
       if (siteMatch) {
         for (let j = 0; j < matchCount; j++) {
@@ -250,10 +246,7 @@ export function getResultHeaders(
   mode: 'same-site' | 'different-site',
   matchCount: number,
 ): string[] {
-  const baseHeaders =
-    mode === 'same-site'
-      ? ['名称', '经度', '纬度']
-      : ['名称', '经度', '纬度']
+  const baseHeaders = mode === 'same-site' ? ['名称', '经度', '纬度'] : ['名称', '经度', '纬度']
 
   for (let i = 1; i <= matchCount; i++) {
     baseHeaders.push(`匹配站名${i}`, `匹配经度${i}`, `匹配纬度${i}`, `距离${i}(米)`)

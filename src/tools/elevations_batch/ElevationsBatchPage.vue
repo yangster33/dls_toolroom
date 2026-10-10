@@ -8,7 +8,9 @@
       @close="closeErrorDialog"
     />
     <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || '批量高程查询' }}</h1>
-    <p class="text-base-content/70">{{ toolConfig?.description || '通过上传模板批量查询高程数据' }}</p>
+    <p class="text-base-content/70">
+      {{ toolConfig?.description || '通过上传模板批量查询高程数据' }}
+    </p>
 
     <div class="bg-base-200/40 rounded-lg p-6 space-y-6">
       <div>
@@ -107,7 +109,10 @@
           @dragover.prevent="isDragging = true"
           @dragleave.prevent="isDragging = false"
           @drop.prevent="onDropFile"
-          :class="['border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors', isDragging ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-primary']"
+          :class="[
+            'border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors',
+            isDragging ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-primary',
+          ]"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -144,15 +149,11 @@
       <div>
         <h2 class="text-xl font-semibold mb-4">4. 执行查询</h2>
         <div class="flex flex-wrap gap-4 items-center">
-          <button
-            @click="executeQuery"
-            :disabled="!canExecuteQuery"
-            class="btn btn-primary"
-          >
+          <button @click="executeQuery" :disabled="!canExecuteQuery" class="btn btn-primary">
             <span v-if="isQuerying" class="loading loading-spinner"></span>
             {{ isQuerying ? '查询中...' : '执行查询' }}
           </button>
-          
+
           <div v-if="isQuerying" class="flex items-center gap-4 flex-1">
             <div class="w-64">
               <div class="progress w-full">
@@ -164,9 +165,13 @@
             </div>
             <span class="text-sm text-gray-600">{{ progressMessage }}</span>
           </div>
-          
+
           <div class="dropdown">
-            <label tabindex="0" class="btn btn-outline btn-secondary" :disabled="!canDownloadResult">
+            <label
+              tabindex="0"
+              class="btn btn-outline btn-secondary"
+              :disabled="!canDownloadResult"
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5 mr-2"
@@ -195,12 +200,8 @@
               </li>
             </ul>
           </div>
-          
-          <button
-            @click="clearAll"
-            class="btn btn-ghost"
-            :disabled="!hasData"
-          >
+
+          <button @click="clearAll" class="btn btn-ghost" :disabled="!hasData">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               class="h-5 w-5 mr-2"
@@ -317,7 +318,11 @@ const closeErrorDialog = () => {
   errorDialogMessage.value = ''
 }
 
-const showErrorDialog = (type: 'error' | 'warning' | 'success' | 'info', title: string, message: string) => {
+const showErrorDialog = (
+  type: 'error' | 'warning' | 'success' | 'info',
+  title: string,
+  message: string,
+) => {
   errorDialogType.value = type
   errorDialogTitle.value = title
   errorDialogMessage.value = message
@@ -325,7 +330,10 @@ const showErrorDialog = (type: 'error' | 'warning' | 'success' | 'info', title: 
 }
 
 const canExecuteQuery = computed(
-  () => validationResult.value?.isValid && !isQuerying.value && validationResult.value.data.length <= 100,
+  () =>
+    validationResult.value?.isValid &&
+    !isQuerying.value &&
+    validationResult.value.data.length <= 100,
 )
 
 const canDownloadResult = computed(() => queryResults.value.length > 0)
@@ -385,7 +393,11 @@ const onFileUpload = async (event: Event) => {
     }
 
     if (validationResult.value.data.length > 100) {
-      showErrorDialog('warning', '数据量超限', `单次查询最多支持 100 个坐标点，当前文件包含 ${validationResult.value.data.length} 个，请分批查询`)
+      showErrorDialog(
+        'warning',
+        '数据量超限',
+        `单次查询最多支持 100 个坐标点，当前文件包含 ${validationResult.value.data.length} 个，请分批查询`,
+      )
     }
   } catch (error) {
     logger.error('文件读取失败:', error)
@@ -402,22 +414,22 @@ const onDropFile = async (event: DragEvent) => {
   isDragging.value = false
   const file = event.dataTransfer?.files?.[0]
   if (!file) return
-  
+
   // 验证文件类型
   if (!file.name.toLowerCase().endsWith('.csv') && !file.name.toLowerCase().endsWith('.xlsx')) {
     showErrorDialog('warning', '文件格式错误', '请上传 CSV 或 Excel 格式的文件')
     return
   }
-  
+
   // 手动创建事件并调用原有的文件上传处理函数
   const inputEvent = new Event('change', { bubbles: true })
   Object.defineProperty(inputEvent, 'target', {
     value: {
-      files: [file]
+      files: [file],
     },
-    writable: true
+    writable: true,
   })
-  
+
   await onFileUpload(inputEvent)
 }
 
@@ -440,7 +452,7 @@ const executeQuery = async () => {
 
   const MAX_BATCH_SIZE = 100
   const batches: CoordinatePoint[][] = []
-  
+
   for (let i = 0; i < data.length; i += MAX_BATCH_SIZE) {
     batches.push(data.slice(i, i + MAX_BATCH_SIZE))
   }
@@ -448,7 +460,7 @@ const executeQuery = async () => {
   try {
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
       const batch = batches[batchIndex]!
-      const points = batch!.map(p => ({ longitude: p.longitude, latitude: p.latitude }))
+      const points = batch!.map((p) => ({ longitude: p.longitude, latitude: p.latitude }))
 
       if (batchIndex > 0) {
         await delay(getDelay())
@@ -480,13 +492,16 @@ const executeQuery = async () => {
 
 const getDelay = (): number => {
   if (queryOptions.randomDelay) {
-    return Math.random() * (queryOptions.maxRandomDelay - queryOptions.minRandomDelay) + queryOptions.minRandomDelay
+    return (
+      Math.random() * (queryOptions.maxRandomDelay - queryOptions.minRandomDelay) +
+      queryOptions.minRandomDelay
+    )
   }
   return queryOptions.delay
 }
 
 const delay = (ms: number): Promise<void> => {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 const downloadResult = (format: 'csv' | 'xlsx') => {

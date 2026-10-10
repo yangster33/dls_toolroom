@@ -94,9 +94,7 @@ describe('generateXlsx', () => {
 
   it('生成含表头、数据、列宽与边框的工作表', async () => {
     const blob = generateXlsx(['名称', '经度'], [['甲', '116.4']], '模板表')
-    expect(blob.type).toBe(
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    )
+    expect(blob.type).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     const wb = XLSX.read(await blob.arrayBuffer(), { type: 'array', cellStyles: true })
     expect(wb.SheetNames).toEqual(['模板表'])
     const ws = wb.Sheets['模板表']!
@@ -145,9 +143,7 @@ describe('exportTemplate / exportData / exportTable', () => {
     exportTemplate(['名称'], 'xlsx', '点位模板')
     const anchor = anchors[0]!
     const blob = createObjectURL.mock.calls[0]![0] as Blob
-    expect(blob.type).toBe(
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    )
+    expect(blob.type).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     expect(anchor.getAttribute('download')).toBe('点位模板.xlsx')
   })
 
@@ -193,9 +189,7 @@ describe('downloadCsvTemplate / downloadXlsxTemplate', () => {
   it('下载 XLSX 模板', () => {
     downloadXlsxTemplate()
     const blob = createObjectURL.mock.calls[0]![0] as Blob
-    expect(blob.type).toBe(
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    )
+    expect(blob.type).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     expect(anchors[0]!.getAttribute('download')).toBe('点位导入模板.xlsx')
   })
 })

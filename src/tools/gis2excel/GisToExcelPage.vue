@@ -1,7 +1,9 @@
 <template>
   <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4">
     <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || 'GIS转表格' }}</h1>
-    <p class="text-base-content/70">{{ toolConfig?.description || '将SHP、KML、KMZ文件转换为Excel表格' }}</p>
+    <p class="text-base-content/70">
+      {{ toolConfig?.description || '将SHP、KML、KMZ文件转换为Excel表格' }}
+    </p>
 
     <div class="mt-4 space-y-6">
       <div>
@@ -14,21 +16,40 @@
           accept=".shp,.kml,.kmz"
           :disabled="isConverting"
         />
-        <p class="text-sm text-base-content/60 mt-2">支持格式：Shapefile (.shp)、KML (.kml)、KMZ (.kmz)</p>
+        <p class="text-sm text-base-content/60 mt-2">
+          支持格式：Shapefile (.shp)、KML (.kml)、KMZ (.kmz)
+        </p>
       </div>
 
       <div v-if="validateResult && validateResult.isValid" class="space-y-2">
         <div class="flex items-center gap-2 text-success font-semibold">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M5 13l4 4L19 7"
+            />
           </svg>
           验证通过
         </div>
         <div class="text-sm text-base-content/70">
           检测到 {{ validateResult.totalFeatures }} 个地理要素：
-          <span v-if="validateResult.pointCount > 0" class="text-primary">{{ validateResult.pointCount }} 个点</span>
-          <span v-if="validateResult.lineCount > 0" class="text-blue-600">，{{ validateResult.lineCount }} 条线</span>
-          <span v-if="validateResult.polygonCount > 0" class="text-green-600">，{{ validateResult.polygonCount }} 个面</span>
+          <span v-if="validateResult.pointCount > 0" class="text-primary"
+            >{{ validateResult.pointCount }} 个点</span
+          >
+          <span v-if="validateResult.lineCount > 0" class="text-blue-600"
+            >，{{ validateResult.lineCount }} 条线</span
+          >
+          <span v-if="validateResult.polygonCount > 0" class="text-green-600"
+            >，{{ validateResult.polygonCount }} 个面</span
+          >
         </div>
       </div>
 
@@ -37,12 +58,24 @@
           @click="showAdvancedOptions = !showAdvancedOptions"
           class="btn btn-sm btn-outline mb-4 flex items-center gap-2"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" :class="{ 'rotate-180': showAdvancedOptions }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4"
+            :class="{ 'rotate-180': showAdvancedOptions }"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"
+            />
           </svg>
           高级选项
         </button>
-        
+
         <div v-show="showAdvancedOptions" class="border border-base-200 rounded-lg p-4 space-y-4">
           <div class="space-y-2">
             <h3 class="font-medium text-sm">LineString 设置</h3>
@@ -108,20 +141,45 @@
           @click="handleConvert"
           class="btn btn-success"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5 mr-2"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 10V3L4 14h7v7l9-11h-7z"
+            />
           </svg>
           {{ isConverting ? '转换中...' : '转换' }}
         </button>
-        
+
         <div class="dropdown" v-if="canDownload">
           <label tabindex="0" class="btn btn-primary">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5 mr-2"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+              />
             </svg>
             下载结果
           </label>
-          <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box shadow-lg p-2 w-48 z-10">
+          <ul
+            tabindex="0"
+            class="dropdown-content menu bg-base-100 rounded-box shadow-lg p-2 w-48 z-10"
+          >
             <li>
               <a @click="downloadAll('xlsx')" class="text-sm">Excel 格式（单文件）</a>
             </li>
@@ -137,19 +195,33 @@
             </li>
           </ul>
         </div>
-        
+
         <button v-else disabled class="btn btn-disabled btn-primary">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5 mr-2"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+            />
           </svg>
           下载结果
         </button>
-        
+
         <button @click="handleClear" class="btn btn-outline btn-warning">清空</button>
       </div>
     </div>
 
-    <div v-if="isConverting" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div
+      v-if="isConverting"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+    >
       <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
         <h3 class="font-bold text-lg mb-4">正在转换...</h3>
         <div class="w-full bg-base-200 rounded-full h-2.5 mb-2">
@@ -200,7 +272,11 @@ const advancedOptions = reactive({
 })
 
 const canConvert = computed(() => {
-  return validateResult.value?.isValid === true && validateResult.value.totalFeatures > 0 && !isConverting.value
+  return (
+    validateResult.value?.isValid === true &&
+    validateResult.value.totalFeatures > 0 &&
+    !isConverting.value
+  )
 })
 
 const canDownload = computed(() => {
@@ -238,20 +314,20 @@ async function handleConvert() {
   progressText.value = '正在解析地理要素...'
 
   try {
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 100))
 
     progress.value = 30
     progressText.value = '正在转换数据...'
 
-    await new Promise(resolve => setTimeout(resolve, 200))
+    await new Promise((resolve) => setTimeout(resolve, 200))
 
     progress.value = 70
     progressText.value = '正在整理表格...'
 
     const groupedFeatures: GisFeature[][] = []
-    const pointFeatures = validateResult.value.features.filter(f => f.type === 'Point')
-    const lineFeatures = validateResult.value.features.filter(f => f.type === 'LineString')
-    const polygonFeatures = validateResult.value.features.filter(f => f.type === 'Polygon')
+    const pointFeatures = validateResult.value.features.filter((f) => f.type === 'Point')
+    const lineFeatures = validateResult.value.features.filter((f) => f.type === 'LineString')
+    const polygonFeatures = validateResult.value.features.filter((f) => f.type === 'Polygon')
 
     if (pointFeatures.length > 0) groupedFeatures.push(pointFeatures)
     if (lineFeatures.length > 0) groupedFeatures.push(lineFeatures)
@@ -259,12 +335,12 @@ async function handleConvert() {
 
     convertedData.value = groupedFeatures
 
-    await new Promise(resolve => setTimeout(resolve, 200))
+    await new Promise((resolve) => setTimeout(resolve, 200))
 
     progress.value = 100
     progressText.value = '转换完成'
 
-    await new Promise(resolve => setTimeout(resolve, 500))
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
     isConverting.value = false
   } catch (err) {

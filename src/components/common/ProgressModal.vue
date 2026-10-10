@@ -19,11 +19,7 @@
             </div>
           </div>
           <div class="modal-action">
-            <button
-              v-if="showCancel"
-              @click="$emit('cancel')"
-              class="btn btn-error btn-sm"
-            >
+            <button v-if="showCancel" @click="$emit('cancel')" class="btn btn-error btn-sm">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 class="h-4 w-4 mr-1"

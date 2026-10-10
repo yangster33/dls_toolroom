@@ -51,11 +51,7 @@ export function parseStrictNumber(raw: unknown): number | null {
  * @param max   允许的最大值（经度 +180 / 纬度 +90）
  * @returns     合法坐标值，或 null（空值、非数字、越界）
  */
-export function parseCoordinateValue(
-  raw: unknown,
-  min: number,
-  max: number,
-): number | null {
+export function parseCoordinateValue(raw: unknown, min: number, max: number): number | null {
   const value = parseStrictNumber(raw)
   if (value === null) return null
   if (value < min || value > max) return null

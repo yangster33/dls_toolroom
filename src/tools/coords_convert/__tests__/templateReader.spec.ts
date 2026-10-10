@@ -87,9 +87,7 @@ describe('readAndValidateCoordTemplate', () => {
   })
 
   it('任一非法行时整体校验失败且不返回数据', async () => {
-    const file = makeCsvFile(
-      '名称,经度/X（必填）,纬度/Y（必填）\nA,116.4,39.9\nB,abc,def',
-    )
+    const file = makeCsvFile('名称,经度/X（必填）,纬度/Y（必填）\nA,116.4,39.9\nB,abc,def')
     const result = await readAndValidateCoordTemplate(file, 'wgs84_lnglat')
     expect(result.isValid).toBe(false)
     expect(result.dataRows).toEqual([])

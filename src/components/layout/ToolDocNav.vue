@@ -16,9 +16,7 @@
         :fileName="currentDocInfo?.fileName || ''"
         :basePath="basePath"
       />
-      <div v-else class="text-center text-gray-500 py-8">
-        暂无文档
-      </div>
+      <div v-else class="text-center text-gray-500 py-8">暂无文档</div>
     </div>
   </div>
 </template>
@@ -56,7 +54,7 @@ watch(
       currentDoc.value = firstDoc.key
     }
   },
-  { immediate: true }
+  { immediate: true },
 )
 </script>
 

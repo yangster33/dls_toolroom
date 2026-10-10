@@ -14,108 +14,112 @@
     <!-- 评论表单 -->
     <div class="aura aura-holo w-full [--aura-radius:0.5rem] mb-6">
       <div class="p-4 bg-base-200 rounded-lg">
-      <div class="space-y-3">
-        <!-- 评论内容（必填） -->
-        <div>
-          <textarea
-            v-model="formContent"
-            class="w-full p-3 bg-base-100 rounded-lg border focus:outline-none resize-none"
-            :class="errors.content ? 'border-error' : 'border-base-300 focus:border-primary'"
-            rows="3"
-            placeholder="写下你的评论..."
-          ></textarea>
-          <span v-if="errors.content" class="text-error text-xs mt-1">{{ errors.content }}</span>
-        </div>
+        <div class="space-y-3">
+          <!-- 评论内容（必填） -->
+          <div>
+            <textarea
+              v-model="formContent"
+              class="w-full p-3 bg-base-100 rounded-lg border focus:outline-none resize-none"
+              :class="errors.content ? 'border-error' : 'border-base-300 focus:border-primary'"
+              rows="3"
+              placeholder="写下你的评论..."
+            ></textarea>
+            <span v-if="errors.content" class="text-error text-xs mt-1">{{ errors.content }}</span>
+          </div>
 
-        <!-- 可选信息行 -->
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-          <div>
-            <input
-              v-model="formNickname"
-              type="text"
-              class="input input-bordered w-full bg-base-100"
-              :class="{ 'input-error': errors.nickname }"
-              placeholder="昵称（选填）"
-            />
-            <span v-if="errors.nickname" class="text-error text-xs mt-1">{{ errors.nickname }}</span>
+          <!-- 可选信息行 -->
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div>
+              <input
+                v-model="formNickname"
+                type="text"
+                class="input input-bordered w-full bg-base-100"
+                :class="{ 'input-error': errors.nickname }"
+                placeholder="昵称（选填）"
+              />
+              <span v-if="errors.nickname" class="text-error text-xs mt-1">{{
+                errors.nickname
+              }}</span>
+            </div>
+            <div>
+              <input
+                v-model="formPhone"
+                type="tel"
+                class="input input-bordered w-full bg-base-100"
+                :class="{ 'input-error': errors.phone }"
+                placeholder="电话（选填）"
+              />
+              <span v-if="errors.phone" class="text-error text-xs mt-1">{{ errors.phone }}</span>
+            </div>
+            <div>
+              <input
+                v-model="formEmail"
+                type="email"
+                class="input input-bordered w-full bg-base-100"
+                :class="{ 'input-error': errors.email }"
+                placeholder="邮箱（选填）"
+              />
+              <span v-if="errors.email" class="text-error text-xs mt-1">{{ errors.email }}</span>
+            </div>
+            <div>
+              <select
+                v-model="formType"
+                class="select select-bordered w-full bg-base-100"
+                :class="{ 'select-error': errors.type }"
+                required
+              >
+                <option value="" disabled>请选择留言类型</option>
+                <option value="complaint">吐槽</option>
+                <option value="bug">bug上报</option>
+                <option value="praise">赞美</option>
+                <option value="other">其他</option>
+              </select>
+              <span v-if="errors.type" class="text-error text-xs mt-1">{{ errors.type }}</span>
+            </div>
           </div>
-          <div>
-            <input
-              v-model="formPhone"
-              type="tel"
-              class="input input-bordered w-full bg-base-100"
-              :class="{ 'input-error': errors.phone }"
-              placeholder="电话（选填）"
-            />
-            <span v-if="errors.phone" class="text-error text-xs mt-1">{{ errors.phone }}</span>
-          </div>
-          <div>
-            <input
-              v-model="formEmail"
-              type="email"
-              class="input input-bordered w-full bg-base-100"
-              :class="{ 'input-error': errors.email }"
-              placeholder="邮箱（选填）"
-            />
-            <span v-if="errors.email" class="text-error text-xs mt-1">{{ errors.email }}</span>
-          </div>
-          <div>
-            <select
-              v-model="formType"
-              class="select select-bordered w-full bg-base-100"
-              :class="{ 'select-error': errors.type }"
-              required
+
+          <!-- 验证码行 -->
+          <div class="flex items-center gap-3">
+            <span
+              class="select-none bg-base-300 text-base-content px-3 py-1.5 rounded font-mono text-lg tracking-widest italic line-through"
             >
-              <option value="" disabled>请选择留言类型</option>
-              <option value="complaint">吐槽</option>
-              <option value="bug">bug上报</option>
-              <option value="praise">赞美</option>
-              <option value="other">其他</option>
-            </select>
-            <span v-if="errors.type" class="text-error text-xs mt-1">{{ errors.type }}</span>
+              {{ captchaCode }}
+            </span>
+            <button class="btn btn-ghost btn-sm" @click="refreshCaptcha">换一张</button>
+            <div>
+              <input
+                v-model="formCaptcha"
+                type="text"
+                class="input input-bordered w-32 bg-base-100"
+                :class="{ 'input-error': errors.captcha }"
+                placeholder="验证码"
+                maxlength="4"
+              />
+              <span v-if="errors.captcha" class="text-error text-xs block mt-1">{{
+                errors.captcha
+              }}</span>
+            </div>
+          </div>
+
+          <div class="flex justify-between items-center">
+            <span v-if="submitError" class="text-error text-sm">{{ submitError }}</span>
+            <span v-else></span>
+            <button class="btn btn-primary btn-sm" :disabled="submitting" @click="handleSubmit">
+              <span v-if="submitting" class="loading loading-spinner loading-xs"></span>
+              发表评论
+            </button>
           </div>
         </div>
-
-        <!-- 验证码行 -->
-        <div class="flex items-center gap-3">
-          <span
-            class="select-none bg-base-300 text-base-content px-3 py-1.5 rounded font-mono text-lg tracking-widest italic line-through"
-          >
-            {{ captchaCode }}
-          </span>
-          <button class="btn btn-ghost btn-sm" @click="refreshCaptcha">换一张</button>
-          <div>
-            <input
-              v-model="formCaptcha"
-              type="text"
-              class="input input-bordered w-32 bg-base-100"
-              :class="{ 'input-error': errors.captcha }"
-              placeholder="验证码"
-              maxlength="4"
-            />
-            <span v-if="errors.captcha" class="text-error text-xs block mt-1">{{ errors.captcha }}</span>
-          </div>
-        </div>
-
-        <div class="flex justify-between items-center">
-          <span v-if="submitError" class="text-error text-sm">{{ submitError }}</span>
-          <span v-else></span>
-          <button
-            class="btn btn-primary btn-sm"
-            :disabled="submitting"
-            @click="handleSubmit"
-          >
-            <span v-if="submitting" class="loading loading-spinner loading-xs"></span>
-            发表评论
-          </button>
-        </div>
-      </div>
       </div>
     </div>
 
     <!-- 评论列表 -->
     <div class="space-y-3">
-      <div v-for="comment in comments" :key="comment.id" class="aura aura-holo w-full [--aura-radius:0.5rem]">
+      <div
+        v-for="comment in comments"
+        :key="comment.id"
+        class="aura aura-holo w-full [--aura-radius:0.5rem]"
+      >
         <div class="p-4 bg-base-200 rounded-lg">
           <div class="flex items-center gap-2 mb-2 flex-wrap">
             <span class="font-semibold text-sm text-base-content">

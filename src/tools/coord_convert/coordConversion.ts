@@ -6,7 +6,11 @@ import {
 } from '@/utils/coordinateConverter'
 import { type CGCS2000Params } from '@/utils/coordTransform'
 
-export { type CGCS2000Params, DEFAULT_CGCS2000_PARAMS, computeCentralMeridian } from '@/utils/coordTransform'
+export {
+  type CGCS2000Params,
+  DEFAULT_CGCS2000_PARAMS,
+  computeCentralMeridian,
+} from '@/utils/coordTransform'
 export { type CoordinateSystemType } from '@/utils/coordinateConverter'
 
 interface CoordinateResult {

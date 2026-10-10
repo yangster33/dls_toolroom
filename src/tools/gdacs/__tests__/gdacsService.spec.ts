@@ -155,7 +155,13 @@ describe('fetchGdacsData', () => {
       json: async () => ({ type: 'FeatureCollection', features: [] }),
     })
     vi.stubGlobal('fetch', fetchMock)
-    await fetchGdacsData({ ...FORM, eventType: 'EQ', alertLevel: 'Red', startDate: '2026-08-01', endDate: '2026-08-10' })
+    await fetchGdacsData({
+      ...FORM,
+      eventType: 'EQ',
+      alertLevel: 'Red',
+      startDate: '2026-08-01',
+      endDate: '2026-08-10',
+    })
     const url = fetchMock.mock.calls[0]![0] as string
     expect(url).toContain('eventlist=EQ')
     expect(url).toContain('alertlevel=red')
@@ -164,7 +170,10 @@ describe('fetchGdacsData', () => {
   })
 
   it('HTTP 错误返回失败结果', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500, text: async () => 'boom' }))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 500, text: async () => 'boom' }),
+    )
     const result = await fetchGdacsData(FORM)
     expect(result.success).toBe(false)
     expect(result.error).toContain('HTTP 500')

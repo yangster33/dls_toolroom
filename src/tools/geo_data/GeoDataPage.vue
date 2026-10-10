@@ -1,7 +1,9 @@
 <template>
   <div class="bg-base-100/70 backdrop-blur-sm rounded-lg shadow-lg p-4">
     <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || '空间分析' }}</h1>
-    <p class="text-base-content/70">{{ toolConfig?.description || '基于Turf.js的地理空间分析工具' }}</p>
+    <p class="text-base-content/70">
+      {{ toolConfig?.description || '基于Turf.js的地理空间分析工具' }}
+    </p>
 
     <div class="bg-base-200/40 rounded-lg p-6 space-y-6">
       <!-- 文件上传区域 -->
@@ -26,8 +28,19 @@
             accept=".kml,.kmz"
           />
           <div class="flex flex-col items-center gap-4">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-16 w-16 text-primary"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              />
             </svg>
             <div>
               <p class="text-lg font-semibold">拖拽 KML/KMZ 文件到此处</p>
@@ -36,7 +49,9 @@
           </div>
         </div>
         <div v-if="uploadedFile" class="mt-4 flex items-center justify-between">
-          <span class="text-sm text-gray-600">{{ uploadedFile.name }} ({{ formatFileSize(uploadedFile.size) }})</span>
+          <span class="text-sm text-gray-600"
+            >{{ uploadedFile.name }} ({{ formatFileSize(uploadedFile.size) }})</span
+          >
           <button @click="clearFile" class="btn btn-sm btn-outline btn-warning">移除</button>
         </div>
       </div>
@@ -59,9 +74,25 @@
       <div v-if="parseResult" class="stats stats-vertical lg:stats-horizontal shadow mb-6 w-full">
         <div class="stat">
           <div class="stat-figure text-primary">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-8 w-8"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+              />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+              />
             </svg>
           </div>
           <div class="stat-title">点要素</div>
@@ -69,8 +100,19 @@
         </div>
         <div class="stat">
           <div class="stat-figure text-secondary">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-8 w-8"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
             </svg>
           </div>
           <div class="stat-title">线要素</div>
@@ -78,8 +120,19 @@
         </div>
         <div class="stat">
           <div class="stat-figure text-accent">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 011-1v-6z" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-8 w-8"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 011-1v-6z"
+              />
             </svg>
           </div>
           <div class="stat-title">面要素</div>
@@ -87,8 +140,19 @@
         </div>
         <div class="stat">
           <div class="stat-figure text-info">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-8 w-8"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+              />
             </svg>
           </div>
           <div class="stat-title">总计</div>
@@ -137,24 +201,60 @@
         </button>
         <div class="dropdown" v-if="canDownloadResult">
           <label tabindex="0" class="btn btn-success">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5 mr-2"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+              />
             </svg>
             导出数据
           </label>
-          <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box shadow-lg p-2 w-52 z-10">
+          <ul
+            tabindex="0"
+            class="dropdown-content menu bg-base-100 rounded-box shadow-lg p-2 w-52 z-10"
+          >
             <li>
               <a @click="exportResult('csv')" class="text-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4 mr-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
                 </svg>
                 CSV 格式
               </a>
             </li>
             <li>
               <a @click="exportResult('xlsx')" class="text-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4 mr-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
                 </svg>
                 Excel 格式
               </a>
@@ -220,7 +320,7 @@
           <h3 class="font-bold text-lg">空间分析</h3>
           <button @click="cancelAnalysis" class="btn btn-sm btn-outline btn-error">取消</button>
         </div>
-        
+
         <!-- 总进度条 -->
         <div class="space-y-2 mb-6">
           <div class="flex justify-between text-sm">
@@ -349,7 +449,11 @@ const closeErrorDialog = () => {
   parseErrors.value = []
 }
 
-const showErrorDialogMsg = (type: 'error' | 'warning' | 'success' | 'info', title: string, message: string) => {
+const showErrorDialogMsg = (
+  type: 'error' | 'warning' | 'success' | 'info',
+  title: string,
+  message: string,
+) => {
   errorDialogType.value = type
   errorDialogTitle.value = title
   errorDialogMessage.value = message
@@ -378,19 +482,17 @@ const previewTotal = ref(0)
 
 // 计算属性
 const canStartAnalysis = computed(() => {
-  return parseResult.value !== null &&
-    selectedAnalysisTypes.value.length > 0 &&
-    !isAnalyzing.value
+  return parseResult.value !== null && selectedAnalysisTypes.value.length > 0 && !isAnalyzing.value
 })
 
 const canDownloadResult = computed(() => {
-  return analysisResults.value.length > 0 &&
-    selectedAnalysisTypes.value.length > 0 &&
-    !isAnalyzing.value
+  return (
+    analysisResults.value.length > 0 && selectedAnalysisTypes.value.length > 0 && !isAnalyzing.value
+  )
 })
 
 // 检查分析类型是否可用
-const isAnalysisTypeAvailable = (config: typeof analysisConfigs[0]): boolean => {
+const isAnalysisTypeAvailable = (config: (typeof analysisConfigs)[0]): boolean => {
   if (!parseResult.value) return false
   const { totalPoints, totalLines, totalPolygons } = parseResult.value
   if (config.minPoints && totalPoints < config.minPoints) return false
@@ -440,9 +542,10 @@ const processFile = async (file: File) => {
   parseErrors.value = []
 
   try {
-    const result = extension === 'kmz'
-      ? await parseKMZ(file, updateParseProgress)
-      : await parseKML(file, updateParseProgress)
+    const result =
+      extension === 'kmz'
+        ? await parseKMZ(file, updateParseProgress)
+        : await parseKML(file, updateParseProgress)
 
     parseResult.value = result
 
@@ -498,7 +601,7 @@ const selectAllAnalysis = () => {
   selectedAnalysisTypes.value = getAvailableAnalysisTypes(
     parseResult.value?.totalPoints ?? 0,
     parseResult.value?.totalLines ?? 0,
-    parseResult.value?.totalPolygons ?? 0
+    parseResult.value?.totalPolygons ?? 0,
   )
 }
 
@@ -512,10 +615,10 @@ const toggleAllAnalysis = () => {
   const availableTypes = getAvailableAnalysisTypes(
     parseResult.value?.totalPoints ?? 0,
     parseResult.value?.totalLines ?? 0,
-    parseResult.value?.totalPolygons ?? 0
+    parseResult.value?.totalPolygons ?? 0,
   )
   const currentSet = new Set(selectedAnalysisTypes.value)
-  selectedAnalysisTypes.value = availableTypes.filter(type => !currentSet.has(type))
+  selectedAnalysisTypes.value = availableTypes.filter((type) => !currentSet.has(type))
 }
 
 // 自动选择可用的分析类型
@@ -524,7 +627,7 @@ const autoSelectAnalysisTypes = () => {
   selectedAnalysisTypes.value = getAvailableAnalysisTypes(
     parseResult.value.totalPoints,
     parseResult.value.totalLines,
-    parseResult.value.totalPolygons
+    parseResult.value.totalPolygons,
   )
 }
 
@@ -549,7 +652,7 @@ const startAnalysis = async () => {
   try {
     const results = await performAnalysisAsync(
       parseResult.value.features,
-      selectedAnalysisTypes.value
+      selectedAnalysisTypes.value,
     )
 
     if (!isCancelRequested.value) {
@@ -571,7 +674,7 @@ const startAnalysis = async () => {
 // 异步分析函数（支持取消）
 const performAnalysisAsync = async (
   features: GeoFeature[],
-  analysisTypes: AnalysisType[]
+  analysisTypes: AnalysisType[],
 ): Promise<AnalysisResult[]> => {
   const results: AnalysisResult[] = []
   const points = features.filter((f): f is PointFeature => f.type === 'Point')
@@ -595,7 +698,7 @@ const performAnalysisAsync = async (
     const taskLabel = getAnalysisLabel(type)
     updateCurrentTaskProgress(0, taskLabel)
 
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await new Promise((resolve) => setTimeout(resolve, 10))
 
     let result: AnalysisResult | null = null
 

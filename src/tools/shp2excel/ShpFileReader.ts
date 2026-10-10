@@ -43,9 +43,9 @@ export async function readAndValidateShpFiles(files: File[]): Promise<ShpMultiFi
     allFeatures.push(...result.features)
   }
 
-  const pointCount = allFeatures.filter(f => f.type === 'Point').length
-  const lineCount = allFeatures.filter(f => f.type === 'LineString').length
-  const polygonCount = allFeatures.filter(f => f.type === 'Polygon').length
+  const pointCount = allFeatures.filter((f) => f.type === 'Point').length
+  const lineCount = allFeatures.filter((f) => f.type === 'LineString').length
+  const polygonCount = allFeatures.filter((f) => f.type === 'Polygon').length
 
   const isValid = errors.length === 0 && allFeatures.length > 0
 
@@ -100,9 +100,9 @@ export async function validateSingleShpFile(file: File): Promise<ShpSingleFileRe
       }
     }
 
-    const pointCount = features.filter(f => f.type === 'Point').length
-    const lineCount = features.filter(f => f.type === 'LineString').length
-    const polygonCount = features.filter(f => f.type === 'Polygon').length
+    const pointCount = features.filter((f) => f.type === 'Point').length
+    const lineCount = features.filter((f) => f.type === 'LineString').length
+    const polygonCount = features.filter((f) => f.type === 'Polygon').length
 
     return {
       fileName,

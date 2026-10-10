@@ -134,18 +134,14 @@ function generateSectorCoordinates(
 /**
  * 生成正方形多边形坐标（以经纬度为中心，2倍半径为边长）
  */
-function generateSquareCoordinates(
-  lng: number,
-  lat: number,
-  radius: number,
-): [number, number][] {
+function generateSquareCoordinates(lng: number, lat: number, radius: number): [number, number][] {
   const halfSide = radius // 边长为2倍半径，所以从中心向每个方向延伸radius米
 
   const coordinates: [number, number][] = []
 
   // 计算正方形四个角
   const northWest = calculateDestinationPoint(lng, lat, Math.sqrt(2) * halfSide, 315) // 西北
-  const northEast = calculateDestinationPoint(lng, lat, Math.sqrt(2) * halfSide, 45)  // 东北
+  const northEast = calculateDestinationPoint(lng, lat, Math.sqrt(2) * halfSide, 45) // 东北
   const southEast = calculateDestinationPoint(lng, lat, Math.sqrt(2) * halfSide, 135) // 东南
   const southWest = calculateDestinationPoint(lng, lat, Math.sqrt(2) * halfSide, 225) // 西南
 
@@ -220,11 +216,7 @@ export function generateKml(sectors: KmlSector[], properties: KmlDocumentPropert
     let coordinates: [number, number][]
     if (sector.isIndoor === '是') {
       // 室分：生成正方形
-      coordinates = generateSquareCoordinates(
-        sector.longitude,
-        sector.latitude,
-        sector.radius,
-      )
+      coordinates = generateSquareCoordinates(sector.longitude, sector.latitude, sector.radius)
     } else {
       // 宏站：生成扇形
       coordinates = generateSectorCoordinates(

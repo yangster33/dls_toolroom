@@ -2,7 +2,11 @@ import { describe, it, expect } from 'vitest'
 import { generateKml, type ShpExportEntry, type GisStyle } from '../ShpToKmlGenerator'
 import type { GisFeature } from '../../gis2excel/GisFileReader'
 
-function feature(name: string, coordinates: string, properties: Record<string, unknown> = {}): GisFeature {
+function feature(
+  name: string,
+  coordinates: string,
+  properties: Record<string, unknown> = {},
+): GisFeature {
   return { id: name, type: 'Point', name, coordinates, path: '', properties }
 }
 
@@ -89,7 +93,10 @@ describe('generateKml - 样式去重', () => {
   })
 
   it('placemark 引用正确 styleUrl', () => {
-    const kml = generateKml([entry({ folderName: 'f1' }), entry({ folderName: 'f2', style: { color: '#00FF00' } })])
+    const kml = generateKml([
+      entry({ folderName: 'f1' }),
+      entry({ folderName: 'f2', style: { color: '#00FF00' } }),
+    ])
     expect(kml).toContain('<styleUrl>#p_ff0000</styleUrl>')
     expect(kml).toContain('<styleUrl>#p_00ff00</styleUrl>')
   })
@@ -103,18 +110,25 @@ describe('generateKml - 名称模板', () => {
 
   it('模板替换属性占位符', () => {
     const kml = generateKml([
-      entry({ nameTemplate: '{name}-{code}', features: [feature('点1', '116.3,39.9', { code: 'X1' })] }),
+      entry({
+        nameTemplate: '{name}-{code}',
+        features: [feature('点1', '116.3,39.9', { code: 'X1' })],
+      }),
     ])
     expect(kml).toContain('<name>点1-X1</name>')
   })
 
   it('模板缺失属性时替换为空', () => {
-    const kml = generateKml([entry({ nameTemplate: '{name}-{missing}', features: [feature('点1', '116.3,39.9')] })])
+    const kml = generateKml([
+      entry({ nameTemplate: '{name}-{missing}', features: [feature('点1', '116.3,39.9')] }),
+    ])
     expect(kml).toContain('<name>点1-</name>')
   })
 
   it('名称与文件夹做 XML 转义', () => {
-    const kml = generateKml([entry({ folderName: 'A&B', features: [feature('C<D>', '116.3,39.9')] })])
+    const kml = generateKml([
+      entry({ folderName: 'A&B', features: [feature('C<D>', '116.3,39.9')] }),
+    ])
     expect(kml).toContain('<name>A&amp;B</name>')
     expect(kml).toContain('<name>C&lt;D&gt;</name>')
   })

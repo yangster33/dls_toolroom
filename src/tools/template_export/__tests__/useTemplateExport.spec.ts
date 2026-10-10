@@ -77,7 +77,9 @@ describe('generateFilename', () => {
   })
 
   it('按模板替换占位符', () => {
-    expect(generateFilename({ name: '大龙山', id: '7' }, '报告_{name}_{id}', 0)).toBe('报告_大龙山_7')
+    expect(generateFilename({ name: '大龙山', id: '7' }, '报告_{name}_{id}', 0)).toBe(
+      '报告_大龙山_7',
+    )
   })
 
   it('缺失字段替换为空字符串', () => {

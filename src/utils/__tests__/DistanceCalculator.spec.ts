@@ -71,12 +71,18 @@ describe('isValidCoordinate', () => {
 
 describe('matchDistances - 同站址', () => {
   it('识别同站址模式', async () => {
-    const result = await matchDistances([A, B, C], [A, B, C], { matchCount: 1, matchMode: 'nearest' })
+    const result = await matchDistances([A, B, C], [A, B, C], {
+      matchCount: 1,
+      matchMode: 'nearest',
+    })
     expect(result.mode).toBe('same-site')
   })
 
   it('每个站点匹配到最近的其他站点（排除自身）', async () => {
-    const result = await matchDistances([A, B, C], [A, B, C], { matchCount: 2, matchMode: 'nearest' })
+    const result = await matchDistances([A, B, C], [A, B, C], {
+      matchCount: 2,
+      matchMode: 'nearest',
+    })
     expect(result.results).toHaveLength(3)
 
     const aResult = result.results.find((r) => r.site.name === 'A')!
@@ -86,7 +92,10 @@ describe('matchDistances - 同站址', () => {
   })
 
   it('最远匹配模式返回降序候选', async () => {
-    const result = await matchDistances([A, B, C], [A, B, C], { matchCount: 2, matchMode: 'farthest' })
+    const result = await matchDistances([A, B, C], [A, B, C], {
+      matchCount: 2,
+      matchMode: 'farthest',
+    })
     const aResult = result.results.find((r) => r.site.name === 'A')!
     expect(aResult.matches.map((m) => m.site.name)).toEqual(['C', 'B'])
   })
@@ -217,7 +226,10 @@ describe('matchDistances - matchCount 边界（阶段 0）', () => {
   })
 
   it('正常 matchCount 仍返回请求的数量（行为不变）', async () => {
-    const result = await matchDistances([A, B, C], [A, B, C], { matchCount: 2, matchMode: 'nearest' })
+    const result = await matchDistances([A, B, C], [A, B, C], {
+      matchCount: 2,
+      matchMode: 'nearest',
+    })
     const aResult = result.results.find((r) => r.site.name === 'A')!
     expect(aResult.matches.map((m) => m.site.name)).toEqual(['B', 'C'])
   })

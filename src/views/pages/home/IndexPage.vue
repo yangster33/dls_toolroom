@@ -40,7 +40,9 @@
 
       <div class="text-center mt-12">
         <button class="btn btn-primary btn-lg group" @click="navigateToTools">
-          <PhArrowRight class="w-5 h-5 mr-2 transition-transform duration-300 group-hover:translate-x-1" />
+          <PhArrowRight
+            class="w-5 h-5 mr-2 transition-transform duration-300 group-hover:translate-x-1"
+          />
           浏览全部工具
         </button>
       </div>

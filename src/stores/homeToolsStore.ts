@@ -28,7 +28,7 @@ export const useHomeToolsStore = defineStore('homeTools', () => {
     (newOrder) => {
       localStorage.setItem('home-tool-order', JSON.stringify(newOrder))
     },
-    { deep: true }
+    { deep: true },
   )
 
   const getOrderedTools = (): ToolConfig[] => {

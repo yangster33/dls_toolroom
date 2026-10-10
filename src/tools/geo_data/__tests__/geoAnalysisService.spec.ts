@@ -81,7 +81,12 @@ describe('analyzePoints', () => {
 
 describe('analyzeLines', () => {
   it('计算线长（1 度纬度约 110.6 公里）', async () => {
-    const result = await analyzeLines([line('线1', [[0, 0], [0, 1]])])
+    const result = await analyzeLines([
+      line('线1', [
+        [0, 0],
+        [0, 1],
+      ]),
+    ])
     const length = parseFloat(result.data[0]!['长度_km'] as string)
     expect(length).toBeGreaterThan(110)
     expect(length).toBeLessThan(111.2)
@@ -101,7 +106,16 @@ describe('analyzePolygons', () => {
 
   it('多边形带孔洞被识别', async () => {
     const result = await analyzePolygons([
-      polygon('带孔', [SQUARE[0]!, [[0.4, 0.4], [0.6, 0.4], [0.6, 0.6], [0.4, 0.6], [0.4, 0.4]]]),
+      polygon('带孔', [
+        SQUARE[0]!,
+        [
+          [0.4, 0.4],
+          [0.6, 0.4],
+          [0.6, 0.6],
+          [0.4, 0.6],
+          [0.4, 0.4],
+        ],
+      ]),
     ])
     expect(result.data[0]!['是否有孔洞']).toBe('是')
   })
@@ -128,7 +142,15 @@ describe('analyzePointToPoint', () => {
 
 describe('analyzePointToLine', () => {
   it('线上的点判定在线上', async () => {
-    const result = await analyzePointToLine([point('P', [0, 0.5])], [line('L', [[0, 0], [0, 1]])])
+    const result = await analyzePointToLine(
+      [point('P', [0, 0.5])],
+      [
+        line('L', [
+          [0, 0],
+          [0, 1],
+        ]),
+      ],
+    )
     const row = result.data[0]!
     expect(row['是否在线上']).toBe('是')
     expect(parseFloat(row['到线距离_m'] as string)).toBeLessThan(1)
@@ -136,7 +158,15 @@ describe('analyzePointToLine', () => {
   })
 
   it('线外的点计算距离', async () => {
-    const result = await analyzePointToLine([point('P', [1, 0.5])], [line('L', [[0, 0], [0, 1]])])
+    const result = await analyzePointToLine(
+      [point('P', [1, 0.5])],
+      [
+        line('L', [
+          [0, 0],
+          [0, 1],
+        ]),
+      ],
+    )
     const distance = parseFloat(result.data[0]!['到线距离_m'] as string)
     expect(distance).toBeGreaterThan(110000)
     expect(distance).toBeLessThan(112000)
@@ -162,8 +192,14 @@ describe('analyzePointToPolygon', () => {
 describe('analyzeLineToLine', () => {
   it('交叉线检测相交与交点数量', async () => {
     const result = await analyzeLineToLine([
-      line('线A', [[0, 0], [1, 1]]),
-      line('线B', [[0, 1], [1, 0]]),
+      line('线A', [
+        [0, 0],
+        [1, 1],
+      ]),
+      line('线B', [
+        [0, 1],
+        [1, 0],
+      ]),
     ])
     const row = result.data[0]!
     expect(row['是否相交']).toBe('是')
@@ -172,8 +208,14 @@ describe('analyzeLineToLine', () => {
 
   it('平行线检测平行', async () => {
     const result = await analyzeLineToLine([
-      line('线A', [[0, 0], [1, 0]]),
-      line('线B', [[0, 1], [1, 1]]),
+      line('线A', [
+        [0, 0],
+        [1, 0],
+      ]),
+      line('线B', [
+        [0, 1],
+        [1, 1],
+      ]),
     ])
     expect(result.data[0]!['是否平行']).toBe('是')
     expect(result.data[0]!['是否相交']).toBe('否')
@@ -182,7 +224,15 @@ describe('analyzeLineToLine', () => {
 
 describe('analyzeLineToPolygon', () => {
   it('穿越面的线判定相交', async () => {
-    const result = await analyzeLineToPolygon([line('线A', [[-1, 0.5], [2, 0.5]])], [polygon('面', SQUARE)])
+    const result = await analyzeLineToPolygon(
+      [
+        line('线A', [
+          [-1, 0.5],
+          [2, 0.5],
+        ]),
+      ],
+      [polygon('面', SQUARE)],
+    )
     expect(result.data[0]!['是否相交']).toBe('是')
     expect(parseInt(result.data[0]!['交点数量'] as string)).toBe(2)
   })
@@ -192,7 +242,15 @@ describe('analyzePolygonToPolygon', () => {
   it('重叠面检测交叠面积', async () => {
     const result = await analyzePolygonToPolygon([
       polygon('面A', SQUARE),
-      polygon('面B', [[[0.5, 0.5], [1.5, 0.5], [1.5, 1.5], [0.5, 1.5], [0.5, 0.5]]]),
+      polygon('面B', [
+        [
+          [0.5, 0.5],
+          [1.5, 0.5],
+          [1.5, 1.5],
+          [0.5, 1.5],
+          [0.5, 0.5],
+        ],
+      ]),
     ])
     const row = result.data[0]!
     expect(row['是否相交']).toBe('是')
@@ -202,7 +260,15 @@ describe('analyzePolygonToPolygon', () => {
   it('分离面判定分离', async () => {
     const result = await analyzePolygonToPolygon([
       polygon('面A', SQUARE),
-      polygon('面B', [[[5, 5], [6, 5], [6, 6], [5, 6], [5, 5]]]),
+      polygon('面B', [
+        [
+          [5, 5],
+          [6, 5],
+          [6, 6],
+          [5, 6],
+          [5, 5],
+        ],
+      ]),
     ])
     expect(result.data[0]!['是否分离']).toBe('是')
     expect(result.data[0]!['交叠面积_km2']).toBe('0')

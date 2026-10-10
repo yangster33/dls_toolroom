@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  parseKmlCoordinates,
-  formatCoordinates,
-  toKmlCoordinatesString,
-} from '../kmlCoordinates'
+import { parseKmlCoordinates, formatCoordinates, toKmlCoordinatesString } from '../kmlCoordinates'
 
 describe('parseKmlCoordinates', () => {
   describe('各主流 KML 写法（回归用例）', () => {
@@ -89,9 +85,7 @@ describe('parseKmlCoordinates', () => {
     })
 
     it('换行 / 多重空白 / Tab 混排', () => {
-      expect(
-        parseKmlCoordinates('116.3,39.9,0\n  116.4,40.0,0\t116.5,40.1,0'),
-      ).toEqual([
+      expect(parseKmlCoordinates('116.3,39.9,0\n  116.4,40.0,0\t116.5,40.1,0')).toEqual([
         { lat: 39.9, lng: 116.3 },
         { lat: 40.0, lng: 116.4 },
         { lat: 40.1, lng: 116.5 },
@@ -157,9 +151,7 @@ describe('parseKmlCoordinates', () => {
     })
 
     it('超出经度范围的点被剔除（180 / 90 边界）', () => {
-      expect(parseKmlCoordinates('181,39.9,0 116.4,40.0,0')).toEqual([
-        { lat: 40.0, lng: 116.4 },
-      ])
+      expect(parseKmlCoordinates('181,39.9,0 116.4,40.0,0')).toEqual([{ lat: 40.0, lng: 116.4 }])
       expect(parseKmlCoordinates('116.3,91,0')).toEqual([])
     })
 
@@ -230,9 +222,7 @@ describe('toKmlCoordinatesString', () => {
   })
 
   it('支持自定义高程', () => {
-    expect(toKmlCoordinatesString([{ lat: 39.9, lng: 116.3 }], 1200)).toBe(
-      '116.3,39.9,1200',
-    )
+    expect(toKmlCoordinatesString([{ lat: 39.9, lng: 116.3 }], 1200)).toBe('116.3,39.9,1200')
   })
 
   it('空数组返回空字符串', () => {

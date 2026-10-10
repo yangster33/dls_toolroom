@@ -41,9 +41,7 @@
       <h2 class="text-xl font-semibold mb-4">2. 设置转换参数</h2>
       <div class="collapse collapse-arrow bg-base-200 border-base-300 border">
         <input type="checkbox" />
-        <div class="collapse-title font-semibold">
-          CGCS2000 投影参数（按需求填写，选填）
-        </div>
+        <div class="collapse-title font-semibold">CGCS2000 投影参数（按需求填写，选填）</div>
         <div class="collapse-content">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 pt-2">
             <label class="flex flex-col gap-1.5">
@@ -166,9 +164,7 @@
         </table>
       </div>
     </div>
-    <div v-else class="text-center text-gray-500 py-8">
-      请输入有效的坐标以查看转换结果
-    </div>
+    <div v-else class="text-center text-gray-500 py-8">请输入有效的坐标以查看转换结果</div>
   </div>
 </template>
 

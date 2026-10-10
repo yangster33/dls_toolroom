@@ -22,7 +22,12 @@ describe('coordinateInputStore', () => {
     const store = useCoordinateInputStore()
     store.addRow({ id: 1, coordinateSystem: 'gcj02', x: '116.4', y: '39.9' })
     expect(store.coordinates).toHaveLength(2)
-    expect(store.coordinates[1]).toEqual({ id: 1, coordinateSystem: 'gcj02', x: '116.4', y: '39.9' })
+    expect(store.coordinates[1]).toEqual({
+      id: 1,
+      coordinateSystem: 'gcj02',
+      x: '116.4',
+      y: '39.9',
+    })
   })
 
   it('removeRowById 移除存在的行', () => {

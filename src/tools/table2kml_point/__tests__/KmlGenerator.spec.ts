@@ -17,7 +17,15 @@ function point(overrides: Partial<PointRow> = {}): PointRow {
 /** 模拟 TemplateValidator 的真实产出：color 规范化 + 保留 colorRaw */
 function validatedPoint(rawColor: string, overrides: Partial<PointRow> = {}): PointRow {
   const hex = rawColor === '红色' ? '#FF0000' : rawColor
-  return { name: '站1', lng: 116.4, lat: 39.9, folder: '北京', color: hex, colorRaw: rawColor, ...overrides }
+  return {
+    name: '站1',
+    lng: 116.4,
+    lat: 39.9,
+    folder: '北京',
+    color: hex,
+    colorRaw: rawColor,
+    ...overrides,
+  }
 }
 
 describe('generateKml - 分组', () => {
@@ -55,19 +63,27 @@ describe('generateKml - 分组', () => {
 
 describe('generateKml - 样式', () => {
   it('相同颜色去重生成单个 Style', () => {
-    const kml = generateKml([point({ name: '站1' }), point({ name: '站2' }), point({ name: '站3', color: '深红' })])
+    const kml = generateKml([
+      point({ name: '站1' }),
+      point({ name: '站2' }),
+      point({ name: '站3', color: '深红' }),
+    ])
     expect(kml.match(/<Style id=/g)).toHaveLength(2)
   })
 
   it('中文颜色使用官方图钉图标与白色叠加色', () => {
     const kml = generateKml([point()])
-    expect(kml).toContain('<href>http://maps.google.com/mapfiles/kml/pushpin/red-pushpin.png</href>')
+    expect(kml).toContain(
+      '<href>http://maps.google.com/mapfiles/kml/pushpin/red-pushpin.png</href>',
+    )
     expect(kml).toContain('<color>FFFFFFFF</color>')
   })
 
   it('hex 颜色使用白底图标 + AABBGGRR 颜色', () => {
     const kml = generateKml([point({ color: '#00FF00' })])
-    expect(kml).toContain('<href>http://maps.google.com/mapfiles/kml/pushpin/wht-pushpin.png</href>')
+    expect(kml).toContain(
+      '<href>http://maps.google.com/mapfiles/kml/pushpin/wht-pushpin.png</href>',
+    )
     expect(kml).toContain('<color>ff00FF00</color>')
   })
 
@@ -89,7 +105,9 @@ describe('generateKml - 中文色名图钉（P0-3 回归）', () => {
   // 只有「color 已规范化 + colorRaw 保留原值」这种真实输入才能复现。
   it('规范化后的红色仍走官方红图钉（这是修复前失败的用例）', () => {
     const kml = generateKml([validatedPoint('红色')])
-    expect(kml).toContain('<href>http://maps.google.com/mapfiles/kml/pushpin/red-pushpin.png</href>')
+    expect(kml).toContain(
+      '<href>http://maps.google.com/mapfiles/kml/pushpin/red-pushpin.png</href>',
+    )
     expect(kml).toContain('<color>FFFFFFFF</color>')
   })
 

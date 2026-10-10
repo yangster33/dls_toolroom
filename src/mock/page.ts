@@ -16,7 +16,10 @@ const pageStats: Record<string, { view_count: number; comment_count: number }> =
 }
 
 // 各工具的地图数据（模拟不同工具的访问分布差异）
-const toolMapData: Record<string, Array<{ name: string; sevenDays: number; thirtyDays: number; oneYear: number }>> = {
+const toolMapData: Record<
+  string,
+  Array<{ name: string; sevenDays: number; thirtyDays: number; oneYear: number }>
+> = {
   coord_convert: [
     { name: '北京市', sevenDays: 12500, thirtyDays: 47800, oneYear: 545000 },
     { name: '上海市', sevenDays: 11800, thirtyDays: 44900, oneYear: 510000 },
@@ -152,65 +155,268 @@ const toolMapData: Record<string, Array<{ name: string; sevenDays: number; thirt
 }
 
 // 评论 Mock 数据
-const commentsData: Record<string, Array<{
-  id: string
-  nickname: string
-  phone: string
-  email: string
-  type: 'complaint' | 'bug' | 'praise' | 'other'
-  content: string
-  created_at: string
-}>> = {
+const commentsData: Record<
+  string,
+  Array<{
+    id: string
+    nickname: string
+    phone: string
+    email: string
+    type: 'complaint' | 'bug' | 'praise' | 'other'
+    content: string
+    created_at: string
+  }>
+> = {
   coord_convert: [
-    { id: '1', nickname: '用户A', phone: '', email: '', type: 'praise', content: '坐标转换很准确，使用方便！', created_at: '2024-01-15 10:30:00' },
-    { id: '2', nickname: '工程师', phone: '138xxx', email: '', type: 'complaint', content: '希望支持更多坐标系', created_at: '2024-01-14 15:20:00' },
-    { id: '3', nickname: '小明', phone: '', email: '', type: 'other', content: '如果能保存转换历史就好了', created_at: '2024-01-13 09:45:00' },
+    {
+      id: '1',
+      nickname: '用户A',
+      phone: '',
+      email: '',
+      type: 'praise',
+      content: '坐标转换很准确，使用方便！',
+      created_at: '2024-01-15 10:30:00',
+    },
+    {
+      id: '2',
+      nickname: '工程师',
+      phone: '138xxx',
+      email: '',
+      type: 'complaint',
+      content: '希望支持更多坐标系',
+      created_at: '2024-01-14 15:20:00',
+    },
+    {
+      id: '3',
+      nickname: '小明',
+      phone: '',
+      email: '',
+      type: 'other',
+      content: '如果能保存转换历史就好了',
+      created_at: '2024-01-13 09:45:00',
+    },
   ],
   coords_convert: [
-    { id: '1', nickname: '数据分析师', phone: '', email: 'test@xx.com', type: 'praise', content: '批量转换功能太实用了', created_at: '2024-01-13 09:15:00' },
-    { id: '2', nickname: 'GIS专家', phone: '', email: '', type: 'bug', content: 'Excel导入有时会出错', created_at: '2024-01-11 11:20:00' },
+    {
+      id: '1',
+      nickname: '数据分析师',
+      phone: '',
+      email: 'test@xx.com',
+      type: 'praise',
+      content: '批量转换功能太实用了',
+      created_at: '2024-01-13 09:15:00',
+    },
+    {
+      id: '2',
+      nickname: 'GIS专家',
+      phone: '',
+      email: '',
+      type: 'bug',
+      content: 'Excel导入有时会出错',
+      created_at: '2024-01-11 11:20:00',
+    },
   ],
   distance_sensor: [
-    { id: '1', nickname: '地质学家', phone: '', email: '', type: 'praise', content: '距离测算功能对野外工作帮助很大', created_at: '2024-01-12 14:00:00' },
-    { id: '2', nickname: '户外爱好者', phone: '', email: '', type: 'other', content: '希望能添加海拔计算', created_at: '2024-01-10 08:30:00' },
+    {
+      id: '1',
+      nickname: '地质学家',
+      phone: '',
+      email: '',
+      type: 'praise',
+      content: '距离测算功能对野外工作帮助很大',
+      created_at: '2024-01-12 14:00:00',
+    },
+    {
+      id: '2',
+      nickname: '户外爱好者',
+      phone: '',
+      email: '',
+      type: 'other',
+      content: '希望能添加海拔计算',
+      created_at: '2024-01-10 08:30:00',
+    },
   ],
   get_add: [
-    { id: '1', nickname: '快递员', phone: '', email: '', type: 'praise', content: '快速找到地址，节省了很多时间！', created_at: '2024-01-14 16:00:00' },
-    { id: '2', nickname: '电商运营', phone: '', email: 'op@shop.com', type: 'praise', content: '批量解析地址功能太赞了', created_at: '2024-01-13 10:00:00' },
+    {
+      id: '1',
+      nickname: '快递员',
+      phone: '',
+      email: '',
+      type: 'praise',
+      content: '快速找到地址，节省了很多时间！',
+      created_at: '2024-01-14 16:00:00',
+    },
+    {
+      id: '2',
+      nickname: '电商运营',
+      phone: '',
+      email: 'op@shop.com',
+      type: 'praise',
+      content: '批量解析地址功能太赞了',
+      created_at: '2024-01-13 10:00:00',
+    },
   ],
   get_lonlat: [
-    { id: '1', nickname: '地图开发者', phone: '', email: '', type: 'praise', content: '多种地图服务商选择很贴心', created_at: '2024-01-15 09:00:00' },
-    { id: '2', nickname: '物流调度', phone: '', email: '', type: 'other', content: '希望能保存常用地址', created_at: '2024-01-14 11:30:00' },
+    {
+      id: '1',
+      nickname: '地图开发者',
+      phone: '',
+      email: '',
+      type: 'praise',
+      content: '多种地图服务商选择很贴心',
+      created_at: '2024-01-15 09:00:00',
+    },
+    {
+      id: '2',
+      nickname: '物流调度',
+      phone: '',
+      email: '',
+      type: 'other',
+      content: '希望能保存常用地址',
+      created_at: '2024-01-14 11:30:00',
+    },
   ],
   table2kml_point: [
-    { id: '1', nickname: '测绘工程师', phone: '', email: '', type: 'praise', content: '表格转KML点文件功能非常实用', created_at: '2024-01-13 15:00:00' },
-    { id: '2', nickname: '规划师', phone: '', email: '', type: 'complaint', content: '希望支持更多格式导出', created_at: '2024-01-11 14:00:00' },
+    {
+      id: '1',
+      nickname: '测绘工程师',
+      phone: '',
+      email: '',
+      type: 'praise',
+      content: '表格转KML点文件功能非常实用',
+      created_at: '2024-01-13 15:00:00',
+    },
+    {
+      id: '2',
+      nickname: '规划师',
+      phone: '',
+      email: '',
+      type: 'complaint',
+      content: '希望支持更多格式导出',
+      created_at: '2024-01-11 14:00:00',
+    },
   ],
   table2kml_basestation: [
-    { id: '1', nickname: '通信工程师', phone: '', email: '', type: 'praise', content: '基站KML生成功能完美解决了我的需求', created_at: '2024-01-12 10:00:00' },
+    {
+      id: '1',
+      nickname: '通信工程师',
+      phone: '',
+      email: '',
+      type: 'praise',
+      content: '基站KML生成功能完美解决了我的需求',
+      created_at: '2024-01-12 10:00:00',
+    },
   ],
   geo_data: [
-    { id: '1', nickname: 'GIS研究员', phone: '', email: '', type: 'praise', content: '空间分析工具功能强大！', created_at: '2024-01-15 11:00:00' },
-    { id: '2', nickname: '数据科学家', phone: '', email: '', type: 'bug', content: '某些几何计算有精度问题', created_at: '2024-01-13 16:30:00' },
+    {
+      id: '1',
+      nickname: 'GIS研究员',
+      phone: '',
+      email: '',
+      type: 'praise',
+      content: '空间分析工具功能强大！',
+      created_at: '2024-01-15 11:00:00',
+    },
+    {
+      id: '2',
+      nickname: '数据科学家',
+      phone: '',
+      email: '',
+      type: 'bug',
+      content: '某些几何计算有精度问题',
+      created_at: '2024-01-13 16:30:00',
+    },
   ],
   gis2excel: [
-    { id: '1', nickname: '数据分析师', phone: '', email: '', type: 'praise', content: 'GIS转Excel功能太方便了', created_at: '2024-01-14 09:00:00' },
-    { id: '2', nickname: '项目经理', phone: '', email: '', type: 'praise', content: '大大提高了数据处理效率', created_at: '2024-01-12 17:00:00' },
+    {
+      id: '1',
+      nickname: '数据分析师',
+      phone: '',
+      email: '',
+      type: 'praise',
+      content: 'GIS转Excel功能太方便了',
+      created_at: '2024-01-14 09:00:00',
+    },
+    {
+      id: '2',
+      nickname: '项目经理',
+      phone: '',
+      email: '',
+      type: 'praise',
+      content: '大大提高了数据处理效率',
+      created_at: '2024-01-12 17:00:00',
+    },
   ],
   shp2excel: [
-    { id: '1', nickname: 'GIS工程师', phone: '', email: '', type: 'praise', content: '批量SHP转表格功能很实用！', created_at: '2024-01-15 10:00:00' },
-    { id: '2', nickname: '规划设计师', phone: '', email: '', type: 'praise', content: '多文件上传节省了很多时间', created_at: '2024-01-13 14:30:00' },
+    {
+      id: '1',
+      nickname: 'GIS工程师',
+      phone: '',
+      email: '',
+      type: 'praise',
+      content: '批量SHP转表格功能很实用！',
+      created_at: '2024-01-15 10:00:00',
+    },
+    {
+      id: '2',
+      nickname: '规划设计师',
+      phone: '',
+      email: '',
+      type: 'praise',
+      content: '多文件上传节省了很多时间',
+      created_at: '2024-01-13 14:30:00',
+    },
   ],
   docx_template_export: [
-    { id: '1', nickname: '行政专员', phone: '', email: '', type: 'praise', content: 'Word模板导出功能非常实用', created_at: '2024-01-13 11:00:00' },
-    { id: '2', nickname: '报告员', phone: '', email: '', type: 'other', content: '希望能支持更多模板功能', created_at: '2024-01-11 10:00:00' },
+    {
+      id: '1',
+      nickname: '行政专员',
+      phone: '',
+      email: '',
+      type: 'praise',
+      content: 'Word模板导出功能非常实用',
+      created_at: '2024-01-13 11:00:00',
+    },
+    {
+      id: '2',
+      nickname: '报告员',
+      phone: '',
+      email: '',
+      type: 'other',
+      content: '希望能支持更多模板功能',
+      created_at: '2024-01-11 10:00:00',
+    },
   ],
   about: [
-    { id: '1', nickname: '访客', phone: '', email: '', type: 'other', content: '项目很有价值，继续加油！', created_at: '2024-01-16 14:45:00' },
-    { id: '2', nickname: '开发者', phone: '', email: 'dev@xx.com', type: 'bug', content: '页面加载有点慢', created_at: '2024-01-12 11:00:00' },
+    {
+      id: '1',
+      nickname: '访客',
+      phone: '',
+      email: '',
+      type: 'other',
+      content: '项目很有价值，继续加油！',
+      created_at: '2024-01-16 14:45:00',
+    },
+    {
+      id: '2',
+      nickname: '开发者',
+      phone: '',
+      email: 'dev@xx.com',
+      type: 'bug',
+      content: '页面加载有点慢',
+      created_at: '2024-01-12 11:00:00',
+    },
   ],
   moment: [
-    { id: '1', nickname: '用户', phone: '', email: '', type: 'praise', content: '功能很强大！', created_at: '2024-01-10 08:30:00' },
+    {
+      id: '1',
+      nickname: '用户',
+      phone: '',
+      email: '',
+      type: 'praise',
+      content: '功能很强大！',
+      created_at: '2024-01-10 08:30:00',
+    },
   ],
 }
 
@@ -262,7 +468,7 @@ export default [
       const comments = commentsData[pageKey] || []
       const start = (page - 1) * size
       const end = start + size
-      
+
       return {
         code: 0,
         data: {
@@ -278,13 +484,29 @@ export default [
   {
     url: '/api/comments',
     method: 'post',
-    response: (req: { body?: { page_key: string; nickname: string; phone: string; email: string; type: string; content: string } }) => {
-      const body = req.body || { page_key: '', nickname: '', phone: '', email: '', type: 'other', content: '' }
-      
+    response: (req: {
+      body?: {
+        page_key: string
+        nickname: string
+        phone: string
+        email: string
+        type: string
+        content: string
+      }
+    }) => {
+      const body = req.body || {
+        page_key: '',
+        nickname: '',
+        phone: '',
+        email: '',
+        type: 'other',
+        content: '',
+      }
+
       if (!commentsData[body.page_key]) {
         commentsData[body.page_key] = []
       }
-      
+
       const newComment = {
         id: Date.now().toString(),
         nickname: body.nickname,
@@ -294,11 +516,11 @@ export default [
         content: body.content,
         created_at: new Date().toLocaleString('zh-CN'),
       }
-      
+
       commentsData[body.page_key]!.unshift(newComment)
       pageStats[body.page_key] = pageStats[body.page_key] || { view_count: 0, comment_count: 0 }
       pageStats[body.page_key]!.comment_count++
-      
+
       return {
         code: 0,
         data: newComment,
@@ -312,7 +534,7 @@ export default [
     response: (req: { query?: Record<string, string> }) => {
       const toolId = req.query?.tool_id || ''
       const data = toolMapData[toolId] || []
-      
+
       return {
         code: 0,
         data,

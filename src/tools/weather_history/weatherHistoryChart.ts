@@ -15,7 +15,7 @@ export interface ChartThemeColors {
 
 export function generateTemperatureChart(
   data: WeatherApiResponse,
-  theme: ChartThemeColors
+  theme: ChartThemeColors,
 ): EChartsOption {
   const hourly = data.hourly
   if (!hourly?.time || !hourly.temperature_2m) {
@@ -89,7 +89,7 @@ export function generateTemperatureChart(
 
 export function generatePrecipitationChart(
   data: WeatherApiResponse,
-  theme: ChartThemeColors
+  theme: ChartThemeColors,
 ): EChartsOption {
   const daily = data.daily
   if (!daily?.time || !daily.precipitation_sum) {
@@ -156,7 +156,7 @@ export function generatePrecipitationChart(
 
 export function generateHumidityChart(
   data: WeatherApiResponse,
-  theme: ChartThemeColors
+  theme: ChartThemeColors,
 ): EChartsOption {
   const hourly = data.hourly
   if (!hourly?.time || !hourly.relative_humidity_2m) {
@@ -232,7 +232,7 @@ export function generateHumidityChart(
 
 export function generateWindSpeedChart(
   data: WeatherApiResponse,
-  theme: ChartThemeColors
+  theme: ChartThemeColors,
 ): EChartsOption {
   const hourly = data.hourly
   if (!hourly?.time || !hourly.wind_speed_10m) {
@@ -300,7 +300,7 @@ export function generateWindSpeedChart(
 
 export function generateTemperatureRangeChart(
   data: WeatherApiResponse,
-  theme: ChartThemeColors
+  theme: ChartThemeColors,
 ): EChartsOption {
   const daily = data.daily
   if (!daily?.time || !daily.temperature_2m_max || !daily.temperature_2m_min) {
@@ -387,7 +387,10 @@ export function generateTemperatureRangeChart(
 
 export type ChartType = 'temperature' | 'precipitation' | 'humidity' | 'wind' | 'tempRange'
 
-export const chartConfigs: Record<ChartType, { title: string; generator: typeof generateTemperatureChart }> = {
+export const chartConfigs: Record<
+  ChartType,
+  { title: string; generator: typeof generateTemperatureChart }
+> = {
   temperature: { title: '气温趋势（逐小时）', generator: generateTemperatureChart },
   precipitation: { title: '日降水量', generator: generatePrecipitationChart },
   humidity: { title: '相对湿度（逐小时）', generator: generateHumidityChart },

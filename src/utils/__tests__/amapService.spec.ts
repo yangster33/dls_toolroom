@@ -106,7 +106,10 @@ describe('validateApiKey', () => {
     expect(result.url).toContain('key=k1')
     expect(mockGet).toHaveBeenCalledWith(
       'https://restapi.amap.com/v3/geocode/geo',
-      expect.objectContaining({ params: expect.objectContaining({ address: '北京市天安门' }), timeout: 5000 }),
+      expect.objectContaining({
+        params: expect.objectContaining({ address: '北京市天安门' }),
+        timeout: 5000,
+      }),
     )
   })
 
@@ -143,11 +146,9 @@ describe('getProviderOptions / exportResultsToRows', () => {
   })
 
   it('按表头与字段配置导出行', () => {
-    const rows = exportResultsToRows(
-      ['名称', '来源', '原始'],
-      [{ 名称: '甲', 原始: 'raw1' }],
-      { 来源: (r) => `来源:${String(r.名称)}` },
-    )
+    const rows = exportResultsToRows(['名称', '来源', '原始'], [{ 名称: '甲', 原始: 'raw1' }], {
+      来源: (r) => `来源:${String(r.名称)}`,
+    })
     expect(rows).toEqual([
       ['名称', '来源', '原始'],
       ['甲', '来源:甲', 'raw1'],

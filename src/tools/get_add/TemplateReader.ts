@@ -1,7 +1,4 @@
-import {
-  type TemplateValidationResult,
-  COORDINATE_POINT_FIELDS,
-} from '@/utils/templateHandler'
+import { type TemplateValidationResult, COORDINATE_POINT_FIELDS } from '@/utils/templateHandler'
 import type { CoordinatePoint } from '@/utils/templateHandler'
 import { parseCoordinateValue } from '@/utils/coordinateValue'
 
@@ -10,7 +7,7 @@ export type { CoordinatePoint, TemplateValidationResult }
 
 // 使用通用验证函数
 export function readAndValidateTemplate(
-  rows: Record<string, string | number>[]
+  rows: Record<string, string | number>[],
 ): TemplateValidationResult<CoordinatePoint> {
   const data: CoordinatePoint[] = []
   const errors: string[] = []

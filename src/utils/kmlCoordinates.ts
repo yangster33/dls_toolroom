@@ -186,14 +186,10 @@ export function parseKmlCoordinates(text: string | null | undefined): LatLngTupl
  *                  因此默认不做任何舍入。
  * @returns 分号分隔的字符串；无有效点时返回空字符串
  */
-export function formatCoordinates(
-  points: LatLngTuple[],
-  precision?: number,
-): string {
+export function formatCoordinates(points: LatLngTuple[], precision?: number): string {
   if (points.length === 0) return ''
 
-  const fmt = (n: number): string =>
-    precision === undefined ? String(n) : n.toFixed(precision)
+  const fmt = (n: number): string => (precision === undefined ? String(n) : n.toFixed(precision))
 
   return points.map((p) => `${fmt(p.lng)},${fmt(p.lat)}`).join(';')
 }
@@ -206,10 +202,7 @@ export function formatCoordinates(
  * @param altitude 统一高程值（KML 默认 0）
  * @returns 空格分隔的 KML coordinates 字符串
  */
-export function toKmlCoordinatesString(
-  points: LatLngTuple[],
-  altitude: number = 0,
-): string {
+export function toKmlCoordinatesString(points: LatLngTuple[], altitude: number = 0): string {
   if (points.length === 0) return ''
   return points.map((p) => `${p.lng},${p.lat},${altitude}`).join(' ')
 }

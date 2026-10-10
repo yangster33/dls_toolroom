@@ -101,7 +101,11 @@ export const useGeocodeStore = defineStore(
       }
     }
 
-    const updateApiKey = (mode: 'add' | 'lonlat', index: number, keyInfo: Partial<Omit<ApiKeyInfo, 'id'>>) => {
+    const updateApiKey = (
+      mode: 'add' | 'lonlat',
+      index: number,
+      keyInfo: Partial<Omit<ApiKeyInfo, 'id'>>,
+    ) => {
       const config = mode === 'add' ? addConfig : lonlatConfig
       const currentKey = config.value.apiKeys[index]
       if (!currentKey) return
@@ -163,5 +167,5 @@ export const useGeocodeStore = defineStore(
   },
   {
     persist: true,
-  }
+  },
 )

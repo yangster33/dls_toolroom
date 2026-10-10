@@ -68,10 +68,10 @@ export const DEFAULT_MATCH_CONFIG: MatchConfig = {
 
 // 常见星球半径（米）
 export const PLANET_PRESETS: Record<string, number> = {
-  '地球': 6371000,
-  '月球': 1737100,
-  '火星': 3390000,
-  '金星': 6051800,
+  地球: 6371000,
+  月球: 1737100,
+  火星: 3390000,
+  金星: 6051800,
 }
 
 const DEG_TO_RAD = Math.PI / 180
@@ -315,15 +315,18 @@ function matchOneNearest(
       if (skipSelf && isSameCoordRad(src, t, srcLonRad, srcLatRad)) continue
 
       let distance: number
-      if (
-        Math.abs(srcLatRad - t.latRad) < 1e-7 &&
-        Math.abs(srcLonRad - t.lonRad) < 1e-7
-      ) {
+      if (Math.abs(srcLatRad - t.latRad) < 1e-7 && Math.abs(srcLonRad - t.lonRad) < 1e-7) {
         distance = 0
       } else {
         distance = sphericalCosDistance(
-          srcLatRad, srcSinLat, srcCosLat, srcLonRad,
-          t.latRad, t.sinLat, t.cosLat, t.lonRad,
+          srcLatRad,
+          srcSinLat,
+          srcCosLat,
+          srcLonRad,
+          t.latRad,
+          t.sinLat,
+          t.cosLat,
+          t.lonRad,
           cfg.planetRadius,
         )
       }
@@ -335,10 +338,7 @@ function matchOneNearest(
       foundAny = true
     }
 
-    if (
-      topK.length >= k &&
-      topK[k - 1]!.distance <= radiusRad * cfg.planetRadius
-    ) {
+    if (topK.length >= k && topK[k - 1]!.distance <= radiusRad * cfg.planetRadius) {
       break
     }
 
@@ -399,15 +399,18 @@ function matchOneFarthest(
     if (skipSelf && isSameCoordRad(src, t, srcLonRad, srcLatRad)) continue
 
     let distance: number
-    if (
-      Math.abs(srcLatRad - t.latRad) < 1e-7 &&
-      Math.abs(srcLonRad - t.lonRad) < 1e-7
-    ) {
+    if (Math.abs(srcLatRad - t.latRad) < 1e-7 && Math.abs(srcLonRad - t.lonRad) < 1e-7) {
       distance = 0
     } else {
       distance = sphericalCosDistance(
-        srcLatRad, srcSinLat, srcCosLat, srcLonRad,
-        t.latRad, t.sinLat, t.cosLat, t.lonRad,
+        srcLatRad,
+        srcSinLat,
+        srcCosLat,
+        srcLonRad,
+        t.latRad,
+        t.sinLat,
+        t.cosLat,
+        t.lonRad,
         cfg.planetRadius,
       )
     }
@@ -454,12 +457,18 @@ async function matchSameSite(
     const sinLat = Math.sin(latRad)
     const cosLat = Math.cos(latRad)
 
-    const matchFn =
-      options.matchMode === 'nearest' ? matchOneNearest : matchOneFarthest
+    const matchFn = options.matchMode === 'nearest' ? matchOneNearest : matchOneFarthest
 
     const candidates = matchFn(
-      site, lonRad, latRad, sinLat, cosLat,
-      target, options, cfg, /* skipSelf */ true,
+      site,
+      lonRad,
+      latRad,
+      sinLat,
+      cosLat,
+      target,
+      options,
+      cfg,
+      /* skipSelf */ true,
     )
 
     results.push({
@@ -519,12 +528,18 @@ async function matchDifferentSite(
     const sinLat = Math.sin(latRad)
     const cosLat = Math.cos(latRad)
 
-    const matchFn =
-      options.matchMode === 'nearest' ? matchOneNearest : matchOneFarthest
+    const matchFn = options.matchMode === 'nearest' ? matchOneNearest : matchOneFarthest
 
     const candidates = matchFn(
-      site, lonRad, latRad, sinLat, cosLat,
-      target, options, cfg, /* skipSelf */ false,
+      site,
+      lonRad,
+      latRad,
+      sinLat,
+      cosLat,
+      target,
+      options,
+      cfg,
+      /* skipSelf */ false,
     )
 
     results.push({

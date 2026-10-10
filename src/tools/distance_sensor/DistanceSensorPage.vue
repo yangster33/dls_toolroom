@@ -162,7 +162,9 @@
                 :key="name"
                 @click="matchConfig.planetRadius = radius"
                 class="btn btn-xs"
-                :class="Math.abs(matchConfig.planetRadius - radius) < 1 ? 'btn-primary' : 'btn-outline'"
+                :class="
+                  Math.abs(matchConfig.planetRadius - radius) < 1 ? 'btn-primary' : 'btn-outline'
+                "
               >
                 {{ name }}
               </button>
@@ -322,7 +324,6 @@
             清除
           </button>
         </div>
-
       </div>
 
       <!-- 验证结果预览 -->
@@ -420,7 +421,6 @@
         </div>
       </div>
     </div>
-
   </div>
 
   <!-- 进度弹窗 -->
@@ -452,7 +452,13 @@ import {
   getResultHeaders,
   type TemplateValidationResult,
 } from './TemplateReader'
-import { matchDistances, type MatchResult, DEFAULT_MATCH_CONFIG, PLANET_PRESETS, type MatchConfig } from '@/utils/DistanceCalculator'
+import {
+  matchDistances,
+  type MatchResult,
+  DEFAULT_MATCH_CONFIG,
+  PLANET_PRESETS,
+  type MatchConfig,
+} from '@/utils/DistanceCalculator'
 import { SAME_SITE_HEADERS, DIFFERENT_SITE_HEADERS } from './TemplateExporter'
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -470,7 +476,9 @@ const planetPresets = PLANET_PRESETS
 const customPlanetRadius = ref(DEFAULT_MATCH_CONFIG.planetRadius)
 
 const isCustomPlanet = computed(() => {
-  return !Object.values(PLANET_PRESETS).some((r) => Math.abs(matchConfig.value.planetRadius - r) < 1)
+  return !Object.values(PLANET_PRESETS).some(
+    (r) => Math.abs(matchConfig.value.planetRadius - r) < 1,
+  )
 })
 
 function resetMatchConfig() {
@@ -500,7 +508,11 @@ const closeErrorDialog = () => {
   errorDialogMessage.value = ''
 }
 
-const showErrorDialog = (type: 'error' | 'warning' | 'success' | 'info', title: string, message: string) => {
+const showErrorDialog = (
+  type: 'error' | 'warning' | 'success' | 'info',
+  title: string,
+  message: string,
+) => {
   errorDialogType.value = type
   errorDialogTitle.value = title
   errorDialogMessage.value = message
@@ -601,8 +613,6 @@ const onFileUpload = async (event: Event) => {
     showErrorDialog('error', '文件读取失败', '请确保文件格式正确')
   }
 }
-
-
 
 // 终止计算
 const cancelMatch = () => {

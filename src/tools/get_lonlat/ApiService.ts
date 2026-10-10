@@ -73,11 +73,10 @@ const PROVIDER_CONFIG: Record<
       const gcjLng = parseFloat(lngStr || '0')
       const gcjLat = parseFloat(latStr || '0')
 
-      const [wgsLng, wgsLat] = gcoord.transform(
-        [gcjLng, gcjLat],
-        gcoord.GCJ02,
-        gcoord.WGS84,
-      ) as [number, number]
+      const [wgsLng, wgsLat] = gcoord.transform([gcjLng, gcjLat], gcoord.GCJ02, gcoord.WGS84) as [
+        number,
+        number,
+      ]
 
       return {
         longitude: wgsLng,
@@ -156,16 +155,8 @@ export async function batchQueryLonLats(
           inBounds: true,
         }
 
-        if (
-          options.bounds &&
-          parsed.longitude !== undefined &&
-          parsed.latitude !== undefined
-        ) {
-          partialResult.inBounds = isInBounds(
-            parsed.longitude,
-            parsed.latitude,
-            options.bounds,
-          )
+        if (options.bounds && parsed.longitude !== undefined && parsed.latitude !== undefined) {
+          partialResult.inBounds = isInBounds(parsed.longitude, parsed.latitude, options.bounds)
         }
 
         return partialResult
@@ -224,10 +215,7 @@ export function getAvailableFields(): { value: string; label: string }[] {
 
 // ===================== 导出结果到行 =====================
 
-export function exportResultsToRows(
-  results: QueryResult[],
-  selectedFields: string[],
-): string[][] {
+export function exportResultsToRows(results: QueryResult[], selectedFields: string[]): string[][] {
   const headers = [
     '省',
     '市',

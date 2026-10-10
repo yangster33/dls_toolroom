@@ -82,7 +82,9 @@ const tool = computed(() => {
 })
 
 useHead({
-  title: computed(() => (tool.value ? `${tool.value.name} | ${SITE_NAME}` : `工具未找到 | ${SITE_NAME}`)),
+  title: computed(() =>
+    tool.value ? `${tool.value.name} | ${SITE_NAME}` : `工具未找到 | ${SITE_NAME}`,
+  ),
   meta: [
     {
       name: 'description',
@@ -116,9 +118,7 @@ useHead({
     { name: 'twitter:url', content: computed(() => `${SITE_URL}/tools/${toolId.value}`) },
     { name: 'twitter:image', content: `${SITE_URL}/my-logo.png` },
   ],
-  link: [
-    { rel: 'canonical', href: computed(() => `${SITE_URL}/tools/${toolId.value}`) },
-  ],
+  link: [{ rel: 'canonical', href: computed(() => `${SITE_URL}/tools/${toolId.value}`) }],
   script: [
     {
       type: 'application/ld+json',

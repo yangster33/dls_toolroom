@@ -107,9 +107,13 @@ describe('readAndValidateTemplate', () => {
   })
 
   it('转换器抛错时记录错误', () => {
-    const result = readAndValidateTemplate([{ 名称: '甲', 经度: '116.4', 纬度: '39.9' }], COORDINATE_POINT_FIELDS, () => {
-      throw new Error('转换失败')
-    })
+    const result = readAndValidateTemplate(
+      [{ 名称: '甲', 经度: '116.4', 纬度: '39.9' }],
+      COORDINATE_POINT_FIELDS,
+      () => {
+        throw new Error('转换失败')
+      },
+    )
     expect(result.isValid).toBe(false)
     expect(result.errors[0]).toContain('数据转换失败 - 转换失败')
   })
@@ -123,15 +127,21 @@ describe('readAndValidateTemplate', () => {
 
 describe('字段映射预设', () => {
   it('COORDINATE_POINT_FIELDS 支持中英文表头', () => {
-    const result = validateRow({ name: '甲', lon: '116.4', lat: '39.9' }, 0, COORDINATE_POINT_FIELDS)
+    const result = validateRow(
+      { name: '甲', lon: '116.4', lat: '39.9' },
+      0,
+      COORDINATE_POINT_FIELDS,
+    )
     expect(result.valid).toBe(true)
     expect(result.data).toEqual({ 名称: '甲', 经度: 116.4, 纬度: 39.9 })
   })
 
   it('transformToCoordinatePoint 输出结构化对象', () => {
-    expect(
-      transformToCoordinatePoint({ 名称: '甲', 经度: 116.4, 纬度: 39.9 }),
-    ).toEqual({ name: '甲', longitude: 116.4, latitude: 39.9 })
+    expect(transformToCoordinatePoint({ 名称: '甲', 经度: 116.4, 纬度: 39.9 })).toEqual({
+      name: '甲',
+      longitude: 116.4,
+      latitude: 39.9,
+    })
   })
 
   it('ADDRESS_FIELDS 支持别名，空字段保持空字符串', () => {
@@ -156,9 +166,7 @@ describe('字段映射预设', () => {
   })
 
   it('transformToFullAddress 输出全字段地址', () => {
-    expect(
-      transformToFullAddress({ 名称: '甲', 省: '广东', 市: '广州' }),
-    ).toEqual({
+    expect(transformToFullAddress({ 名称: '甲', 省: '广东', 市: '广州' })).toEqual({
       name: '甲',
       province: '广东',
       city: '广州',

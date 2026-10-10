@@ -1,10 +1,7 @@
 // stores/coordinateInputStore.ts
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import {
-  type CGCS2000Params,
-  DEFAULT_CGCS2000_PARAMS,
-} from './coordConversion.ts'
+import { type CGCS2000Params, DEFAULT_CGCS2000_PARAMS } from './coordConversion.ts'
 
 interface CoordinateRow {
   id: number

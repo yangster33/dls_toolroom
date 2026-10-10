@@ -135,9 +135,7 @@ describe('parseKmlXml', () => {
       name: '文件夹内点',
       path: '测试文件夹',
     })
-    const nested = parseKmlXml(
-      folderKml.replace('测试文件夹', '外层/内层'),
-    )
+    const nested = parseKmlXml(folderKml.replace('测试文件夹', '外层/内层'))
     expect(nested[0]!.path).toBe('外层/内层')
   })
 
@@ -157,9 +155,37 @@ describe('convertGeoJsonToFeatures', () => {
     const geojson = {
       type: 'FeatureCollection',
       features: [
-        { type: 'Feature', geometry: { type: 'Point', coordinates: [116.4, 39.9] }, properties: { name: '点1' } },
-        { type: 'Feature', geometry: { type: 'LineString', coordinates: [[1, 2], [3, 4]] }, properties: { NAME: '线1' } },
-        { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] }, properties: { Name: '面1' } },
+        {
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [116.4, 39.9] },
+          properties: { name: '点1' },
+        },
+        {
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [1, 2],
+              [3, 4],
+            ],
+          },
+          properties: { NAME: '线1' },
+        },
+        {
+          type: 'Feature',
+          geometry: {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [0, 0],
+                [1, 0],
+                [1, 1],
+                [0, 0],
+              ],
+            ],
+          },
+          properties: { Name: '面1' },
+        },
       ],
     }
     const features = convertGeoJsonToFeatures(geojson)
@@ -174,9 +200,51 @@ describe('convertGeoJsonToFeatures', () => {
     const geojson = {
       type: 'FeatureCollection',
       features: [
-        { type: 'Feature', geometry: { type: 'MultiPoint', coordinates: [[1, 2], [3, 4]] }, properties: {} },
-        { type: 'Feature', geometry: { type: 'MultiLineString', coordinates: [[[1, 2], [3, 4]], [[5, 6], [7, 8]]] }, properties: {} },
-        { type: 'Feature', geometry: { type: 'MultiPolygon', coordinates: [[[[0, 0], [1, 0], [1, 1], [0, 0]]]] }, properties: {} },
+        {
+          type: 'Feature',
+          geometry: {
+            type: 'MultiPoint',
+            coordinates: [
+              [1, 2],
+              [3, 4],
+            ],
+          },
+          properties: {},
+        },
+        {
+          type: 'Feature',
+          geometry: {
+            type: 'MultiLineString',
+            coordinates: [
+              [
+                [1, 2],
+                [3, 4],
+              ],
+              [
+                [5, 6],
+                [7, 8],
+              ],
+            ],
+          },
+          properties: {},
+        },
+        {
+          type: 'Feature',
+          geometry: {
+            type: 'MultiPolygon',
+            coordinates: [
+              [
+                [
+                  [0, 0],
+                  [1, 0],
+                  [1, 1],
+                  [0, 0],
+                ],
+              ],
+            ],
+          },
+          properties: {},
+        },
       ],
     }
     const features = convertGeoJsonToFeatures(geojson)
@@ -204,7 +272,11 @@ describe('convertGeoJsonToFeatures', () => {
     const features = convertGeoJsonToFeatures({
       type: 'FeatureCollection',
       features: [
-        { type: 'Feature', geometry: { type: 'Point', coordinates: [1, 2] }, properties: { 其他: 'x' } },
+        {
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [1, 2] },
+          properties: { 其他: 'x' },
+        },
       ],
     })
     expect(features[0]).toMatchObject({
@@ -214,7 +286,11 @@ describe('convertGeoJsonToFeatures', () => {
   })
 
   it('单个 Feature 或数组输入均支持', () => {
-    const single = { type: 'Feature', geometry: { type: 'Point', coordinates: [1, 2] }, properties: { name: '单' } }
+    const single = {
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [1, 2] },
+      properties: { name: '单' },
+    }
     expect(convertGeoJsonToFeatures(single)).toHaveLength(1)
     expect(convertGeoJsonToFeatures([single])).toHaveLength(1)
   })
@@ -229,13 +305,19 @@ describe('parseShpFile', () => {
     mockedShp.mockResolvedValue({
       type: 'FeatureCollection',
       features: [
-        { type: 'Feature', geometry: { type: 'Point', coordinates: [1, 2] }, properties: { name: 'a' } },
+        {
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [1, 2] },
+          properties: { name: 'a' },
+        },
       ],
     })
     const shpFile = new File([new Uint8Array([1])], 'a.shp')
     const dbfFile = new File([new Uint8Array([1])], 'a.dbf')
     const features = await parseShpFile([shpFile, dbfFile])
-    expect(mockedShp).toHaveBeenCalledWith(expect.objectContaining({ shp: expect.anything(), dbf: expect.anything() }))
+    expect(mockedShp).toHaveBeenCalledWith(
+      expect.objectContaining({ shp: expect.anything(), dbf: expect.anything() }),
+    )
     expect(features).toHaveLength(1)
   })
 

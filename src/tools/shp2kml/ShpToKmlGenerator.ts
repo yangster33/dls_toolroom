@@ -65,7 +65,7 @@ function coordToKml(coordStr: string): string {
 function generateNameFromTemplate(
   properties: Record<string, unknown>,
   name: string,
-  template?: string
+  template?: string,
 ): string {
   if (!template) return name
 
