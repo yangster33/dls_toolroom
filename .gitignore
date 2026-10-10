@@ -51,7 +51,10 @@ playwright/.cache/
 
 # 本地审计/文档产物（不入库）
 # 注意：道法术器势的 markdown 在 public/docs/（已入库），与此处无关
-docs/
+# 但审计报告本身必须入库，否则知识断层、下一个接手者看不到历史结论
+docs/*
+!docs/*.md
+!docs/audit/
 
 # 环境变量：.env 不入库，改用 .env.example 作为模板
 # .env.local 等已被上面的 *.local 覆盖
