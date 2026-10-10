@@ -275,6 +275,7 @@
                 <th>序号</th>
                 <th>分析类型</th>
                 <th>数据条数</th>
+                <th>要素状态</th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -284,11 +285,57 @@
                 <td>{{ result.label }}</td>
                 <td>{{ result.data.length }}</td>
                 <td>
+                  <span
+                    v-if="result.errors && result.errors.length > 0"
+                    class="badge badge-warning badge-sm"
+                    :title="result.errors.join('\n')"
+                  >
+                    跳过 {{ result.errors.length }} 个要素
+                  </span>
+                  <span v-else class="text-success text-sm">全部正常</span>
+                </td>
+                <td>
                   <button class="btn btn-xs btn-ghost" @click="previewResult(result)">预览</button>
                 </td>
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- 被跳过的要素详情（审计 P0-4：畸形几何不再静默丢弃，但也不该埋在 tooltip 里） -->
+        <div
+          v-if="analysisResults.some((r) => r.errors && r.errors.length > 0)"
+          class="mt-3 collapse collapse-arrow bg-base-200 border border-base-300"
+        >
+          <input type="checkbox" />
+          <div class="collapse-title text-sm font-semibold">
+            有
+            {{ analysisResults.reduce((n, r) => n + (r.errors?.length ?? 0), 0) }}
+            个要素因几何畸形被跳过（不影响其它要素的结果）
+          </div>
+          <div class="collapse-content">
+            <ul class="list-disc pl-5 text-xs space-y-1">
+              <template v-for="result in analysisResults" :key="result.type">
+                <li v-for="(err, i) in result.errors ?? []" :key="`${result.type}-${i}`">
+                  <span class="text-gray-500">[{{ result.label }}]</span> {{ err }}
+                </li>
+              </template>
+            </ul>
+            <p class="text-xs text-gray-500 mt-2">
+              常见原因：只有 1 个点的 LineString、未闭合的 3 点
+              Polygon。请修正源文件中的这些要素后重试。
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 分析类型级错误（如某类型整体失败） -->
+      <div v-if="analysisTypeErrors.length > 0" class="alert alert-error shadow-lg">
+        <div>
+          <span>{{ analysisTypeErrors.length }} 个分析类型失败：</span>
+          <ul class="list-disc pl-5 text-sm mt-1">
+            <li v-for="(err, index) in analysisTypeErrors" :key="index">{{ err }}</li>
+          </ul>
         </div>
       </div>
 
@@ -465,6 +512,8 @@ const isAnalyzing = ref(false)
 const analysisProgress = ref(0)
 const analysisProgressMessage = ref('')
 const analysisResults = ref<AnalysisResult[]>([])
+/** 分析类型级别的错误（非逐要素错误），用于在 UI 上提示哪些类型失败 */
+const analysisTypeErrors = ref<string[]>([])
 
 // 分析进度模态框状态
 const analysisModal = ref<HTMLDialogElement | null>(null)
@@ -581,6 +630,7 @@ const clearFile = () => {
   parseErrors.value = []
   selectedAnalysisTypes.value = []
   analysisResults.value = []
+  analysisTypeErrors.value = []
   if (fileInput.value) {
     fileInput.value.value = ''
   }
@@ -640,6 +690,7 @@ const startAnalysis = async () => {
   analysisProgress.value = 0
   analysisProgressMessage.value = '准备分析...'
   analysisResults.value = []
+  analysisTypeErrors.value = []
   currentTaskProgress.value = 0
   currentTaskName.value = ''
   totalTasks.value = selectedAnalysisTypes.value.length
@@ -657,11 +708,26 @@ const startAnalysis = async () => {
 
     if (!isCancelRequested.value) {
       analysisResults.value = results
+      // 有类型级失败时提示，但结果仍保留
+      if (analysisTypeErrors.value.length > 0) {
+        parseErrors.value = [...parseErrors.value, ...analysisTypeErrors.value]
+        showErrorDialogMsg(
+          'warning',
+          '部分分析类型失败',
+          `${analysisTypeErrors.value.length} 个分析类型未完成，其它类型的结果已保留：\n` +
+            analysisTypeErrors.value.join('\n'),
+        )
+      }
     }
   } catch (error) {
     if (!isCancelRequested.value) {
-      parseErrors.value = [`分析失败: ${error instanceof Error ? error.message : '未知错误'}`]
-      showErrorDialogMsg('error', '空间分析失败', '分析过程中发生异常：')
+      // 兜底：正常情况下 performAnalysisAsync 已逐类型容错。
+      // 注意取消是控制流，不当作错误展示。
+      parseErrors.value = [
+        ...parseErrors.value,
+        `分析失败: ${error instanceof Error ? error.message : '未知错误'}`,
+      ]
+      showErrorDialogMsg('error', '空间分析失败', '分析过程中发生异常，请重试：')
     }
   } finally {
     isAnalyzing.value = false
@@ -702,34 +768,44 @@ const performAnalysisAsync = async (
 
     let result: AnalysisResult | null = null
 
-    switch (type) {
-      case 'point_analysis':
-        result = await analyzePoints(points, progressCallback, cancelCallback)
-        break
-      case 'line_analysis':
-        result = await analyzeLines(lines, progressCallback, cancelCallback)
-        break
-      case 'polygon_analysis':
-        result = await analyzePolygons(polygons, progressCallback, cancelCallback)
-        break
-      case 'point_to_point':
-        result = await analyzePointToPoint(points, progressCallback, cancelCallback)
-        break
-      case 'point_to_line':
-        result = await analyzePointToLine(points, lines, progressCallback, cancelCallback)
-        break
-      case 'point_to_polygon':
-        result = await analyzePointToPolygon(points, polygons, progressCallback, cancelCallback)
-        break
-      case 'line_to_line':
-        result = await analyzeLineToLine(lines, progressCallback, cancelCallback)
-        break
-      case 'line_to_polygon':
-        result = await analyzeLineToPolygon(lines, polygons, progressCallback, cancelCallback)
-        break
-      case 'polygon_to_polygon':
-        result = await analyzePolygonToPolygon(polygons, progressCallback, cancelCallback)
-        break
+    // 单个分析类型失败不影响其它类型（审计 P0-4）：
+    // analyze* 内部已逐要素容错，这里是类型级的兜底，
+    // 避免某个类型的意外错误让已完成的结果全部作废。
+    try {
+      switch (type) {
+        case 'point_analysis':
+          result = await analyzePoints(points, progressCallback, cancelCallback)
+          break
+        case 'line_analysis':
+          result = await analyzeLines(lines, progressCallback, cancelCallback)
+          break
+        case 'polygon_analysis':
+          result = await analyzePolygons(polygons, progressCallback, cancelCallback)
+          break
+        case 'point_to_point':
+          result = await analyzePointToPoint(points, progressCallback, cancelCallback)
+          break
+        case 'point_to_line':
+          result = await analyzePointToLine(points, lines, progressCallback, cancelCallback)
+          break
+        case 'point_to_polygon':
+          result = await analyzePointToPolygon(points, polygons, progressCallback, cancelCallback)
+          break
+        case 'line_to_line':
+          result = await analyzeLineToLine(lines, progressCallback, cancelCallback)
+          break
+        case 'line_to_polygon':
+          result = await analyzeLineToPolygon(lines, polygons, progressCallback, cancelCallback)
+          break
+        case 'polygon_to_polygon':
+          result = await analyzePolygonToPolygon(polygons, progressCallback, cancelCallback)
+          break
+      }
+    } catch (err) {
+      // 取消是控制流，必须继续向上抛
+      if (isCancelRequested.value) throw err
+      const reason = err instanceof Error ? err.message : String(err)
+      analysisTypeErrors.value.push(`${taskLabel} 分析失败: ${reason}`)
     }
 
     if (result && !isCancelRequested.value) {

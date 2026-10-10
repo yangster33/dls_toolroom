@@ -298,3 +298,152 @@ describe('分析类型配置', () => {
     expect(getAnalysisLabel('unknown' as AnalysisType)).toBe('unknown')
   })
 })
+
+// ============================================================
+// 审计 P0-4：畸形几何容错
+// ============================================================
+//
+// turf 遇到「只有 1 个点的 LineString」「未闭合的 3 点 Polygon」会直接抛错，
+// 而这些在真实 KML 里很常见。旧实现没有 try/catch，一个坏要素就让整场分析
+// reject、已算完的结果全部作废，用户只看到一句
+// 「分析失败: coordinates must contain at least 2 positions」。
+//
+// 现在逐要素容错：坏要素记入 result.errors 并跳过，其它要素照常产出。
+
+/** 1 个点的 LineString —— turf.lineString 会抛错 */
+const BAD_LINE = line('坏线', [[116.4, 39.9]])
+/** 3 点未闭合的 Polygon —— turf.polygon 会抛错 */
+const BAD_POLYGON = polygon('坏面', [
+  [
+    [116, 39],
+    [117, 39],
+    [117, 40],
+  ],
+])
+const GOOD_LINE = line('好线', [
+  [116.4, 39.9],
+  [116.5, 39.95],
+])
+
+describe('analyzeLines - 畸形几何容错（P0-4）', () => {
+  it('1 点 LineString 被跳过，其它线照常分析', async () => {
+    const result = await analyzeLines([BAD_LINE, GOOD_LINE])
+
+    expect(result.data).toHaveLength(1)
+    expect(result.data[0]).toMatchObject({ 名称: '好线' })
+    expect(result.errors).toHaveLength(1)
+    expect(result.errors![0]).toContain('坏线')
+  })
+
+  it('全部畸形时 data 为空但不抛错', async () => {
+    const result = await analyzeLines([BAD_LINE, line('b', [[3, 4]])])
+    expect(result.data).toHaveLength(0)
+    expect(result.errors).toHaveLength(2)
+  })
+})
+
+describe('analyzePolygons - 畸形几何容错（P0-4）', () => {
+  it('3 点未闭合环被跳过，合法面照常分析', async () => {
+    const result = await analyzePolygons([BAD_POLYGON, polygon('好面', SQUARE)])
+
+    expect(result.data).toHaveLength(1)
+    expect(result.data[0]).toMatchObject({ 名称: '好面' })
+    expect(result.errors).toHaveLength(1)
+    expect(result.errors![0]).toContain('坏面')
+  })
+})
+
+describe('analyzePointToLine - 畸形线只影响该组合（P0-4）', () => {
+  it('坏线跳过、好线正常，不丢点自身的结果', async () => {
+    const result = await analyzePointToLine(
+      [point('P1', [116.4, 39.9]), point('P2', [116.5, 39.95])],
+      [BAD_LINE, GOOD_LINE],
+    )
+
+    // 2 点 × 1 条好线 = 2 行
+    expect(result.data).toHaveLength(2)
+    expect(result.errors).toHaveLength(2)
+    expect(result.errors![0]).toContain('坏线')
+  })
+})
+
+describe('analyzePointToPolygon - 畸形面只影响该组合（P0-4）', () => {
+  it('坏面跳过、好面正常', async () => {
+    const result = await analyzePointToPolygon(
+      [point('P1', [116.4, 39.9])],
+      [BAD_POLYGON, polygon('好面', SQUARE)],
+    )
+
+    expect(result.data).toHaveLength(1)
+    expect(result.data[0]).toMatchObject({ 面名称: '好面' })
+    expect(result.errors).toHaveLength(1)
+  })
+})
+
+describe('analyzeLineToLine - 一条坏线不影响其它配对（P0-4）', () => {
+  it('3 条线中有 1 条畸形，其余 2 条之间的配对照常', async () => {
+    const result = await analyzeLineToLine([
+      BAD_LINE,
+      line('A', [
+        [116.4, 39.9],
+        [116.5, 39.95],
+      ]),
+      line('B', [
+        [116.4, 39.9],
+        [116.6, 39.99],
+      ]),
+    ])
+
+    // 3 条线 3 个配对，含坏线的 2 个失败，剩 A↔B 成功
+    expect(result.data).toHaveLength(1)
+    expect(result.errors).toHaveLength(2)
+  })
+})
+
+describe('analyzeLineToPolygon - 畸形几何不影响其它组合（P0-4）', () => {
+  it('坏面和坏线都被跳过，合法组合正常', async () => {
+    const result = await analyzeLineToPolygon(
+      [BAD_LINE, GOOD_LINE],
+      [BAD_POLYGON, polygon('好面', SQUARE)],
+    )
+
+    // 2 线 × 2 面 = 4 组合，3 个失败（坏线×2 + 好线×坏面），1 个成功
+    expect(result.data).toHaveLength(1)
+    expect(result.errors).toHaveLength(3)
+  })
+})
+
+describe('analyzePolygonToPolygon - 畸形面不影响其它配对（P0-4）', () => {
+  it('坏面被跳过，好面之间照常分析', async () => {
+    const result = await analyzePolygonToPolygon([
+      BAD_POLYGON,
+      polygon('A', SQUARE),
+      polygon('B', [
+        [
+          [118, 41],
+          [119, 41],
+          [119, 42],
+          [118, 42],
+          [118, 41],
+        ],
+      ]),
+    ])
+
+    expect(result.data).toHaveLength(1) // 只剩 A↔B
+    expect(result.errors).toHaveLength(2) // 坏↔A、坏↔B
+  })
+})
+
+describe('analyzePoints - 正常路径不受影响（P0-4）', () => {
+  it('合法点正常分析且没有 errors', async () => {
+    const result = await analyzePoints([point('P1', [116.4, 39.9]), point('P2', [116.5, 39.95])])
+    expect(result.data).toHaveLength(2)
+    expect(result.errors).toEqual([])
+  })
+})
+
+describe('取消操作仍然抛错，不被容错吞掉（P0-4）', () => {
+  it('isCanceled 返回 true 时抛出"取消"', async () => {
+    await expect(analyzeLines([GOOD_LINE], undefined, () => true)).rejects.toThrow('取消')
+  })
+})

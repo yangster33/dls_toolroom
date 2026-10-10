@@ -30,6 +30,96 @@ export interface GeoFeature {
   feature: GeoJSON.Feature
 }
 
+/** 展开后的「原子单几何」：coordinates 形状与 type 严格对应 */
+interface AtomicGeometry {
+  type: 'Point' | 'LineString' | 'Polygon'
+  coordinates: number[] | number[][] | number[][][]
+  /** 名称后缀，如 '1' 或 '1.2'；空串表示该 feature 只有一个几何 */
+  suffix: string
+}
+
+function childSuffix(parent: string, i: number): string {
+  return parent ? `${parent}.${i + 1}` : String(i + 1)
+}
+
+/**
+ * 把 GeoJSON geometry 递归展开成若干**原子单几何**。
+ *
+ * 处理两类嵌套：
+ *  1. `GeometryCollection` —— KML 的 `<MultiGeometry>` 经 togeojson 转换后
+ *     就是它（可能混合 Point/LineString/Polygon）。旧代码直接丢弃整块。
+ *  2. `MultiPoint` / `MultiLineString` / `MultiPolygon`。
+ *
+ * 关键点：展开后每个元素的 `coordinates` 形状必须与 `type` 严格对应
+ * （Point→number[]，LineString→number[][]，Polygon→number[][][]），
+ * 否则下游 `analyzePoints` 会把 `[lng,lat]` 整个数组当成经度写进 Excel，
+ * 或 `turf.lineString` 抛错（审计 P0-4）。
+ */
+function flattenGeometry(geometry: unknown, suffix: string, out: AtomicGeometry[]): void {
+  if (geometry === null || typeof geometry !== 'object') return
+  const g = geometry as { type?: unknown; coordinates?: unknown; geometries?: unknown }
+  const t = g.type
+  if (typeof t !== 'string') return
+
+  if (t === 'GeometryCollection') {
+    if (!Array.isArray(g.geometries)) return
+    g.geometries.forEach((child, i) => flattenGeometry(child, childSuffix(suffix, i), out))
+    return
+  }
+
+  const coords = g.coordinates
+  if (!Array.isArray(coords)) return
+
+  switch (t) {
+    case 'Point':
+      if (typeof coords[0] === 'number') {
+        out.push({ type: 'Point', coordinates: coords as number[], suffix })
+      }
+      break
+    case 'MultiPoint':
+      coords.forEach((c, i) => {
+        if (Array.isArray(c) && typeof c[0] === 'number') {
+          out.push({ type: 'Point', coordinates: c as number[], suffix: childSuffix(suffix, i) })
+        }
+      })
+      break
+    case 'LineString':
+      if (Array.isArray(coords[0])) {
+        out.push({ type: 'LineString', coordinates: coords as number[][], suffix })
+      }
+      break
+    case 'MultiLineString':
+      coords.forEach((c, i) => {
+        if (Array.isArray(c) && Array.isArray(c[0])) {
+          out.push({
+            type: 'LineString',
+            coordinates: c as number[][],
+            suffix: childSuffix(suffix, i),
+          })
+        }
+      })
+      break
+    case 'Polygon':
+      if (Array.isArray(coords[0]) && Array.isArray((coords[0] as unknown[])[0])) {
+        out.push({ type: 'Polygon', coordinates: coords as number[][][], suffix })
+      }
+      break
+    case 'MultiPolygon':
+      coords.forEach((rings, i) => {
+        if (Array.isArray(rings) && Array.isArray(rings[0])) {
+          out.push({
+            type: 'Polygon',
+            coordinates: rings as number[][][],
+            suffix: childSuffix(suffix, i),
+          })
+        }
+      })
+      break
+    default:
+      break
+  }
+}
+
 export interface PointFeature extends GeoFeature {
   type: 'Point'
   coordinates: number[]
@@ -66,6 +156,17 @@ export interface AnalysisResult {
   label: string
   data: Record<string, unknown>[]
   columns: string[]
+  /**
+   * 分析过程中被跳过的要素及其原因（审计 P0-4）。
+   *
+   * 畸形几何（1 点的 LineString、未闭合的 3 点 Polygon 等）会让 turf 抛错。
+   * 旧实现没有容错，一个坏要素就让整场分析 reject、已算完的结果全部作废。
+   * 现在逐要素容错：坏要素记到这里，其它要素的结果照常产出。
+   *
+   * 注意：有 errors 不代表分析失败 —— data 仍然是有效的部分结果，
+   * 调用方应把 errors 展示给用户，而不是丢弃 data。
+   */
+  errors?: string[]
 }
 
 export interface ProgressCallback {
@@ -225,39 +326,32 @@ export async function parseKML(file: File, onProgress?: ProgressCallback): Promi
     let polygonCount = 0
 
     geojson.features.forEach((feature: GeoJSON.Feature, index: number) => {
-      const geometryType = feature.geometry?.type
-      if (!geometryType) return
+      if (!feature.geometry) return
 
       const name = (feature.properties?.name as string) || `要素_${index + 1}`
 
-      let type: 'Point' | 'LineString' | 'Polygon'
-      switch (geometryType) {
-        case 'Point':
-        case 'MultiPoint':
-          type = 'Point'
-          pointCount++
-          break
-        case 'LineString':
-        case 'MultiLineString':
-          type = 'LineString'
-          lineCount++
-          break
-        case 'Polygon':
-        case 'MultiPolygon':
-          type = 'Polygon'
-          polygonCount++
-          break
-        default:
-          return
-      }
+      // 先把该 placemark 下的几何展开成若干个「原子单几何」。
+      // 需要处理两类嵌套：
+      //   1. KML 的 <MultiGeometry> → togeojson 转成 GeometryCollection（可能混合类型）
+      //   2. GeoJSON 的 MultiPoint / MultiLineString / MultiPolygon
+      // 历史 Bug（审计 P0-4）：旧代码对 Multi* 只改 type 标签不改 coordinates 形状，
+      // 对 GeometryCollection 直接 default:return 整块丢弃。
+      const atoms: AtomicGeometry[] = []
+      flattenGeometry(feature.geometry, '', atoms)
 
-      features.push({
-        id: `feature_${index}`,
-        name,
-        type,
-        coordinates: feature.geometry.coordinates as number[] | number[][] | number[][][],
-        properties: feature.properties || {},
-        feature,
+      atoms.forEach((atom, atomIndex) => {
+        if (atom.type === 'Point') pointCount++
+        else if (atom.type === 'LineString') lineCount++
+        else polygonCount++
+
+        features.push({
+          id: atoms.length > 1 ? `feature_${index}_${atomIndex}` : `feature_${index}`,
+          name: atom.suffix ? `${name} (${atom.suffix})` : name,
+          type: atom.type,
+          coordinates: atom.coordinates,
+          properties: feature.properties || {},
+          feature,
+        })
       })
 
       onProgress?.(70 + (index / geojson.features.length) * 30, `正在处理要素: ${name}`)
