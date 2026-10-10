@@ -236,7 +236,10 @@ export function generateKml(sectors: KmlSector[], properties: KmlDocumentPropert
       )
     }
 
-    const color = formatColor(sector.color || '', sector.opacity || 0.5)
+    // 注意用 ?? 而不是 ||：opacity = 0 是合法输入（完全透明的填充），
+    // `0 || 0.5` 会把它变成 0.5，导致填 0 和填 0.5 效果完全相同。审计 P1-3。
+    const opacity = sector.opacity ?? 0.5
+    const color = formatColor(sector.color ?? '', opacity)
     const coordString = coordinates.map((c) => `${c[0]},${c[1]},0`).join('\n          ')
 
     // 生成描述表格

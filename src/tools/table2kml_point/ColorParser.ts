@@ -90,6 +90,27 @@ export function hexToKmlColor(hex: string, alpha: number = 1): string {
 }
 
 /**
+ * 判断是否为「中文颜色名」（而非 hex）
+ *
+ * 历史 Bug（审计报告 P0-3）：
+ *   旧实现用 `!color.trim().startsWith('#')` 判断中文色名，但上游
+ *   `TemplateValidator` 已经 `parseColor(colorRaw)` 把颜色规范化成 `#RRGGBB`，
+ *   于是进到 `generateKml` 的颜色**一定以 # 开头** → 判断恒为 false →
+ *   `getChinesePushpinUrl()` 是死代码，中文色名全部降级成白底图标 + 叠色。
+ *
+ *   测试假绿的原因：`KmlGenerator.spec.ts` 直接构造 `color: '红色'` 的 PointRow，
+ *   绕过了规范化层，所以断言能通过。
+ *
+ * 现在改为「是否命中中文色名映射表」——与规范化前后无关，的判断才成立。
+ *
+ * @param input 用户原始输入（未规范化的颜色字符串）
+ */
+export function isChineseColorName(input: string | null | undefined): boolean {
+  if (!input) return false
+  return CHINESE_COLOR_MAP[input.trim()] !== undefined
+}
+
+/**
  * 验证颜色是否合法（中文名或 hex）
  */
 export function isValidColor(input: string | null | undefined): boolean {

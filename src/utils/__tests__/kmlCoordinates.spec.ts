@@ -44,6 +44,50 @@ describe('parseKmlCoordinates', () => {
       ])
     })
 
+    // ── 审计报告 P0-2 的回归用例 ──
+    // 旧的 inferStride 在「含逗号」时无条件优先按 3 分组，
+    // 于是 6 个数字（3 个二元组）被切成 (lon,lat) + 错位对 + 遗漏，
+    // 越界的错位对被静默丢弃，用户看不到任何警告。
+    it('P0-2：纯逗号无空格的 3 个二元组，不能按 3 分组', () => {
+      expect(parseKmlCoordinates('116.3,39.9,116.4,40.0,116.5,40.1')).toEqual([
+        { lat: 39.9, lng: 116.3 },
+        { lat: 40.0, lng: 116.4 },
+        { lat: 40.1, lng: 116.5 },
+      ])
+    })
+
+    it('P0-2：纯逗号无空格的 6 个二元组（12 数字）全部保留', () => {
+      const text = '116.3,39.9,116.4,40.0,116.5,40.1,116.6,40.2,116.7,40.3,116.8,40.4'
+      const result = parseKmlCoordinates(text)
+      expect(result).toHaveLength(6)
+      expect(result.map((p) => p.lng)).toEqual([116.3, 116.4, 116.5, 116.6, 116.7, 116.8])
+    })
+
+    it('P0-2：歧义区仍是 2 个带高程的三元组（平手时取 3）', () => {
+      // 6 个数字既可能是 3 个二元组，也可能是 2 个带高程的三元组。
+      // 无空白边界时无法区分，此时两个 stride 都得到 2 个合法点，
+      // 按 KML 2.0 规范（lon,lat,alt 是标准形式）取 3。
+      expect(parseKmlCoordinates('116.3,39.9,0,116.4,40.0,0')).toEqual([
+        { lat: 39.9, lng: 116.3 },
+        { lat: 40.0, lng: 116.4 },
+      ])
+    })
+
+    it('P0-2：歧义区中是 3 个二元组时，靠合法点数选出 stride 2', () => {
+      // 若按 3 分组只能得到 1 个合法点，按 2 分组可得到 3 个 → 选 2
+      const text = '116.3,39.9,116.4,40.0,116.5,40.1'
+      expect(parseKmlCoordinates(text)).toHaveLength(3)
+    })
+
+    it('P0-2：多行文本（换行分隔元组）同样按空白边界处理', () => {
+      const text = '116.3,39.9\n116.4,40.0\n116.5,40.1'
+      expect(parseKmlCoordinates(text)).toEqual([
+        { lat: 39.9, lng: 116.3 },
+        { lat: 40.0, lng: 116.4 },
+        { lat: 40.1, lng: 116.5 },
+      ])
+    })
+
     it('换行 / 多重空白 / Tab 混排', () => {
       expect(
         parseKmlCoordinates('116.3,39.9,0\n  116.4,40.0,0\t116.5,40.1,0'),

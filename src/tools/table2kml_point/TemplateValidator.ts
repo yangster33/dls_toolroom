@@ -9,7 +9,11 @@ export interface PointRow {
   lng: number
   lat: number
   folder: string
+  /** 规范化后的 hex 颜色（如 '#FF0000'），用于 IconStyle 叠色与样式去重 */
   color: string
+  /** 用户原始输入（如 '红色' / '深红' / '#FF0000'），用于判定是否走中文色名图钉。
+   *  审计报告 P0-3：只用 color 判断会恒为 false，因为 color 已被规范化。 */
+  colorRaw?: string
 }
 
 export interface TableKmlReadResult {
@@ -49,7 +53,7 @@ export async function readAndValidateKmlTemplate(file: File): Promise<TableKmlRe
 
       const parsedColor = parseColor(colorRaw) || '#FF0000'
 
-      points.push({ name, lng, lat, folder, color: parsedColor })
+      points.push({ name, lng, lat, folder, color: parsedColor, colorRaw })
     }
 
     result.points = points

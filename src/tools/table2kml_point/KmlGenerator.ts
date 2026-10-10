@@ -7,7 +7,7 @@
  * KML 颜色格式为 AABBGGRR（Alpha-Blue-Green-Red 各 2 位十六进制）。
  */
 import type { PointRow } from './TemplateValidator'
-import { hexToKmlColor, parseColor } from './ColorParser'
+import { hexToKmlColor, parseColor, isChineseColorName } from './ColorParser'
 
 const WHITE_PUSHPIN = 'http://maps.google.com/mapfiles/kml/pushpin/wht-pushpin.png'
 
@@ -46,17 +46,19 @@ const CHINESE_COLOR_TO_PUSHPIN: Record<string, string> = {
   '#F5F5F5': 'wht',
 }
 
-/** 判断是否为中文颜色名 */
-function isChineseColor(color: string): boolean {
-  const parsed = parseColor(color)
-  if (!parsed) return false
-  // 如果原始颜色不是以 # 开头，但能解析出颜色值，则是中文颜色名
-  return !color.trim().startsWith('#')
+/**
+ * 判断是否应使用中文色名对应的 Google 官方图钉
+ *
+ * 必须看**用户原始输入**（colorRaw），不能看规范化后的 color —— 后者已被
+ * `parseColor()` 转成 `#RRGGBB`，永远以 # 开头。审计报告 P0-3。
+ */
+function isChineseColor(row: PointRow): boolean {
+  return isChineseColorName(row.colorRaw ?? row.color)
 }
 
 /** 获取中文颜色对应的 Google 图钉 URL */
-function getChinesePushpinUrl(color: string): string | null {
-  const parsed = parseColor(color)
+function getChinesePushpinUrl(row: PointRow): string | null {
+  const parsed = parseColor(row.colorRaw ?? row.color)
   if (!parsed) return null
   const pushpinColor = CHINESE_COLOR_TO_PUSHPIN[parsed]
   if (!pushpinColor) return null
@@ -94,6 +96,20 @@ function collectStyles(points: PointRow[]): Map<string, string> {
   return colorToId
 }
 
+/**
+ * 每种规范化颜色取一个代表行，用于读取 colorRaw（用户原始输入）。
+ *
+ * 审计报告 P0-3：样式去重以规范化 color 为 key，但中文色名图钉的判定
+ * 需要原始输入，所以必须保留"这个颜色最早来自哪一行"。
+ */
+function collectRepresentativeRows(points: PointRow[]): Map<string, PointRow> {
+  const rowByColor = new Map<string, PointRow>()
+  for (const p of points) {
+    if (!rowByColor.has(p.color)) rowByColor.set(p.color, p)
+  }
+  return rowByColor
+}
+
 function escapeXml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -106,11 +122,13 @@ function escapeXml(s: string): string {
 export function generateKml(points: PointRow[]): string {
   const folders = groupByFolder(points)
   const styles = collectStyles(points)
+  const stylesToRow = collectRepresentativeRows(points)
 
   const styleDefs: string[] = []
   for (const [color, id] of styles) {
-    const isChinese = isChineseColor(color)
-    const pushpinUrl = isChinese ? getChinesePushpinUrl(color) : WHITE_PUSHPIN
+    const row = stylesToRow.get(color)
+    const isChinese = row ? isChineseColor(row) : false
+    const pushpinUrl = isChinese && row ? getChinesePushpinUrl(row) : WHITE_PUSHPIN
     const kmlColor = isChinese ? 'FFFFFFFF' : hexToKmlColor(parseColor(color) || '#FFFFFF')
 
     styleDefs.push(`  <Style id="${id}">

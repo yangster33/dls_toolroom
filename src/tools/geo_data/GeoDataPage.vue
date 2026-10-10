@@ -203,14 +203,14 @@
       </div>
     </div>
 
-    <!-- 错误提示弹窗 -->
+    <!-- 错误提示弹窗（统一入口：解析错误与分析/导出错误都走这里） -->
     <ErrorDialog
       :is-open="showErrorDialog"
-      type="error"
-      title="文件解析错误"
-      message="您上传的文件存在以下问题，请检查后重新上传："
+      :type="errorDialogType"
+      :title="errorDialogTitle"
+      :message="errorDialogMessage"
       :details="{ errorMessage: parseErrors.join('\n') }"
-      @close="showErrorDialog = false"
+      @close="closeErrorDialog"
     />
 
     <!-- 分析进度弹窗 -->
@@ -338,22 +338,22 @@ const parseResult = ref<ParseResult | null>(null)
 const parseErrors = ref<string[]>([])
 const showErrorDialog = ref(false)
 
-// 通用错误对话框状态
-const errorDialogOpen = ref(false)
+// 通用错误对话框状态（单一入口，避免"设置 A 变量、模板读 B 变量"）
 const errorDialogType = ref<'error' | 'warning' | 'success' | 'info'>('error')
 const errorDialogTitle = ref('操作失败')
 const errorDialogMessage = ref('')
 
 const closeErrorDialog = () => {
-  errorDialogOpen.value = false
+  showErrorDialog.value = false
   errorDialogMessage.value = ''
+  parseErrors.value = []
 }
 
 const showErrorDialogMsg = (type: 'error' | 'warning' | 'success' | 'info', title: string, message: string) => {
   errorDialogType.value = type
   errorDialogTitle.value = title
   errorDialogMessage.value = message
-  errorDialogOpen.value = true
+  showErrorDialog.value = true
 }
 
 const selectedAnalysisTypes = ref<AnalysisType[]>([])
@@ -430,7 +430,7 @@ const processFile = async (file: File) => {
 
   if (extension !== 'kml' && extension !== 'kmz') {
     parseErrors.value = ['仅支持 KML 和 KMZ 格式的文件']
-    showErrorDialog.value = true
+    showErrorDialogMsg('error', '文件格式错误', '您上传的文件存在以下问题，请检查后重新上传：')
     return
   }
 
@@ -448,7 +448,7 @@ const processFile = async (file: File) => {
 
     if (!result.success) {
       parseErrors.value = result.errors
-      showErrorDialog.value = true
+      showErrorDialogMsg('error', '文件解析错误', '您上传的文件存在以下问题，请检查后重新上传：')
       return
     }
 
@@ -459,7 +459,7 @@ const processFile = async (file: File) => {
     autoSelectAnalysisTypes()
   } catch (error) {
     parseErrors.value = [`解析失败: ${error instanceof Error ? error.message : '未知错误'}`]
-    showErrorDialog.value = true
+    showErrorDialogMsg('error', '文件解析错误', '解析过程中发生异常，请检查文件后重试：')
   } finally {
     isParsing.value = false
   }
@@ -558,7 +558,7 @@ const startAnalysis = async () => {
   } catch (error) {
     if (!isCancelRequested.value) {
       parseErrors.value = [`分析失败: ${error instanceof Error ? error.message : '未知错误'}`]
-      showErrorDialog.value = true
+      showErrorDialogMsg('error', '空间分析失败', '分析过程中发生异常：')
     }
   } finally {
     isAnalyzing.value = false

@@ -12,12 +12,16 @@ import type * as ExcelJS from 'exceljs'
  *
  * 这个测试确保修复后的动态导入在**运行时**真的能拿到 Workbook 构造函数，
  * 并完成「读取模板 → 填充单元格 → 写出 buffer」的完整往返。
+ *
+ * ⚠ 超时说明：exceljs 约 900KB，动态 import 在并行加载下可能超过 vitest
+ * 默认的 5s。这里显式放宽到 30s —— 2026-10-09 阶段 0 新增测试文件后，
+ * 该用例在全量跑时偶发超时，放宽后稳定。
  */
 describe('exceljs 动态导入（P0-1 回归）', () => {
   it('await import("exceljs") 能取到 Workbook 构造函数', async () => {
     const mod = await import('exceljs')
     expect(mod.Workbook).toBeTypeOf('function')
-  })
+  }, 30_000)
 
   it('不再依赖 window.ExcelJS（该全局从未被赋值）', () => {
     expect((window as unknown as { ExcelJS?: unknown }).ExcelJS).toBeUndefined()
@@ -48,7 +52,7 @@ describe('exceljs 动态导入（P0-1 回归）', () => {
     ws2!.getCell('A1').value = '大龙山'
     expect(ws2!.getCell('A1').value).toBe('大龙山')
     expect(ws2!.getCell('B1').value).toBe('{经度}')
-  })
+  }, 30_000)
 
   it('无工作表时 getWorksheet(1) 返回 undefined（对应实际代码的抛错分支）', async () => {
     const { Workbook } = await import('exceljs')

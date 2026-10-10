@@ -575,15 +575,23 @@ export async function matchDistances(
   config?: MatchConfig,
 ): Promise<MatchResult> {
   const cfg = config ?? DEFAULT_MATCH_CONFIG
+  // k <= 0 会让 insertSortedAsc/Desc 访问 arr[-1].distance、
+  // matchOneNearest 访问 topK[k-1] → TypeError 崩溃。
+  // UI 层已钳制，这里再做一层防御（任何新增调用方都可能传入 0）。
+  const safeOptions: MatchOptions = {
+    ...options,
+    matchCount: Math.max(1, Math.floor(Number(options.matchCount) || 1)),
+  }
+
   const mode = isSameSiteData(data1, data2) ? 'same-site' : 'different-site'
 
   let results: SiteMatchResult[]
 
   if (mode === 'same-site') {
-    results = await matchSameSite(data1, options, cfg, onProgress, signal)
+    results = await matchSameSite(data1, safeOptions, cfg, onProgress, signal)
   } else {
     // data2(456列) 遍历，data1(123列) 做目标索引
-    results = await matchDifferentSite(data2, data1, options, cfg, onProgress, signal)
+    results = await matchDifferentSite(data2, data1, safeOptions, cfg, onProgress, signal)
   }
 
   return { results, mode }

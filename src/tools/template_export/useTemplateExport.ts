@@ -185,21 +185,25 @@ function convertDateValue(value: any): any {
   return value
 }
 
-function sanitizeFilename(name: string): string {
+/** 导出以便单测（这些纯函数此前只在已删除的 docx/xlsxTemplateFunctions.ts 中有测试，
+ *  而那份是重构残留的死代码副本；导出后 live 实现重新获得覆盖） */
+export function sanitizeFilename(name: string): string {
   return name.replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim() || '未命名'
 }
 
-function validateFilenameTemplate(template: string): { valid: boolean; error?: string } {
+export function validateFilenameTemplate(template: string): { valid: boolean; error?: string } {
   let depth = 0
   for (const ch of template) {
     if (ch === '{') depth++
     if (ch === '}') depth--
     if (depth < 0) return { valid: false, error: '多余的 } 右花括号' }
   }
-  if (depth > 0) return { valid: false, error: '花括号未闭合，缺少 }' }
-  if (depth < 0) return { valid: false, error: '花括号不匹配' }
+  if (depth > 0) return { valid: false, error: '花括号未闭合，缺少 } 右花括号' }
 
-  const re = /\{([^}]+)\}/g
+  // 注意用 [^}]* 而不是 [^}]+：`{}` 也必须被判为非法。
+  // 旧实现用 [^}]+，空占位符匹配不上正则，下面的"存在空的 {} 占位符"
+  // 分支是死代码，`报告_{}` 会被放过并生成 `报告_`。
+  const re = /\{([^}]*)\}/g
   let m: RegExpExecArray | null
   while ((m = re.exec(template)) !== null) {
     if (m[1] === '') return { valid: false, error: '存在空的 {} 占位符' }
@@ -211,7 +215,7 @@ function validateFilenameTemplate(template: string): { valid: boolean; error?: s
   return { valid: true }
 }
 
-function generateFilename(
+export function generateFilename(
   row: Record<string, any>,
   template: string,
   index: number,
@@ -219,8 +223,11 @@ function generateFilename(
   if (!template) {
     const keys = Object.keys(row)
     const firstKey = keys[0]
-    if (firstKey && row[firstKey] != null) {
-      return sanitizeFilename(String(row[firstKey]))
+    const firstValue = firstKey !== undefined ? row[firstKey] : undefined
+    // 首列存在但为空字符串时，旧实现会走 sanitizeFilename('') → '未命名'，
+    // 导致下面的 `文档_${index+1}` 分支永远不可达（'' != null 为 true）。
+    if (firstValue != null && String(firstValue).trim() !== '') {
+      return sanitizeFilename(String(firstValue))
     }
     return `文档_${index + 1}`
   }
@@ -232,7 +239,7 @@ function generateFilename(
   return sanitizeFilename(name)
 }
 
-function resolveDuplicates(
+export function resolveDuplicates(
   names: string[],
   strategy: 'appendIndex' | 'rowPrefix',
 ): string[] {
@@ -241,12 +248,28 @@ function resolveDuplicates(
     return names.map((name, i) => `${String(i + 1).padStart(pad, '0')}-${name}`)
   }
 
-  const seen = new Map<string, number>()
+  // 必须用「已产出的最终名」集合，而不是「原始名出现次数」。
+  //
+  // 旧实现（审计报告 P1-4）：
+  //   const seen = new Map<string, number>()
+  //   names.map(name => { const count = seen.get(name) || 0; seen.set(name, count+1)
+  //                      return count === 0 ? name : `${name}(${count})` })
+  // 输入 ['a','a','a(1)'] → ['a','a(1)','a(1)']：第三行与第二行撞名，
+  // JSZip 的 zip.file(name) 同名覆盖 → 少一个文件，且 zip 生成时不报错。
+  const used = new Set<string>()
   return names.map((name) => {
-    const count = seen.get(name) || 0
-    seen.set(name, count + 1)
-    if (count === 0) return name
-    return `${name}(${count})`
+    if (!used.has(name)) {
+      used.add(name)
+      return name
+    }
+    let n = 1
+    let candidate = `${name}(${n})`
+    while (used.has(candidate)) {
+      n++
+      candidate = `${name}(${n})`
+    }
+    used.add(candidate)
+    return candidate
   })
 }
 

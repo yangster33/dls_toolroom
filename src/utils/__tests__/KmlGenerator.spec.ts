@@ -93,6 +93,34 @@ describe('generateKml - 颜色处理', () => {
   })
 })
 
+describe('generateKml - 半透明度 opacity（P1-3 回归）', () => {
+  // 历史 Bug：`formatColor(sector.color || '', sector.opacity || 0.5)`
+  // `0 || 0.5` === 0.5，用户填 0 想要「完全透明的填充」但永远得到半透明，
+  // 而填 0.0001 反而正常 —— 这个不对称性正是 `||` 误判 falsy 值的特征。
+  //
+  // KML 颜色格式是 AABBGGRR。红色 #FF0000 → alpha + 00(bb) + 00(gg) + FF(rr)
+  it('opacity = 0 应产出全透明（alpha 00），不是 0.5', () => {
+    const kml = generateKml([sector({ opacity: 0, color: '#FF0000' })])
+    expect(kml).toContain('<color>000000FF</color>')
+    expect(kml).not.toContain('<color>800000FF</color>') // 0.5 → 80
+  })
+
+  it('opacity = 1 应产出不透明（alpha FF）', () => {
+    const kml = generateKml([sector({ opacity: 1, color: '#FF0000' })])
+    expect(kml).toContain('<color>FF0000FF</color>')
+  })
+
+  it('opacity = 0.5 产出 alpha 80（保持原有默认行为）', () => {
+    const kml = generateKml([sector({ opacity: 0.5, color: '#FF0000' })])
+    expect(kml).toContain('<color>800000FF</color>')
+  })
+
+  it('opacity 未提供时默认 0.5', () => {
+    const kml = generateKml([sector({ color: '#FF0000' })])
+    expect(kml).toContain('<color>800000FF</color>')
+  })
+})
+
 describe('generateKml - 属性', () => {
   it('自定义文档名与关闭状态', () => {
     const kml = generateKml([sector()], { name: '自定义名', open: false })

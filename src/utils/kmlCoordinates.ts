@@ -46,26 +46,95 @@ function extractNumbers(text: string): number[] {
 }
 
 /**
+ * 按 KML 规范的「元组间空白分隔」把文本切成元组片段
+ *
+ * KML 规范：`<coordinates>` 是元组序列，**元组间用空白分隔，元组内字段用逗号分隔**。
+ * 这个空白边界是规范给我们的最强信号，比"数字个数能否整除"可靠得多。
+ *
+ * 现实中的坑：有些工具在逗号后也加空格（QGIS 及部分国产工具）：
+ *   `116.3, 39.9,0 116.4, 40.0,0`
+ * 直接按空白切会得到 ["116.3,", "39.9,0", "116.4,", "40.0,0"]，每个片段的
+ * 字段数不一致。此时把「以逗号结尾的片段」与下一个片段合并即可还原元组。
+ *
+ * @returns 元组片段数组；无法切分时返回 null
+ */
+function splitIntoTuples(text: string): string[] | null {
+  const rawSegments = text.trim().split(/\s+/).filter(Boolean)
+  if (rawSegments.length === 0) return null
+
+  const tuples: string[] = []
+  let current = ''
+
+  for (const seg of rawSegments) {
+    current += (current ? ' ' : '') + seg
+    // 以逗号结尾 → 这个元组还没写完，继续拼下一个片段
+    if (seg.endsWith(',')) continue
+    tuples.push(current)
+    current = ''
+  }
+  if (current) tuples.push(current) // 兜底：结尾有未闭合的片段
+
+  return tuples
+}
+
+/** 统计一段文本里的数字个数 */
+function countNumbers(segment: string): number {
+  const matches = segment.match(NUMBER_PATTERN)
+  return matches ? matches.length : 0
+}
+
+/** 按给定 stride 切分，返回「坐标合法」的点数 */
+function countValidPoints(numbers: number[], stride: number): number {
+  let valid = 0
+  for (let i = 0; i + 1 < numbers.length; i += stride) {
+    const lng = numbers[i]
+    const lat = numbers[i + 1]
+    if (lng === undefined || lat === undefined) break
+    if (lng < -180 || lng > 180) continue
+    if (lat < -90 || lat > 90) continue
+    valid++
+  }
+  return valid
+}
+
+/**
  * 推断元组宽度（stride）
  *
- * 规则：
- * - 文本含逗号 → KML 2.0 风格，每元组 3 个数（lon, lat, alt）
- *   同时兼容「无高程但用逗号分隔元组」的变体（此时总数可被 2 整除）
- * - 不含逗号 → 纯空格分隔，优先按 2 分组，其次按 3 分组
+ * 四级策略，从可靠到兜底：
+ * 1. 空白边界一致 —— 所有元组片段含相同数量的数字（2 或 3）→ 直接采用
+ * 2. 纯空格分隔、每段 1 个数字 → 2（KML 2.2 的无逗号变体）
+ * 3. 整除推断 —— 只能被 2 整除取 2，只能被 3 整除取 3
+ * 4. 歧义区（可同时被 2 和 3 整除，如 6/12 个数字）——
+ *    按「哪个 stride 能得到更多合法坐标」选择，平手时取 3（KML 2.0 规范
+ *    的 lon,lat,alt 是标准形式）
  */
-function inferStride(text: string, numberCount: number): number {
-  const hasComma = text.includes(',')
+function inferStride(text: string, numbers: number[]): number {
+  const numberCount = numbers.length
 
-  if (hasComma) {
-    // 有逗号：优先 3（标准 KML 2.0）；若不能被 3 整除但能被 2 整除，则按 2 处理
-    if (numberCount % 3 === 0) return 3
-    if (numberCount % 2 === 0) return 2
-    return 3
+  // ── 策略 1 & 2：利用空白边界 ──
+  const tuples = splitIntoTuples(text)
+  if (tuples && tuples.length > 1) {
+    const counts = tuples.map(countNumbers)
+
+    if (counts.every((c) => c === counts[0])) {
+      if (counts[0] === 2 || counts[0] === 3) return counts[0]
+      if (counts[0] === 1) return 2 // 纯空格分隔，无逗号
+    }
   }
 
-  // 无逗号：优先 2（KML 2.2）
-  if (numberCount % 2 === 0) return 2
-  return 3
+  // ── 策略 3：整除推断 ──
+  const divBy2 = numberCount % 2 === 0
+  const divBy3 = numberCount % 3 === 0
+  if (divBy2 && !divBy3) return 2
+  if (divBy3 && !divBy2) return 3
+
+  // ── 策略 4：歧义区 ──
+  if (numberCount === 0) return 2
+  const valid2 = countValidPoints(numbers, 2)
+  const valid3 = countValidPoints(numbers, 3)
+  // 平手时取 3：KML 2.0 的 lon,lat,alt 是规范标准形式，
+  // 且带高程的写法更可能出自正规工具（Google Earth / ArcGIS）
+  return valid3 >= valid2 ? 3 : 2
 }
 
 /**
@@ -89,7 +158,7 @@ export function parseKmlCoordinates(text: string | null | undefined): LatLngTupl
   // 少于 2 个数字不可能构成一个点
   if (numbers.length < 2) return []
 
-  const stride = inferStride(clean, numbers.length)
+  const stride = inferStride(clean, numbers)
   const points: LatLngTuple[] = []
 
   for (let i = 0; i + 1 < numbers.length; i += stride) {

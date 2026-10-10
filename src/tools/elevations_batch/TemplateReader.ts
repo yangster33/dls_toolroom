@@ -3,6 +3,7 @@ import {
   COORDINATE_POINT_FIELDS,
 } from '@/utils/templateHandler'
 import type { CoordinatePoint } from '@/utils/templateHandler'
+import { parseCoordinateValue } from '@/utils/coordinateValue'
 
 export type { CoordinatePoint, TemplateValidationResult }
 
@@ -43,12 +44,10 @@ export function readAndValidateTemplate(
     const lonAliases = lonField.aliases
     let longitude: number | null = null
     for (const alias of lonAliases) {
-      if (row[alias] !== undefined && row[alias] !== null) {
-        const val = Number(row[alias])
-        if (!isNaN(val) && val >= -180 && val <= 180) {
-          longitude = val
-          break
-        }
+      const parsed = parseCoordinateValue(row[alias], -180, 180)
+      if (parsed !== null) {
+        longitude = parsed
+        break
       }
     }
 
@@ -65,12 +64,10 @@ export function readAndValidateTemplate(
     const latAliases = latField.aliases
     let latitude: number | null = null
     for (const alias of latAliases) {
-      if (row[alias] !== undefined && row[alias] !== null) {
-        const val = Number(row[alias])
-        if (!isNaN(val) && val >= -90 && val <= 90) {
-          latitude = val
-          break
-        }
+      const parsed = parseCoordinateValue(row[alias], -90, 90)
+      if (parsed !== null) {
+        latitude = parsed
+        break
       }
     }
 

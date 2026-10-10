@@ -520,11 +520,20 @@ const canDownloadResult = computed(() => {
   return matchResult.value?.results.length !== undefined && matchResult.value.results.length > 0
 })
 
-// 确保匹配数量始终是整数
+// 确保匹配数量始终是 >= 1 的整数
+// 清空输入框时 v-model.number 产出 ''，Math.floor('') === 0。
+// k = 0 会在 DistanceCalculator 的 insertSortedAsc / matchOneNearest 里
+// 访问 topK[k-1]（即 topK[-1]）→ TypeError，整个计算崩溃。
+// 输入框虽然有 min="1"，但 min 不阻止用户清空，所以这里必须钳制。审计阶段 0。
 watch(matchCount, (newVal) => {
-  if (newVal !== null && newVal !== undefined) {
-    matchCount.value = Math.floor(newVal)
+  // v-model.number 在输入为空时运行时给出 ''，但 TS 类型是 number，故用 unknown 桥接
+  const raw: unknown = newVal
+  if (raw === null || raw === undefined || raw === '') {
+    matchCount.value = 1
+    return
   }
+  const num = Number(raw)
+  matchCount.value = Number.isFinite(num) ? Math.max(1, Math.floor(num)) : 1
 })
 
 // 下载同站址模板

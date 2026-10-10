@@ -771,8 +771,10 @@ const parseCSV = (text: string): Record<string, string | number>[] => {
     const values = parseCSVLine(line)
     const row: Record<string, string | number> = {}
     headers.forEach((header, index) => {
-      const value = values[index]?.trim().replace(/^"|"$/g, '') || ''
-      row[header] = isNaN(Number(value)) ? value : Number(value)
+      const value = (values[index] ?? '').trim().replace(/^"|"$/g, '')
+      // 空字符串保持为空字符串，不能变成数字 0（审计 P0-1：空白经纬度会被
+      // 当成 (0,0) 几内亚湾的坐标并通过校验，静默产出错误结果）
+      row[header] = /^[+-]?(\d+\.?\d*|\.\d+)$/.test(value) ? Number(value) : value
     })
     rows.push(row)
   }

@@ -186,3 +186,39 @@ describe('配置常量', () => {
     expect(DEFAULT_MATCH_CONFIG.chunkSize).toBe(100)
   })
 })
+
+describe('matchDistances - matchCount 边界（阶段 0）', () => {
+  // 历史 Bug：DistanceSensorPage 的 watcher 只做 Math.floor 不做下限钳制。
+  // 清空「匹配数量」输入框时 v-model.number 产出 ''，Math.floor('') === 0。
+  // k = 0 会让 insertSortedAsc 访问 arr[-1].distance、matchOneNearest 访问
+  // topK[k-1] → TypeError，整个计算崩溃，只弹一个无信息量的「计算失败」。
+  it('matchCount = 0 不崩溃，退化为至少 1 个近邻', async () => {
+    const result = await matchDistances([A, B, C], [A, B, C], {
+      matchCount: 0,
+      matchMode: 'nearest',
+    } as Parameters<typeof matchDistances>[2])
+    expect(result.results).toHaveLength(3)
+    for (const site of result.results) {
+      expect(site.matches.length).toBeGreaterThanOrEqual(1)
+    }
+  })
+
+  it('matchCount 为负数 / NaN 也不崩溃', async () => {
+    for (const bad of [-5, Number.NaN]) {
+      const result = await matchDistances([A, B, C], [A, B, C], {
+        matchCount: bad,
+        matchMode: 'nearest',
+      } as Parameters<typeof matchDistances>[2])
+      expect(result.results).toHaveLength(3)
+      for (const site of result.results) {
+        expect(site.matches.length).toBeGreaterThanOrEqual(1)
+      }
+    }
+  })
+
+  it('正常 matchCount 仍返回请求的数量（行为不变）', async () => {
+    const result = await matchDistances([A, B, C], [A, B, C], { matchCount: 2, matchMode: 'nearest' })
+    const aResult = result.results.find((r) => r.site.name === 'A')!
+    expect(aResult.matches.map((m) => m.site.name)).toEqual(['B', 'C'])
+  })
+})
