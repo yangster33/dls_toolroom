@@ -452,6 +452,7 @@ import {
   getResultHeaders,
   type TemplateValidationResult,
 } from './TemplateReader'
+import { aoaToTemplateRows, columnsFromRows } from './templateRows'
 import {
   matchDistances,
   type MatchResult,
@@ -566,6 +567,7 @@ const onFileUpload = async (event: Event) => {
 
   try {
     let rows: Record<string, string | number>[]
+    let columns: string[]
 
     // 根据文件扩展名选择解析方式
     if (file.name.toLowerCase().endsWith('.xlsx')) {
@@ -581,15 +583,21 @@ const onFileUpload = async (event: Event) => {
       if (!worksheet) {
         throw new Error('无法读取工作表内容')
       }
-      const jsonData = XLSX.utils.sheet_to_json(worksheet)
-      rows = jsonData as Record<string, string | number>[]
+      // header:1 拿二维数组，列数/列名从**表头行**推。
+      // 不能用默认的对象模式：它不给空单元格建 key，第一条数据的
+      // data2 三列为空时会被误判成 3 列（同站址）。（审计 C1 / P1-6）
+      const aoa = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][]
+      const parsed = aoaToTemplateRows(aoa)
+      rows = parsed.rows
+      columns = parsed.columns
     } else {
       // 解析 CSV 文件
       const text = await file.text()
       rows = parseCSV(text)
+      columns = columnsFromRows(rows)
     }
 
-    validationResult.value = readAndValidateTemplate(rows)
+    validationResult.value = readAndValidateTemplate(rows, columns)
     matchResult.value = null
 
     // 如果校验失败，弹出错误提示

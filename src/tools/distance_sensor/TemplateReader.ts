@@ -15,9 +15,21 @@ export interface TemplateValidationResult {
 /**
  * 读取并验证模板数据
  * 自动判断是同站址（3列）还是异站址（6列）匹配
+ *
+ * @param rows           数据行（不含表头）
+ * @param headerColumns  表头列名，**强烈建议提供**，理由见下。
+ *
+ * 历史 Bug（审计 C1 / P1-6）：列数原先从 `Object.keys(rows[0])` 推断，
+ * 而 XLSX 默认的 `sheet_to_json(ws)` 不给空单元格建 key。若第一条数据的
+ * 「名称2/经度2/纬度2」为空，首行就只有 3 个 key → 被误判成同站址模式
+ * → 之后每行都报「名称不能为空」，而文件其实是合法的 6 列异站址模板。
+ *
+ * 列数与列名必须来自**表头行**；省略本参数时退回读首行 key 的旧行为，
+ * 只为兼容直接传数组的调用方。
  */
 export function readAndValidateTemplate(
   rows: Record<string, string | number>[],
+  headerColumns?: string[],
 ): TemplateValidationResult {
   const errors: string[] = []
   const data1: LocationPoint[] = []
@@ -34,9 +46,8 @@ export function readAndValidateTemplate(
     }
   }
 
-  // 获取列名（去除前后空格）
-  const firstRow = rows[0] || {}
-  const columns = Object.keys(firstRow).map((col) => col.trim())
+  // 列名与列数一律来自表头行，而不是数据行的 key 数量（审计 C1 / P1-6）
+  const columns = (headerColumns ?? Object.keys(rows[0] || {})).map((col) => col.trim())
   const columnCount = columns.length
 
   if (columnCount !== 3 && columnCount !== 6) {
