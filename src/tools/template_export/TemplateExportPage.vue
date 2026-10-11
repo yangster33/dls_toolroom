@@ -109,7 +109,11 @@
             />
           </svg>
           <span class="text-sm">{{ dataFileName }}</span>
-          <span class="text-sm text-base-content/60">({{ dataRowCount }} 行数据)</span>
+          <span class="text-sm text-base-content/60">
+            ({{ dataRowCount }} 行数据{{
+              skipRows > 0 ? `，忽略前 ${skipRows} 行后 ${actualDataList.length} 行` : ''
+            }})
+          </span>
         </div>
       </div>
 
@@ -372,6 +376,7 @@ const {
   dataFileName,
   templateFileName,
   dataRowCount,
+  actualDataList,
   detectedFields,
   skipRows,
   filenameTemplate,
@@ -399,7 +404,7 @@ const {
   dismissFilenameError,
 } = useTemplateExport(format)
 
-const skipRowsLocal = ref(1)
+const skipRowsLocal = ref(0)
 
 watch(skipRows, (newVal) => {
   skipRowsLocal.value = newVal

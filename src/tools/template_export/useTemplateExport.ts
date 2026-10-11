@@ -189,6 +189,24 @@ function convertDateValue(value: unknown): unknown {
   return value
 }
 
+/**
+ * 归一化「忽略行数」。
+ *
+ * 历史 Bug（审计 P1-5）：
+ *  1. 旧实现 `slice(skipRows - 1)` 与 UI 文案「忽略前 N 行（默认1行）」错开一位；
+ *  2. 旧钳制 `Math.max(1, value)` 使下限为 1，用户无法表达「不忽略」；
+ *  3. `v-model.number` 清空输入框时产出 `''`，必须能被正常处理。
+ *
+ * 现在统一为「忽略 N 行」并允许 0。抽成模块级纯函数以便单测
+ * （原本是 composable 内的闭包，无法直接测试）。
+ */
+export function normalizeSkipRows(value: number): number {
+  const n = Math.floor(Number(value))
+  // NaN / Infinity / 空串一律归 0（不忽略）
+  if (!Number.isFinite(n)) return 0
+  return Math.max(0, n)
+}
+
 /** 导出以便单测（这些纯函数此前只在已删除的 docx/xlsxTemplateFunctions.ts 中有测试，
  *  而那份是重构残留的死代码副本；导出后 live 实现重新获得覆盖） */
 export function sanitizeFilename(name: string): string {
@@ -351,7 +369,8 @@ export function useTemplateExport(format: ExportFormat) {
   const templateFileName = ref('')
   const dataRowCount = ref(0)
   const detectedFields = ref<string[]>([])
-  const skipRows = ref(1)
+  /** 忽略前 N 行；0 表示不忽略。默认 0 而不是 1（审计 P1-5） */
+  const skipRows = ref(0)
   const rawDataList = ref<Record<string, unknown>[]>([])
 
   const filenameTemplate = ref('')
@@ -450,7 +469,7 @@ export function useTemplateExport(format: ExportFormat) {
   }
 
   function setSkipRows(value: number) {
-    skipRows.value = Math.max(1, value)
+    skipRows.value = normalizeSkipRows(value)
   }
 
   async function onTemplateFileUpload(event: Event) {
@@ -480,8 +499,18 @@ export function useTemplateExport(format: ExportFormat) {
     return renderResults.value.length > 0
   })
 
+  /**
+   * 忽略前 N 行后剩余的数据行。
+   *
+   * 历史 Bug（审计 P1-5）：旧代码是 `rawDataList.slice(skipRows - 1)`，
+   * 而 UI 文案写「忽略前 N 行（默认1行）」——两个语义错开一位：
+   * skipRows=1 时 slice(0) 等于一行不忽略，用户按提示填 1 结果什么都没跳，
+   * 填 2 才真正忽略 1 行。
+   *
+   * 现在统一为「忽略 N 行」，且允许 0（不忽略），默认 0。
+   */
   const actualDataList = computed(() => {
-    return rawDataList.value.slice(skipRows.value - 1)
+    return rawDataList.value.slice(skipRows.value)
   })
 
   const previewFilenames = computed(() => {
@@ -696,7 +725,7 @@ export function useTemplateExport(format: ExportFormat) {
     detectedFields.value = []
     templateContent.value = null
     renderResults.value = []
-    skipRows.value = 1
+    skipRows.value = 0
 
     rawDataList.value = []
     filenameTemplate.value = ''
@@ -727,6 +756,7 @@ export function useTemplateExport(format: ExportFormat) {
     dataFileName,
     templateFileName,
     dataRowCount,
+    actualDataList,
     detectedFields,
     skipRows,
     filenameTemplate,
