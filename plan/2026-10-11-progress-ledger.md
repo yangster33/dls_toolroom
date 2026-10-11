@@ -7,11 +7,11 @@
 | 属性 | 值 |
 |---|---|
 | 审查基线 | `c096944`（2026-10-09 审计） |
-| 台账更新 | 2026-10-11（A 档 5 项完成） |
-| 当前 HEAD | `c93a842` |
+| 台账更新 | 2026-10-11（A 档 + B2 + B3 完成） |
+| 当前 HEAD | `c8903b5` |
 | 工具数 | 26 个路由（预渲染 sitemap） |
-| 测试 | 610 passed / 44 files |
-| 最近更新 | 2026-10-11 · A 档 5 项 + B3 完成 |
+| 测试 | 643 passed / 47 files |
+| 最近更新 | 2026-10-11 · A 档 5 项 + B3 + B2 完成 |
 
 ---
 
@@ -69,7 +69,10 @@
 | `elevations_batch/__tests__/TemplateReader.spec.ts` | 13 |
 | `get_add/__tests__/TemplateReader.spec.ts` | 5 |
 | `template_export/__tests__/useTemplateExport.spec.ts` | 27 |
-| **合计** | 524 → **577** |
+| A 档新增：`skipRows`/`weatherHistoryChart`/`geocodeStore`/`amapService`(追加)/`safeUrl` | +29 |
+| B3 新增：`kml_viewer/__tests__/KmlViewerPage.spec.ts` | +4 |
+| B2 新增：`fetchWithTimeout`(22) / `weatherHistoryService`(4) / `earthquakeService`+2 / `gdacsService`+2 / `DlsComment`(3) | +33 |
+| **合计** | 524 → **643** |
 
 ### 门禁基线演进
 
@@ -79,7 +82,7 @@
 | `oxlint` | 0 / 0 | ✅ 0 / 0 |
 | `eslint` | ❌ 133 errors | ✅ **0** |
 | `prettier --check` | ❌ 216 files 不符 | ✅ 全符合 |
-| `vitest` | 524 / 35 files | ✅ **606 / 43 files** |
+| `vitest` | 524 / 35 files | ✅ **643 / 47 files** |
 | `playwright`（生产构建） | 未验证 | ✅ 6 passed / 1 flaky |
 | `npm run build` | 不带门禁 | ✅ 全链路通过 |
 
@@ -102,7 +105,7 @@
 | # | 编号 | 问题 | 工作量 | 状态 |
 |---|---|---|---|---|
 | B1 | P2-13 | `push(...arr)` / `Math.max(...arr)` 共 21 处，大数据量 `RangeError` | 3 h | ⬜ |
-| B2 | P2-15 | 4 处裸 `fetch` 无 `AbortController` + 超时 | 2 h | ⬜ |
+| B2 | P2-15 | 4 处裸 `fetch` 无 `AbortController` + 超时 | 2 h | ✅ `c8903b5` |
 | B3 | P2-14 | `KmlViewerPage:611` fullscreenchange 监听器泄漏；甘特图重复实例化累积监听器 | 1 h | ✅ `c93a842` |
 | B4 | P2-11 | `manualChunks` 顺序错误，首屏 810 kB / 1.2 MB JS | 3 h | ⬜ |
 | B5 | P1-9 | 8 处 `parseFloat` 宽松前缀，脏数据被"净化" | 2 h | ⬜ |
@@ -207,3 +210,50 @@ literal 模式匹配到了多处相同文本），按行号精确剥离后恢复
 只要还在用该库，每次重建仍会泄漏一个 document 监听器。
 根治需要：a) 减少重建场景（已完成节流）；b) 上游支持解绑；
 c) 换甘特库。已记入 D4（拆 GanttChartPage）的关联项。
+
+
+### B2 执行明细（2026-10-11）
+
+提交 `c8903b5`。核心是新增统一请求封装并把外部 API 与组件守卫接上。
+
+**新增 `src/utils/fetchWithTimeout.ts`**
+
+| 导出 | 作用 |
+|---|---|
+| `fetchWithTimeout(url, {timeoutMs, signal, ...})` | 默认 15s 超时，返回原生 `Response`，调用方 `res.ok`/`res.json()` 不变 |
+| `FetchTimeoutError` / `isFetchTimeoutError` | 超时错误带可识别标记，可与"取消""断网"区分 |
+| `describeFetchError` | 转中文可读信息 |
+| `createAbortScope` | 一次性作用域取消 |
+| `createRequestGate` | 「单飞」闸门：`begin()` 取消上一请求返回新 signal |
+
+**接入点**
+
+| 层 | 文件 | 变更 |
+|---|---|---|
+| 外部 API | weatherHistory / earthquake / gdacs Service | 裸 `fetch` → `fetchWithTimeout`，新增可选 `signal` 参数透传（elevation 已在阶段 0 处理） |
+| 组件 | `DlsComment` | `onUnmounted` 置 `disposed`，三个响应回调写 ref 前检查 |
+| 组件 | `DlsChart` | async `onMounted` 跨 `await`，await 后检查 `disposed` |
+| 页面 | WeatherHistory / EarthquakeQuery / Gdacs Page | 接入 `createRequestGate`：新查询取消旧查询 + 卸载取消在途；`await` 后判 `signal.aborted` |
+
+**一个语义坑**：service 层 `catch` 会把 `AbortError` 也吞成 `{success:false, error}`，
+所以组件不能只看 `result.success`，必须用 `signal.aborted` 判断"是否已被取消/取代"，
+否则卸载后仍会弹一个"请求已取消"的错误框。
+
+**测试 +33（610 → 643）**：`fetchWithTimeout`(22) + `weatherHistoryService`(4) +
+`earthquakeService`(+2) + `gdacsService`(+2) + `DlsComment`(3)。
+
+**可观测性难点**：组件守卫的 `disposed` 是闭包变量，无法直接读。DlsComment 测试通过
+内部实例的 `setupState` 观察 `comments` ref，并配一个「对照组」（未卸载时应正常写入）
+防止断言假绿。
+
+**反证**：
+- weather 服务还原裸 `fetch` → 3 用例失败（超时用例直接挂起到测试超时）；
+- DlsComment 去掉 `onUnmounted` 守卫 → 2 用例失败（迟到响应写入 `comments`）。
+
+**门禁**：type-check 0 / oxlint 0 / eslint 0 / prettier 全符合 /
+vitest 643 passed（47 files） / `npm run build` 全链路通过。
+期间 `npm run build` 的 `lint:oxlint` 暴露 spec 中两处
+「Async assertions must be awaited」，改为先挂 `catch` 再断言。
+
+**残留**：`DlsChart` 的守卫未加组件测试（依赖 echarts，mount 成本高），
+仅由代码审查与 type-check 保证；如需覆盖，应把 `loadChinaMap` 的编排抽成可测函数。
