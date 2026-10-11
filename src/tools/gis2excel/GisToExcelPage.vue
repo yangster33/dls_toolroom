@@ -245,7 +245,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, shallowRef } from 'vue'
 import { getToolById } from '../toolData'
 import { readAndValidateGisFile, type GisValidationResult, type GisFeature } from './GisFileReader'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
@@ -255,7 +255,7 @@ import { exportToExcel, exportSeparateFiles } from './GisToExcelExporter'
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const validateResult = ref<GisValidationResult | null>(null)
-const convertedData = ref<GisFeature[][] | null>(null)
+const convertedData = shallowRef<GisFeature[][] | null>(null)
 const errorMessage = ref('')
 const progress = ref(0)
 const progressText = ref('')

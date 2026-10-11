@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, shallowRef } from 'vue'
 import Docxtemplater from 'docxtemplater'
 import PizZip from 'pizzip'
 import JSZip from 'jszip'
@@ -371,7 +371,7 @@ export function useTemplateExport(format: ExportFormat) {
   const detectedFields = ref<string[]>([])
   /** 忽略前 N 行；0 表示不忽略。默认 0 而不是 1（审计 P1-5） */
   const skipRows = ref(0)
-  const rawDataList = ref<Record<string, unknown>[]>([])
+  const rawDataList = shallowRef<Record<string, unknown>[]>([])
 
   const filenameTemplate = ref('')
   const duplicateStrategy = ref<'appendIndex' | 'rowPrefix'>('appendIndex')

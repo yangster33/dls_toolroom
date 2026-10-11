@@ -440,7 +440,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, shallowRef } from 'vue'
 import { getToolById } from '../toolData'
 import { logger } from '@/utils/logger'
 import {
@@ -511,7 +511,7 @@ const selectedAnalysisTypes = ref<AnalysisType[]>([])
 const isAnalyzing = ref(false)
 const analysisProgress = ref(0)
 const analysisProgressMessage = ref('')
-const analysisResults = ref<AnalysisResult[]>([])
+const analysisResults = shallowRef<AnalysisResult[]>([])
 /** 分析类型级别的错误（非逐要素错误），用于在 UI 上提示哪些类型失败 */
 const analysisTypeErrors = ref<string[]>([])
 

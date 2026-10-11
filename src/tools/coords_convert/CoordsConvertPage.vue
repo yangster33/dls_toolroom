@@ -358,7 +358,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, shallowRef } from 'vue'
 import { exportTemplate } from '@/utils/TemplateExporter'
 import { getToolById } from '../toolData'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
@@ -436,7 +436,7 @@ const cgcsParamError = computed(() => {
 })
 
 // 转换相关状态
-const validatedDataRows = ref<DataRow[]>([])
+const validatedDataRows = shallowRef<DataRow[]>([])
 /**
  * 上传时锁定的输入坐标系（审计 C2 / P0-5 余项）。
  *
@@ -449,7 +449,7 @@ const uploadInputSystem = ref<string>('')
 const isProcessing = ref<boolean>(false)
 const conversionProgress = ref<number>(0)
 const conversionCompleted = ref<boolean>(false)
-const conversionResultData = ref<DataRow[]>([])
+const conversionResultData = shallowRef<DataRow[]>([])
 const conversionResultHeaders = ref<string[]>([])
 const conversionErrors = ref<string[]>([])
 const processedRows = ref<number>(0)

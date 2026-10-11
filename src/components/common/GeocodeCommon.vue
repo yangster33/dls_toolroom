@@ -572,7 +572,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, shallowRef } from 'vue'
 import * as XLSX from 'xlsx'
 import { exportData, exportTemplate } from '@/utils/TemplateExporter'
 import { logger } from '@/utils/logger'
@@ -742,7 +742,7 @@ const availableFields = mode === 'add' ? getAddFields() : getLonLatFields()
 type AddValidation = TemplateValidationResult<CoordinatePoint>
 type LonLatValidation = TemplateValidationResult<FullAddress>
 const validationResult = ref<AddValidation | LonLatValidation | null>(null)
-const queryResults = ref<AddQueryResult[] | LonLatQueryResult[]>([])
+const queryResults = shallowRef<AddQueryResult[] | LonLatQueryResult[]>([])
 
 /** 模板按 mode 分流渲染；用 computed 收窄，避免模板里访问并集上不存在的字段 */
 const addResults = computed<AddQueryResult[]>(() =>
