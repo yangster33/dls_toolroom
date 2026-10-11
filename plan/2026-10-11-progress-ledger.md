@@ -7,11 +7,11 @@
 | 属性 | 值 |
 |---|---|
 | 审查基线 | `c096944`（2026-10-09 审计） |
-| 台账更新 | 2026-10-11（A 档 + B2 + B3 完成） |
-| 当前 HEAD | `c8903b5` |
+| 台账更新 | 2026-10-11（A 档 + B1 + B2 + B3 完成） |
+| 当前 HEAD | `460c002` |
 | 工具数 | 26 个路由（预渲染 sitemap） |
-| 测试 | 643 passed / 47 files |
-| 最近更新 | 2026-10-11 · A 档 5 项 + B3 + B2 完成 |
+| 测试 | 660 passed / 48 files |
+| 最近更新 | 2026-10-11 · A 档 5 项 + B1 + B2 + B3 完成 |
 
 ---
 
@@ -72,7 +72,8 @@
 | A 档新增：`skipRows`/`weatherHistoryChart`/`geocodeStore`/`amapService`(追加)/`safeUrl` | +29 |
 | B3 新增：`kml_viewer/__tests__/KmlViewerPage.spec.ts` | +4 |
 | B2 新增：`fetchWithTimeout`(22) / `weatherHistoryService`(4) / `earthquakeService`+2 / `gdacsService`+2 / `DlsComment`(3) | +33 |
-| **合计** | 524 → **643** |
+| B1 新增：`arrayUtils`(14) / `TemplateExporter`追加(3) | +17 |
+| **合计** | 524 → **660** |
 
 ### 门禁基线演进
 
@@ -82,7 +83,7 @@
 | `oxlint` | 0 / 0 | ✅ 0 / 0 |
 | `eslint` | ❌ 133 errors | ✅ **0** |
 | `prettier --check` | ❌ 216 files 不符 | ✅ 全符合 |
-| `vitest` | 524 / 35 files | ✅ **643 / 47 files** |
+| `vitest` | 524 / 35 files | ✅ **660 / 48 files** |
 | `playwright`（生产构建） | 未验证 | ✅ 6 passed / 1 flaky |
 | `npm run build` | 不带门禁 | ✅ 全链路通过 |
 
@@ -104,7 +105,7 @@
 
 | # | 编号 | 问题 | 工作量 | 状态 |
 |---|---|---|---|---|
-| B1 | P2-13 | `push(...arr)` / `Math.max(...arr)` 共 21 处，大数据量 `RangeError` | 3 h | ⬜ |
+| B1 | P2-19 | `push(...arr)` / `Math.max(...arr)` 共 20 处，大数据量 `RangeError`（另 ganttTaskUtils 已于前批次修复） | 3 h | ✅ `460c002` |
 | B2 | P2-15 | 4 处裸 `fetch` 无 `AbortController` + 超时 | 2 h | ✅ `c8903b5` |
 | B3 | P2-14 | `KmlViewerPage:611` fullscreenchange 监听器泄漏；甘特图重复实例化累积监听器 | 1 h | ✅ `c93a842` |
 | B4 | P2-11 | `manualChunks` 顺序错误，首屏 810 kB / 1.2 MB JS | 3 h | ⬜ |
@@ -257,3 +258,56 @@ vitest 643 passed（47 files） / `npm run build` 全链路通过。
 
 **残留**：`DlsChart` 的守卫未加组件测试（依赖 echarts，mount 成本高），
 仅由代码审查与 type-check 保证；如需覆盖，应把 `loadChinaMap` 的编排抽成可测函数。
+
+
+### B1 执行明细（2026-10-11）
+
+提交 `460c002`。**编号修正**：原台账把本项记为 P2-13，实为 **P2-19**
+（P2-13 是 API Key 渲染，即 A 档 A4）。处数由审查时的"21 处"经全量扫描
+校准为 **20 处**（另有 `ganttTaskUtils` 的 `Math.max(...)` 已在前批次修复）。
+
+**新增 `src/utils/arrayUtils.ts`**
+
+| 导出 | 等价于 | 说明 |
+|---|---|---|
+| `pushAll(target, items)` | `target.push(...items)` | 循环追加，返回 target |
+| `maxOf(values, fallback=-Infinity)` | `Math.max(...values, fallback)` | 逐元素 `Math.max` 归约，保留 NaN 传播 |
+| `minOf(values, fallback=Infinity)` | `Math.min(...values, fallback)` | 同上 |
+
+关键点：**不能用 `if (v > m) m = v`** —— `NaN > m` 恒为 false，会把原生
+`Math.max` 的 NaN 传播行为悄悄改掉。归约实现则完全一致。
+
+**替换清单（20 处）**
+
+| 文件 | 处数 | 类型 |
+|---|---|---|
+| `utils/TemplateExporter.ts` | 1 | push（**被 6 个工具共用**，风险最高） |
+| `tools/gis2excel/GisToExcelExporter.ts` | 6 | Math.max |
+| `tools/gis2excel/GisFileReader.ts` | 4 | push |
+| `tools/shp2excel/ShpFileReader.ts` | 2 | push |
+| `tools/shp2excel/ShpToExcelPage.vue` | 2 | push |
+| `utils/templateHandler.ts` | 1 | push |
+| `utils/TemplateReader.ts` | 1 | push |
+| `tools/earthquake_query/EarthquakeQueryPage.vue` | 2 | Math.max |
+| `components/layout/DlsChart.vue` | 1 | Math.max |
+
+**审查的一处误报**：`[headers, ...dataRows]` 是**数组字面量展开**，走迭代器
+协议，不受调用栈限制，并非崩溃点。审计在 TemplateExporter / GisToExcelExporter
+两处把它列为风险；TemplateExporter 那处按审计建议改为 `concat` 统一语义，
+GisToExcelExporter 保持不变，并在 commit 与本节都写明原因。
+
+**测试 +17（643 → 660）**
+- `arrayUtils.spec.ts`（新建，14）：语义等价（含 fallback、NaN 传播）、
+  空输入、`Set`/生成器、20 万元素不抛错；两条**反证**断言原生
+  `push(...arr)` / `Math.max(...arr)` 在 20 万规模下确实抛 `RangeError`。
+- `TemplateExporter.spec.ts` 追加 3：20 万行 `generateCsv` 不抛错且
+  行数 = 输入 + 1；大行数 `generateXlsx` 链路冒烟；20 万行 `exportData`
+  完整导出链路不抛错。（原 22 用例保留。）
+
+**反证**：还原 `rows.push(...dataRows)` → 200k 用例立即
+`RangeError: Maximum call stack size exceeded`（2 失败）；恢复后全绿。
+
+**门禁**：type-check 0 / oxlint 0 / eslint 0 / prettier 全符合 /
+vitest 660 passed（48 files） / `npm run build` 全链路通过。
+期间 oxlint `no-useless-spread` 提示测试里 `Math.max(...[字面量])` 无意义，
+已改为先绑定变量再展开。
