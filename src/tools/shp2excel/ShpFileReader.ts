@@ -1,4 +1,5 @@
 import { parseShpFile, type GisFeature } from '../gis2excel/GisFileReader'
+import { pushAll } from '@/utils/arrayUtils'
 
 export interface ShpMultiFileResult {
   isValid: boolean
@@ -33,14 +34,14 @@ export async function readAndValidateShpFiles(files: File[]): Promise<ShpMultiFi
   // Check for errors
   for (const result of fileResults) {
     if (!result.isValid) {
-      errors.push(...result.errors)
+      pushAll(errors, result.errors)
     }
   }
 
   // Collect all features and counts
   const allFeatures: GisFeature[] = []
   for (const result of fileResults) {
-    allFeatures.push(...result.features)
+    pushAll(allFeatures, result.features)
   }
 
   const pointCount = allFeatures.filter((f) => f.type === 'Point').length

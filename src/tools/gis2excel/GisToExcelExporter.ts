@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 import type { GisFeature } from './GisFileReader'
+import { maxOf } from '@/utils/arrayUtils'
 
 export interface ExportOptions {
   lonLatSeparator: string
@@ -170,9 +171,24 @@ function exportToXlsx(groupedFeatures: GisFeature[][], options: ExportOptions): 
     const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
 
     const colWidths = [
-      { wch: Math.max(...worksheetData.map((row) => String(row[0]).length), 8) },
-      { wch: Math.max(...worksheetData.map((row) => String(row[1]).length), 30) },
-      { wch: Math.max(...worksheetData.map((row) => String(row[2]).length), 20) },
+      {
+        wch: maxOf(
+          worksheetData.map((row) => String(row[0]).length),
+          8,
+        ),
+      },
+      {
+        wch: maxOf(
+          worksheetData.map((row) => String(row[1]).length),
+          30,
+        ),
+      },
+      {
+        wch: maxOf(
+          worksheetData.map((row) => String(row[2]).length),
+          20,
+        ),
+      },
     ]
     worksheet['!cols'] = colWidths
 
@@ -283,9 +299,24 @@ function exportSingleTypeToXlsx(
   const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
 
   const colWidths = [
-    { wch: Math.max(...worksheetData.map((row) => String(row[0]).length), 8) },
-    { wch: Math.max(...worksheetData.map((row) => String(row[1]).length), 30) },
-    { wch: Math.max(...worksheetData.map((row) => String(row[2]).length), 20) },
+    {
+      wch: maxOf(
+        worksheetData.map((row) => String(row[0]).length),
+        8,
+      ),
+    },
+    {
+      wch: maxOf(
+        worksheetData.map((row) => String(row[1]).length),
+        30,
+      ),
+    },
+    {
+      wch: maxOf(
+        worksheetData.map((row) => String(row[2]).length),
+        20,
+      ),
+    },
   ]
   worksheet['!cols'] = colWidths
 

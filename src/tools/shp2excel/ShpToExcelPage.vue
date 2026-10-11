@@ -333,6 +333,7 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive } from 'vue'
+import { pushAll } from '@/utils/arrayUtils'
 import { getToolById } from '../toolData'
 import { type ShpMultiFileResult, type ShpSingleFileResult } from './ShpFileReader'
 import { exportToExcel, exportSeparateFiles } from '../gis2excel/GisToExcelExporter'
@@ -425,9 +426,9 @@ async function revalidateAll() {
   const errors: string[] = []
   for (const entry of fileEntries.value) {
     if (!entry.isValid) {
-      errors.push(...entry.errors)
+      pushAll(errors, entry.errors)
     }
-    allFeatures.push(...entry.features)
+    pushAll(allFeatures, entry.features)
   }
 
   const pointCount = allFeatures.filter((f) => f.type === 'Point').length

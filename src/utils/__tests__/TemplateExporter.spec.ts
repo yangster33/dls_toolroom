@@ -193,3 +193,39 @@ describe('downloadCsvTemplate / downloadXlsxTemplate', () => {
     expect(anchors[0]!.getAttribute('download')).toBe('点位导入模板.xlsx')
   })
 })
+
+describe('大数据量导出不触发 RangeError（审计 P2-19 / B1）', () => {
+  // 超过引擎参数展开上限（约 10^5），旧实现 rows.push(...dataRows) 必抛
+  const ROWS = 200_000
+  const headers = ['名称', '经度', '纬度']
+  const dataRows: string[][] = Array.from({ length: ROWS }, (_, i) => [`点${i}`, '116.4', '39.9'])
+
+  it('generateCsv：20 万行不抛 RangeError，行数与输入一致', () => {
+    let csv = ''
+    expect(() => {
+      csv = generateCsv(headers, dataRows)
+    }).not.toThrow()
+
+    const lines = csv.replace(/^\uFEFF/, '').split('\n')
+    expect(lines).toHaveLength(ROWS + 1) // 1 表头 + 20 万数据行
+    expect(lines[0]).toBe(headers.join(','))
+    expect(lines[ROWS]).toContain('39.9')
+  })
+
+  it('generateXlsx：大行数可构造并写出，不抛 RangeError', () => {
+    // 说明：这里的 [headers, ...dataRows] 是「数组字面量展开」，走迭代器协议，
+    // 不受调用栈限制，本就不是 P2-19 的崩溃点（改为 concat 仅为语义统一）。
+    // XLSX 写出 20 万行成本极高，故仅用 5 千行做链路冒烟。
+    const rows = Array.from({ length: 5_000 }, (_, i) => [`点${i}`, '116.4', '39.9'])
+    let blob: Blob | null = null
+    expect(() => {
+      blob = generateXlsx(headers, rows, 'S')
+    }).not.toThrow()
+    expect(blob).toBeInstanceOf(Blob)
+  })
+
+  it('exportData：20 万行走完整导出链路（mock 下载）不抛错', () => {
+    expect(() => exportData(headers, dataRows, 'csv')).not.toThrow()
+    expect(createObjectURL).toHaveBeenCalled()
+  })
+})

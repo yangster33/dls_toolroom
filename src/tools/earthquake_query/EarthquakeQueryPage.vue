@@ -272,6 +272,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { createRequestGate } from '@/utils/fetchWithTimeout'
+import { maxOf } from '@/utils/arrayUtils'
 import { VueDatePicker } from '@vuepic/vue-datepicker'
 import { zhCN } from 'date-fns/locale'
 import { getToolById } from '@/tools/toolData'
@@ -347,7 +348,7 @@ const isValid = computed(() => {
 
 const maxMagnitude = computed(() => {
   if (!earthquakeData.value?.features || earthquakeData.value.features.length === 0) return 0
-  return Math.max(...earthquakeData.value.features.map((f) => f.properties.mag))
+  return maxOf(earthquakeData.value.features.map((f) => f.properties.mag))
 })
 
 const avgMagnitude = computed(() => {
@@ -358,7 +359,7 @@ const avgMagnitude = computed(() => {
 
 const maxDepth = computed(() => {
   if (!earthquakeData.value?.features || earthquakeData.value.features.length === 0) return 0
-  return Math.max(...earthquakeData.value.features.map((f) => f.geometry.coordinates[2]))
+  return maxOf(earthquakeData.value.features.map((f) => f.geometry.coordinates[2]))
 })
 
 const displayFeatures = computed(() => {

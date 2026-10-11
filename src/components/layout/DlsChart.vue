@@ -23,6 +23,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import * as echarts from 'echarts'
+import { maxOf } from '@/utils/arrayUtils'
 import type { ECharts, EChartsOption } from 'echarts'
 import { useDaisyTheme } from '@/composables/useDaisyTheme'
 import { parseOklch, oklchToHex } from '@/utils/colorUtils'
@@ -99,7 +100,7 @@ const nameToData = computed(() => new Map(currentProvinceData.value.map((d) => [
 
 const getMaxValue = computed(() => {
   if (currentProvinceData.value.length === 0) return 1
-  return Math.max(...currentProvinceData.value.map((item) => item.oneYear))
+  return maxOf(currentProvinceData.value.map((item) => item.oneYear))
 })
 
 const generateChartOption = (): EChartsOption => {

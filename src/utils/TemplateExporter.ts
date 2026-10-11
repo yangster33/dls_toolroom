@@ -4,6 +4,7 @@
  */
 import * as XLSX from 'xlsx'
 import { logger } from './logger'
+import { pushAll } from './arrayUtils'
 
 /**
  * CSV 字段转义
@@ -28,7 +29,7 @@ export function generateCsv(headers: string[], dataRows?: string[][]): string {
 
   const rows: string[][] = [headers]
   if (dataRows && dataRows.length > 0) {
-    rows.push(...dataRows)
+    pushAll(rows, dataRows)
   }
 
   const csvContent = rows.map((row) => row.map(escapeCsvField).join(',')).join('\n')
@@ -53,7 +54,7 @@ export function generateXlsx(
   }
 
   const workbook = XLSX.utils.book_new()
-  const worksheetData = [headers, ...(dataRows || [])]
+  const worksheetData = [headers].concat(dataRows || [])
   const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
 
   // 设置列宽

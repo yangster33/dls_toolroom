@@ -2,6 +2,7 @@ import JSZip from 'jszip'
 import shp from 'shpjs'
 import { logger } from '@/utils/logger'
 import { parseKmlCoordinates, formatCoordinates } from '@/utils/kmlCoordinates'
+import { pushAll } from '@/utils/arrayUtils'
 
 export interface GisFeature {
   id: string
@@ -125,7 +126,7 @@ async function parseKmzFile(file: File): Promise<GisFeature[]> {
       const content = await fileObject.async('string')
       const path = filename.replace(/[^/]+$/, '').replace(/\/$/, '')
       const kmlFeatures = parseKmlXml(content, path)
-      features.push(...kmlFeatures)
+      pushAll(features, kmlFeatures)
     }
   }
 
@@ -300,13 +301,13 @@ export async function readAndValidateGisFile(file: File): Promise<GisValidationR
   try {
     if (fileName.endsWith('.shp') || fileName.endsWith('.zip')) {
       const shpFeatures = await parseShpFile(file)
-      features.push(...shpFeatures)
+      pushAll(features, shpFeatures)
     } else if (fileName.endsWith('.kml')) {
       const kmlFeatures = await parseKmlFile(file)
-      features.push(...kmlFeatures)
+      pushAll(features, kmlFeatures)
     } else if (fileName.endsWith('.kmz')) {
       const kmzFeatures = await parseKmzFile(file)
-      features.push(...kmzFeatures)
+      pushAll(features, kmzFeatures)
     }
   } catch (err) {
     errors.push(`文件解析错误: ${err instanceof Error ? err.message : String(err)}`)

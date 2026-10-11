@@ -3,6 +3,7 @@
  * 支持 CSV 和 XLSX 文件的读取和数据验证
  */
 import * as XLSX from 'xlsx'
+import { pushAll } from './arrayUtils'
 
 /**
  * 单元格值类型
@@ -122,7 +123,10 @@ export async function readAndValidateTemplate(
       // 自定义行验证
       const rowErrors = validateRow ? validateRow(rowData, rowIndex) : []
       if (rowErrors.length > 0) {
-        result.errors.push(...rowErrors.map((err) => `第 ${rowNum} 行：${err}`))
+        pushAll(
+          result.errors,
+          rowErrors.map((err) => `第 ${rowNum} 行：${err}`),
+        )
         continue
       }
 

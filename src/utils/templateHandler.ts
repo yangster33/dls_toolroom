@@ -1,5 +1,7 @@
 // ===================== 通用模板处理工具 =====================
 
+import { pushAll } from './arrayUtils'
+
 export interface TemplateHeaders {
   required: string[]
   optional?: string[]
@@ -132,7 +134,7 @@ export function readAndValidateTemplate<T extends Record<string, unknown>>(
         errors.push(`第 ${i + 1} 行：数据转换失败 - ${(error as Error).message}`)
       }
     } else if (validation.errors.length > 0) {
-      errors.push(...validation.errors)
+      pushAll(errors, validation.errors)
     }
   }
 

@@ -21,3 +21,6 @@ export {
   type DataRow,
   type TemplateReadResult,
 } from './TemplateReader'
+
+// 大数组安全操作（避免 `push(...arr)` / `Math.max(...arr)` 的调用栈溢出）
+export { pushAll, maxOf, minOf } from './arrayUtils'
