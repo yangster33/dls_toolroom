@@ -166,6 +166,29 @@ export const useGeocodeStore = defineStore(
     }
   },
   {
-    persist: true,
+    /**
+     * 只持久化非敏感字段（审计 P2-12）。
+     *
+     * 原来是 persist: true，即把整个 state（含 apiKeys[].key 明文高德 API Key）
+     * 以 JSON 写进 localStorage（key 为 `geocode`）。任何 XSS、恶意浏览器扩展
+     * 或本地脚本都能读取，且跨会话长期留存。
+     *
+     * 现在改为白名单：只保留查询参数、边界与字段选择等非敏感项，
+     * apiKeys 留在内存，用户每次会话自行输入。
+     *
+     * 注：pinia-plugin-persistedstate v4 用 `pick`（旧版叫 `paths`）。
+     */
+    persist: {
+      pick: [
+        'addConfig.queryOptions',
+        'addConfig.enableBounds',
+        'addConfig.bounds',
+        'addConfig.selectedFields',
+        'lonlatConfig.queryOptions',
+        'lonlatConfig.enableBounds',
+        'lonlatConfig.bounds',
+        'lonlatConfig.selectedFields',
+      ],
+    },
   },
 )
