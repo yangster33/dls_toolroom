@@ -248,7 +248,10 @@
                 <td>{{ feature.geometry.coordinates[2] }} km</td>
                 <td>{{ getMagnitudeLevel(feature.properties.mag) }}</td>
                 <td>
-                  <a :href="feature.properties.url" target="_blank" class="btn btn-xs btn-link"
+                  <a
+                    :href="toSafeExternalUrl(feature.properties.url)"
+                    target="_blank"
+                    class="btn btn-xs btn-link"
                     >查看详情</a
                   >
                 </td>
@@ -285,6 +288,8 @@ import { useDaisyTheme } from '@/composables/useDaisyTheme'
 import { useECharts } from '@/composables/useECharts'
 import type { EChartsOption } from 'echarts'
 import type { ChartThemeColors } from './earthquakeChart'
+// 审计 P2-14：USGS 响应里的 url 属外部数据，不能直接绑 :href
+import { toSafeExternalUrl } from '@/utils/safeUrl'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
 
 const toolConfig = getToolById('earthquake_query')

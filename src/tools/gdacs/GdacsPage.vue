@@ -196,7 +196,7 @@
                 <td>{{ formatDate(gdacsEvent.fromdate) }}</td>
                 <td>
                   <a
-                    :href="gdacsEvent.url"
+                    :href="toSafeExternalUrl(gdacsEvent.url)"
                     target="_blank"
                     rel="noopener noreferrer"
                     class="btn btn-xs btn-link"
@@ -279,6 +279,8 @@ import { useECharts } from '@/composables/useECharts'
 import type { EChartsOption } from 'echarts'
 import type { ChartThemeColors } from './gdacsChart'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
+// 审计 P2-14：GDACS 的 url 来自外部 API 响应，不能直接绑 :href
+import { toSafeExternalUrl } from '@/utils/safeUrl'
 
 const toolConfig = getToolById('gdacs')
 
