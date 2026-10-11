@@ -7,11 +7,11 @@
 | 属性 | 值 |
 |---|---|
 | 审查基线 | `c096944`（2026-10-09 审计） |
-| 台账更新 | 2026-10-11（A 档 + B 档 B1~B5 全部完成） |
-| 当前 HEAD | `b98b0cd` |
+| 台账更新 | 2026-10-11（A 档 + B 档 + C 档 C1~C3 完成） |
+| 当前 HEAD | `1f53c9d` |
 | 工具数 | 26 个路由（预渲染 sitemap） |
-| 测试 | 671 passed / 48 files |
-| 最近更新 | 2026-10-11 · A 档 5 项 + B 档 B1~B5 全部完成 |
+| 测试 | 693 passed / 50 files |
+| 最近更新 | 2026-10-11 · A 档 5 项 + B 档全部 + C 档 C1~C3 |
 
 ---
 
@@ -75,7 +75,10 @@
 | B1 新增：`arrayUtils`(14) / `TemplateExporter`追加(3) | +17 |
 | B5 新增：`templateHandler`+3 / `CsvParser`+3 / `TemplateValidator`+2 / `TemplateReader`(基站)+3 | +11 |
 | B4 新增：无（构建配置，以首屏体积与 e2e 验收） | — |
-| **合计** | 524 → **671** |
+| C1 新增：`distance_sensor/__tests__/TemplateReader.spec.ts` | +13 |
+| C2 新增：`coordsConversion.spec.ts` 追加 | +5 |
+| C3 新增：`utils/__tests__/shallowRefArray.spec.ts` | +4 |
+| **合计** | 524 → **693** |
 
 ### 门禁基线演进
 
@@ -85,7 +88,7 @@
 | `oxlint` | 0 / 0 | ✅ 0 / 0 |
 | `eslint` | ❌ 133 errors | ✅ **0** |
 | `prettier --check` | ❌ 216 files 不符 | ✅ 全符合 |
-| `vitest` | 524 / 35 files | ✅ **671 / 48 files** |
+| `vitest` | 524 / 35 files | ✅ **693 / 50 files** |
 | `playwright`（生产构建） | 未验证 | ✅ 6 passed / 1 flaky |
 | `npm run build` | 不带门禁 | ✅ 全链路通过 |
 
@@ -113,13 +116,13 @@
 | B4 | P2-11 | `manualChunks` 判据撞车，首屏含 datepicker/draggable；实测 387 KB→129 KB (gzip) | 3 h | ✅ `b98b0cd` |
 | B5 | P1-9 | `parseFloat` 宽松前缀，脏数据被"净化"（审计 8 处，实修 10 文件 20+ 站点） | 2 h | ✅ `b4c66c2` |
 
-### C 档 · 需专门排期（各 1 天以上）
+### C 档 · 需专门排期（✅ C1~C3 完成，2026-10-11；C4 待单独立项）
 
 | # | 编号 | 问题 | 工作量 | 状态 |
 |---|---|---|---|---|
-| C1 | P1-6 | `distance_sensor` XLSX 首行空单元格 → 列数误判，合法文件被拒 | 2 h | ⬜ |
-| C2 | P0-5 余项 | `CoordsConvertPage` 上传后切换坐标系 → 按错误语义解释坐标（阶段 2 只修了 CGCS2000 NaN，快照未做） | 2 h | ⬜ |
-| C3 | P2-18 | 12 处 `ref` 承载大数组，Vue 深度代理内存 2–3 倍 | 2 h | ⬜ |
+| C1 | P1-6 | `distance_sensor` XLSX 首行空单元格 → 列数误判，合法文件被拒（列数改从表头推） | 2 h | ✅ `2eebf23` |
+| C2 | P0-5 余项 | `CoordsConvertPage` 上传后切换坐标系 → 按错误语义解释坐标（阶段 2 只修了 CGCS2000 NaN，快照未做） | 2 h | ✅ `a9b09f4` |
+| C3 | P2-18 | 只读大数组 `ref` → `shallowRef`，避免深代理内存翻倍（审计 5 文件中 3 处是 push 累积，未纳入） | 2 h | ✅ `1f53c9d` |
 | C4 | P2-20 | 文件处理全内存、同步、无分块、无 Worker，大文件卡死主线程 | 3–5 d | ⬜ |
 
 ### D 档 · 大重构（阶段 3）
@@ -387,3 +390,75 @@ B4 无新增单测（构建配置，以体积 + e2e 验收）。
 
 **B 档至此全部完成**（B1 `460c002` / B2 `c8903b5` / B3 `c93a842` /
 B4 `b98b0cd` / B5 `b4c66c2`）。
+
+
+### C1 执行明细（2026-10-11）
+
+提交 `2eebf23`。6 列异站址模板里，若**第一条数据**的后 3 列是完全空白的单元格，
+XLSX 默认的 `sheet_to_json(ws)`（对象模式）不给空单元格建 key，首行只剩 3 个
+key → 列数被数成 3 → 误判为同站址模式 → 之后每行都报「名称不能为空」。
+文件其实合法，用户看到的是误导性错误。
+
+- `readAndValidateTemplate(rows, headerColumns?)` 新增可选表头参数，列数与列名
+  一律从表头行推；省略时退回旧行为。
+- 新增 `distance_sensor/templateRows.ts`：`aoaToTemplateRows`（二维数组 → 行对象，
+  每行带齐全部表头 key、空白补 ''、整行空白跳过）、`columnsFromRows`。
+- `DistanceSensorPage.vue`：XLSX 改 `{header:1}` 拿二维数组再整形，CSV 显式传列名。
+
+**一个有价值的发现**：若空白被写成**空串** `''`，`aoa_to_sheet` 会为其建立 cell，
+对象模式同样有 6 个 key —— 旧代码碰巧不误判。真正的坑是单元格**完全空白**。
+测试里专门有一条锁住这个前提，避免后人误以为空串也能触发。
+
+刻意没按审计建议改 `utils/TemplateReader.ts` 的共用签名（会波及所有工具），
+改为只给本工具补本地整形函数。
+
+---
+
+### C2 执行明细（2026-10-11）
+
+提交 `a9b09f4`。数据是按【上传当时】的输入坐标系校验的（经纬度模式与 XY 模式
+的列语义、取值范围都不同），但 `startConversion` 一直读当前下拉值。用户上传后
+改一下输入坐标系，已校验数据就被按新系统解释，静默产出错误坐标 ——
+这是阶段 2 P0-5 遗留的另一半（当时只修了 CGCS2000 的 NaN）。
+
+- `coordsConversion.ts` 新增纯函数 `resolveInputSystem(uploaded, current)`：
+  有快照时一律用快照；快照与当前不一致时置 `mismatched` 交 UI 提示。
+- `CoordsConvertPage.vue`：校验成功时锁定快照；转换参数改走
+  `inputSystemResolution`；模板新增口径不一致提示。
+  刻意不自动清空已校验数据（会白丢用户上传的文件），也刻意不静默按新系统解释。
+- 反证：按当前下拉解释同一份数据，`batchConvertCoordinates` 的结果与按快照
+  解释**确实不同**；把 `resolveInputSystem` 还原为"始终用当前值"后 3 条立即失败。
+
+**覆盖缺口**：`effectiveSystem` 的取值被单测钉住，但组件把它接进
+`conversionOptions` 这一层靠 type-check + 代码审查保证，未做 mount 测试。
+
+---
+
+### C3 执行明细（2026-10-11）
+
+提交 `1f53c9d`。`ref` 会给数组及每个元素建深度响应式代理，对只做整体替换的
+解析结果是纯浪费（内存 2–3 倍）。项目此前 **0 处** `shallowRef`。
+
+**逐个读代码后确认"整体替换、从不就地改元素"才改，共 6 处：**
+
+| 文件 | 变量 |
+|---|---|
+| coords_convert/CoordsConvertPage.vue | `validatedDataRows`、`conversionResultData` |
+| gis2excel/GisToExcelPage.vue | `convertedData`（`GisFeature[][]` 两层数组，深代理成本最高） |
+| geo_data/GeoDataPage.vue | `analysisResults` |
+| template_export/useTemplateExport.ts | `rawDataList` |
+| common/GeocodeCommon.vue | `queryResults` |
+
+**刻意不改**（存在 `.push`/`.splice` 等就地修改，改 shallowRef 会让响应式
+静默失效）：`Shp2KmlPage.fileEntries`、`ShpToExcelPage.fileEntries`、
+`ElevationsBatchPage.queryResults`、`useTemplateExport.renderResults`、
+gantt 的 `undoStack`/`redoStack`、kml_viewer 的 `treeNodes`/`anglePoints`/`pickedCoords`。
+要让这些也受益，得先把 push 累积改成整体替换，属另一件事。
+
+**审计口径修正**：审计列的 5 个文件中，有 3 处其实是 push 累积的
+（并非"只读大数组"），所以实际只改 6 处、分布在 5 个文件。
+
+**验收缺口（如实记录）**：审计要求「万行数据下内存峰值下降（DevTools 对比）」，
+本环境无 Chrome Memory 面板，未做量化前后对比。以代码审查 + 全量门禁 + e2e 为准。
+
+**C 档剩余**：C4（P2-20 文件处理 Worker 化，3–5 天）需单独立项。
