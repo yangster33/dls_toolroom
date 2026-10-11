@@ -26,13 +26,9 @@
           </div>
 
           <div v-if="details.url" class="p-3 bg-blue-50 rounded-lg">
-            <span class="text-sm font-medium text-blue-600">请求URL:</span>
+            <span class="text-sm font-medium text-blue-600">请求URL（敏感参数已脱敏）:</span>
             <p class="text-xs text-gray-600 mt-1 break-all font-mono">{{ details.url }}</p>
           </div>
-
-          <p v-if="details.url" class="text-xs text-gray-400">
-            提示：您可以复制上面的URL到浏览器中直接访问，查看详细的错误信息。
-          </p>
         </div>
 
         <div class="modal-action mt-4">

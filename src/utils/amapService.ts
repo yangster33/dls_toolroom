@@ -78,6 +78,37 @@ export function buildApiUrl(baseUrl: string, params: Record<string, string | num
   return url.toString()
 }
 
+/** 常见的密钥类查询参数名 */
+const KEY_PARAM_NAMES = ['key', 'ak', 'apikey', 'api_key', 'access_token', 'token'] as const
+
+/**
+ * 对 URL 中的敏感查询参数脱敏（审计 P2-13）。
+ *
+ * API Key 会被拼进 URL query（`?key=xxx`）。校验失败时这个 URL 会被
+ * ErrorDialog 渲染到 DOM 并提示用户"复制到浏览器访问"——Key 由此进入
+ * 可见 DOM，易被录屏、Session Replay 工具、浏览器扩展捕获。
+ *
+ * 这里把常见的 key 类参数值替换为 `****`，保留 host + path + 其它参数，
+ * 既不泄露 Key，也保留排查所需的上下文。
+ */
+export function maskSensitiveUrl(
+  rawUrl: string,
+  secretParams: readonly string[] = KEY_PARAM_NAMES,
+): string {
+  try {
+    const url = new URL(rawUrl)
+    for (const name of secretParams) {
+      if (url.searchParams.has(name)) {
+        url.searchParams.set(name, '****')
+      }
+    }
+    return url.toString()
+  } catch {
+    // 不是合法 URL 时保守返回占位符，避免原样吐出敏感内容
+    return '(无效 URL)'
+  }
+}
+
 // ===================== API Key 验证 =====================
 
 /**
@@ -95,7 +126,8 @@ export async function validateApiKey(
     output: 'json',
   }
 
-  const url = buildApiUrl(config.url, params)
+  // 对外返回的 URL 一律脱敏：Key 不得进入 DOM / 日志 / 录屏（审计 P2-13）
+  const url = maskSensitiveUrl(buildApiUrl(config.url, params), [config.keyParam])
 
   try {
     const response = await axios.get(config.url, {

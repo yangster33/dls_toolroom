@@ -4,6 +4,7 @@ import {
   PROVIDER_CONFIGS,
   getRandomDelay,
   buildApiUrl,
+  maskSensitiveUrl,
   isInBounds,
   parseLocation,
   validateApiKey,
@@ -103,7 +104,10 @@ describe('validateApiKey', () => {
     mockGet.mockResolvedValue({ status: 200, data: { status: '1' } })
     const result = await validateApiKey('k1', 'gaode')
     expect(result.isValid).toBe(true)
-    expect(result.url).toContain('key=k1')
+    // 审计 P2-13：对外返回的 url 必须脱敏，不得再含明文 Key。
+    // 旧断言是 toContain('key=k1')，即固化了 Key 外泄的行为。
+    expect(result.url).not.toContain('k1')
+    expect(result.url).toContain('key=****')
     expect(mockGet).toHaveBeenCalledWith(
       'https://restapi.amap.com/v3/geocode/geo',
       expect.objectContaining({
@@ -161,5 +165,67 @@ describe('getProviderOptions / exportResultsToRows', () => {
       ['a', 'b'],
       ['x', ''],
     ])
+  })
+})
+
+// ============================================================
+// 审计 P2-13：URL 中的 Key 必须脱敏后再对外暴露
+// ============================================================
+//
+// API Key 会被 buildApiUrl 拼进 URL query。Key 校验失败时这个 URL 会被
+// ErrorDialog 渲染到 DOM，且旧弹窗还提示用户"复制上面的URL到浏览器中直接
+// 访问"——Key 由此进入可见 DOM，易被录屏、Session Replay、浏览器扩展捕获。
+//
+// 现在 maskSensitiveUrl 把 key 类参数值替换为 ****，并移除了那条复制提示。
+
+const REAL_KEY = 'a1b2c3d4e5f60718293a4b5c6d7e8f90'
+
+describe('maskSensitiveUrl（P2-13）', () => {
+  it('key 参数值被替换为 ****', () => {
+    const masked = maskSensitiveUrl(
+      `https://restapi.amap.com/v3/geocode/regeo?key=${REAL_KEY}&output=json`,
+    )
+    expect(masked).not.toContain(REAL_KEY)
+    expect(masked).toContain('key=****')
+  })
+
+  it('保留 host / path / 其它参数，便于排查', () => {
+    const masked = maskSensitiveUrl(
+      `https://restapi.amap.com/v3/geocode/regeo?key=${REAL_KEY}&location=116.4,39.9&output=json`,
+    )
+    expect(masked).toContain('restapi.amap.com')
+    expect(masked).toContain('/v3/geocode/regeo')
+    expect(masked).toContain('location=116.4%2C39.9')
+    expect(masked).toContain('output=json')
+  })
+
+  it('覆盖常见密钥参数名', () => {
+    for (const name of ['key', 'ak', 'apikey', 'api_key', 'access_token', 'token']) {
+      const masked = maskSensitiveUrl(`https://example.com/api?${name}=${REAL_KEY}`)
+      expect(masked).not.toContain(REAL_KEY)
+      expect(masked).toContain(`${name}=****`)
+    }
+  })
+
+  it('可指定自定义参数名', () => {
+    expect(maskSensitiveUrl('https://example.com/api?secret=xyz', ['secret'])).toBe(
+      'https://example.com/api?secret=****',
+    )
+  })
+
+  it('非 URL 输入返回占位符，不原样吐出内容', () => {
+    const masked = maskSensitiveUrl(`not-a-url key=${REAL_KEY}`)
+    expect(masked).toBe('(无效 URL)')
+    expect(masked).not.toContain(REAL_KEY)
+  })
+
+  it('与 buildApiUrl 组合：原始 URL 含 Key（请求需要），脱敏后不含', () => {
+    const url = buildApiUrl('https://restapi.amap.com/v3/geocode/regeo', {
+      key: REAL_KEY,
+      location: '116.4,39.9',
+      output: 'json',
+    })
+    expect(url).toContain(REAL_KEY)
+    expect(maskSensitiveUrl(url)).not.toContain(REAL_KEY)
   })
 })
