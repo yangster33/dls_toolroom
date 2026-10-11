@@ -7,11 +7,11 @@
 | 属性 | 值 |
 |---|---|
 | 审查基线 | `c096944`（2026-10-09 审计） |
-| 台账更新 | 2026-10-11（A 档 + B1 + B2 + B3 完成） |
-| 当前 HEAD | `460c002` |
+| 台账更新 | 2026-10-11（A 档 + B 档 B1~B5 全部完成） |
+| 当前 HEAD | `b98b0cd` |
 | 工具数 | 26 个路由（预渲染 sitemap） |
-| 测试 | 660 passed / 48 files |
-| 最近更新 | 2026-10-11 · A 档 5 项 + B1 + B2 + B3 完成 |
+| 测试 | 671 passed / 48 files |
+| 最近更新 | 2026-10-11 · A 档 5 项 + B 档 B1~B5 全部完成 |
 
 ---
 
@@ -73,7 +73,9 @@
 | B3 新增：`kml_viewer/__tests__/KmlViewerPage.spec.ts` | +4 |
 | B2 新增：`fetchWithTimeout`(22) / `weatherHistoryService`(4) / `earthquakeService`+2 / `gdacsService`+2 / `DlsComment`(3) | +33 |
 | B1 新增：`arrayUtils`(14) / `TemplateExporter`追加(3) | +17 |
-| **合计** | 524 → **660** |
+| B5 新增：`templateHandler`+3 / `CsvParser`+3 / `TemplateValidator`+2 / `TemplateReader`(基站)+3 | +11 |
+| B4 新增：无（构建配置，以首屏体积与 e2e 验收） | — |
+| **合计** | 524 → **671** |
 
 ### 门禁基线演进
 
@@ -83,7 +85,7 @@
 | `oxlint` | 0 / 0 | ✅ 0 / 0 |
 | `eslint` | ❌ 133 errors | ✅ **0** |
 | `prettier --check` | ❌ 216 files 不符 | ✅ 全符合 |
-| `vitest` | 524 / 35 files | ✅ **660 / 48 files** |
+| `vitest` | 524 / 35 files | ✅ **671 / 48 files** |
 | `playwright`（生产构建） | 未验证 | ✅ 6 passed / 1 flaky |
 | `npm run build` | 不带门禁 | ✅ 全链路通过 |
 
@@ -101,15 +103,15 @@
 | A4 | P2-13 | 无效 Key 时弹窗把含完整 Key 的 URL 渲染到 DOM | 20 min | ✅ `7a7a285` |
 | A5 | P2-14 | GDACS 外链未过滤 `javascript:` 协议 | 20 min | ✅ `248b485` |
 
-### B 档 · 值得排期（约 1.5 天）
+### B 档 · 值得排期（✅ 全部完成，2026-10-11）
 
 | # | 编号 | 问题 | 工作量 | 状态 |
 |---|---|---|---|---|
 | B1 | P2-19 | `push(...arr)` / `Math.max(...arr)` 共 20 处，大数据量 `RangeError`（另 ganttTaskUtils 已于前批次修复） | 3 h | ✅ `460c002` |
 | B2 | P2-15 | 4 处裸 `fetch` 无 `AbortController` + 超时 | 2 h | ✅ `c8903b5` |
 | B3 | P2-14 | `KmlViewerPage:611` fullscreenchange 监听器泄漏；甘特图重复实例化累积监听器 | 1 h | ✅ `c93a842` |
-| B4 | P2-11 | `manualChunks` 顺序错误，首屏 810 kB / 1.2 MB JS | 3 h | ⬜ |
-| B5 | P1-9 | 8 处 `parseFloat` 宽松前缀，脏数据被"净化" | 2 h | ⬜ |
+| B4 | P2-11 | `manualChunks` 判据撞车，首屏含 datepicker/draggable；实测 387 KB→129 KB (gzip) | 3 h | ✅ `b98b0cd` |
+| B5 | P1-9 | `parseFloat` 宽松前缀，脏数据被"净化"（审计 8 处，实修 10 文件 20+ 站点） | 2 h | ✅ `b4c66c2` |
 
 ### C 档 · 需专门排期（各 1 天以上）
 
@@ -311,3 +313,77 @@ GisToExcelExporter 保持不变，并在 commit 与本节都写明原因。
 vitest 660 passed（48 files） / `npm run build` 全链路通过。
 期间 oxlint `no-useless-spread` 提示测试里 `Math.max(...[字面量])` 无意义，
 已改为先绑定变量再展开。
+
+
+### B5 执行明细（2026-10-11）
+
+提交 `b4c66c2`。审计列的 8 处 `parseFloat` 中，`utils/coordinateConverter.ts`
+已在前批次改动（parseFloat 已消失），其余 7 处保留；另按"同一类 bug"扩展到
+共 3 类、**10 个文件**：
+
+| 层 | 文件 | 站点 |
+|---|---|---|
+| 通用 | `utils/templateHandler.ts` | `validateCoordinate` + `validateRow` 数值转换 |
+| 通用 | `utils/CsvParser.ts` | 单元格数字转换（原 `Number()`） |
+| 表格 | `coords_convert/templateReader.ts` | `validateCoordRow` |
+| 表格 | `table2kml_point/TemplateValidator.ts` | 校验 + 转换 |
+| 表格 | `table2kml_basestation/TemplateReader.ts` | 经纬度/方位角/半功率角/半径/挂高/半透明度 |
+| 表格 | `distance_sensor/TemplateReader.ts` | 同站址 + 异站址三组坐标 |
+| 页面 | `elevation_query/ElevationQueryPage.vue` | `isValid` + 查询 |
+| 页面 | `weather_history/WeatherHistoryPage.vue` | `isValid` |
+| 工具 | `coord_convert/coordConversion.ts` | `validateCoordinate` |
+| 工具 | `coords_convert/coordsConversion.ts` | 批量转换循环 |
+
+复用阶段 0 的 `parseStrictNumber`（失败返回 `null`）。两个关键点：
+1. 所有 `isNaN(x)` 判断同步改为 `x === null`，null 分支 `continue`/`return`，
+   绝不写入 0 或 NaN（P0-1 的同类防线）。
+2. `distance_sensor`：`isValidCoordinate(null, null)` 会返回 **true**
+   （`isNaN(null)` 为 false 且 null 当 0），所以必须先判 `=== null` 再调用。
+
+**未纳入**（不同风险画像）：kml_viewer 解析 KML 内部 `gx:coord`；gantt 解析
+SVG 属性；charts/colorUtils 解析 oklch 分量；GeoDataPage 文件体积；get_lonlat
+解析高德返回串。
+
+反证：`validateCoordinate` 还原为 `parseFloat` 后，「拒绝宽松前缀」「拒绝
+Infinity/十六进制」两条立即失败（脏值 `116.4abc`/`0x1A`/`Infinity` 被放过）；
+恢复后全绿。测试 +11。
+
+---
+
+### B4 执行明细（2026-10-11）
+
+提交 `b98b0cd`。**这是本批最大的体积问题**。
+
+**根因**：`manualChunks` 用 `id.includes('vue')` 子串匹配，把
+`@vuepic/vue-datepicker`、`vuedraggable` 并进 `vue-ecosystem`；vue 是入口
+静态依赖 → 整块进 `modulepreload`。`vendor` 兜底同理，把 proj4/dompurify
+等按需库也拖进首屏。
+
+**改法**：
+1. 精确包名匹配（`node_modules/<pkg>/`）替代子串；
+2. 删除 catch-all `vendor`，未命中模块交还构建器按静态/动态边界自动切分；
+3. datepicker 的 CSS 从 `main.ts` 移到实际使用它的 3 个页面。
+
+**踩到的坑**：给 `@vuepic`、`vuedraggable`/`sortablejs` 指定 chunk 名时，
+Rolldown 会把它们依赖的 `@vue/shared` 等首屏共享模块并入该块，反而把整块
+拖回 `modulepreload`（实测 draggable/datepicker 块被预加载）。故这几个
+**故意不命名**；其余大库正常命名。
+
+**实测结果**（`npm run build` 后的 dist/index.html）：
+
+| 指标 | 改前 | 改后 |
+|---|---|---|
+| 首屏 JS（gzip） | 387.5 KB | **129.2 KB** |
+| 首屏 JS（raw） | 1,179 KB | 360.5 KB |
+| modulepreload 中的重型 npm 库 | vue-ecosystem(含 datepicker/draggable)、vendor | 无 |
+
+改后 `modulepreload` 仅剩 vue-ecosystem / vue 运行时 / toolData / IndexPage /
+useSeo / logger / Ph* 图标；echarts / leaflet / exceljs / document-libs / turf /
+frappe-gantt / geo-libs / md-utils 均为独立懒加载块。
+
+**验收**：首屏 387 → 129 KB（< 250）；`CI=true npx playwright test`
+= 6 passed / 1 flaky（与基线一致，工具详情用例需真实加载懒加载 chunk）。
+B4 无新增单测（构建配置，以体积 + e2e 验收）。
+
+**B 档至此全部完成**（B1 `460c002` / B2 `c8903b5` / B3 `c93a842` /
+B4 `b98b0cd` / B5 `b4c66c2`）。
