@@ -8,10 +8,10 @@
 |---|---|
 | 审查基线 | `c096944`（2026-10-09 审计） |
 | 台账更新 | 2026-10-11（A 档 5 项完成） |
-| 当前 HEAD | `3830c78` |
+| 当前 HEAD | `c93a842` |
 | 工具数 | 26 个路由（预渲染 sitemap） |
-| 测试 | 606 passed / 43 files |
-| 最近更新 | 2026-10-11 · A 档 5 项完成（`f013589`~`3830c78`） |
+| 测试 | 610 passed / 44 files |
+| 最近更新 | 2026-10-11 · A 档 5 项 + B3 完成 |
 
 ---
 
@@ -103,7 +103,7 @@
 |---|---|---|---|---|
 | B1 | P2-13 | `push(...arr)` / `Math.max(...arr)` 共 21 处，大数据量 `RangeError` | 3 h | ⬜ |
 | B2 | P2-15 | 4 处裸 `fetch` 无 `AbortController` + 超时 | 2 h | ⬜ |
-| B3 | P2-14 | `KmlViewerPage:611` fullscreenchange 监听器泄漏；甘特图重复实例化累积监听器 | 1 h | ⬜ |
+| B3 | P2-14 | `KmlViewerPage:611` fullscreenchange 监听器泄漏；甘特图重复实例化累积监听器 | 1 h | ✅ `c93a842` |
 | B4 | P2-11 | `manualChunks` 顺序错误，首屏 810 kB / 1.2 MB JS | 3 h | ⬜ |
 | B5 | P1-9 | 8 处 `parseFloat` 宽松前缀，脏数据被"净化" | 2 h | ⬜ |
 
@@ -183,3 +183,27 @@
 4. **教训 1 一天内犯了两次** —— 报告中"改代码前先确认引用与覆盖"这条，
    在 A3/A4 各违反一次。**写新 spec 前必须先 `git ls-files` / `Test-Path`。**
 
+
+### B3 执行明细（2026-10-11）
+
+提交 `c93a842`。两处监听器泄漏：
+
+| 组件 | 根因 | 修法 |
+|---|---|---|
+| KmlViewerPage | setup 顶层匿名函数注册 fullscreenchange，onBeforeUnmount 未移除 | 提为具名函数，注册移入 onMounted，卸载配对移除 |
+| GanttChartPage | frappe-gantt 构造函数内匿名注册 document mouseup，库不提供解绑 API；缩放按钮每次全量重建 | 500ms trailing 节流合并连续重建；onUnmounted 清定时器；initGantt 改同步（移除 nextTick import） |
+
+新增 `kml_viewer/__tests__/KmlViewerPage.spec.ts`（4 用例）。
+jsdom 无 getEventListeners，改为劫持 document 的
+add/removeEventListener 精确计数（类型 + 同一函数引用配对）。
+
+反证：还原旧注册方式后 4 用例全红；恢复后 4 passed。
+
+**过程中一次替换误伤 5 处 cleanupDrawListeners**（fastctx replace 的
+literal 模式匹配到了多处相同文本），按行号精确剥离后恢复。
+教训：对多处重复的相同文本做替换时，改用带上下文的模式或行号定位。
+
+**遗留**：甘特图那处是**缓解非根治**——frappe-gantt 不暴露解绑能力，
+只要还在用该库，每次重建仍会泄漏一个 document 监听器。
+根治需要：a) 减少重建场景（已完成节流）；b) 上游支持解绑；
+c) 换甘特库。已记入 D4（拆 GanttChartPage）的关联项。
