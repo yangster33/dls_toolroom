@@ -51,6 +51,8 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { VueDatePicker } from '@vuepic/vue-datepicker'
+// 样式在使用处引入：放 main.ts 会把该包的 JS 一并拖进首屏入口图（审计 P2-11）
+import '@vuepic/vue-datepicker/dist/main.css'
 
 interface Props {
   modelValue?: { start: string; end: string }
