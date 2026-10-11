@@ -8,9 +8,10 @@
 |---|---|
 | 审查基线 | `c096944`（2026-10-09 审计） |
 | 台账更新 | 2026-10-11（A 档 5 项完成） |
-| 当前 HEAD | `d43ff75` |
+| 当前 HEAD | `3830c78` |
 | 工具数 | 26 个路由（预渲染 sitemap） |
 | 测试 | 606 passed / 43 files |
+| 最近更新 | 2026-10-11 · A 档 5 项完成（`f013589`~`3830c78`） |
 
 ---
 
@@ -78,7 +79,7 @@
 | `oxlint` | 0 / 0 | ✅ 0 / 0 |
 | `eslint` | ❌ 133 errors | ✅ **0** |
 | `prettier --check` | ❌ 216 files 不符 | ✅ 全符合 |
-| `vitest` | 524 / 35 files | ✅ **577 / 39 files** |
+| `vitest` | 524 / 35 files | ✅ **606 / 43 files** |
 | `playwright`（生产构建） | 未验证 | ✅ 6 passed / 1 flaky |
 | `npm run build` | 不带门禁 | ✅ 全链路通过 |
 
@@ -90,11 +91,11 @@
 
 | # | 编号 | 问题 | 工作量 | 状态 |
 |---|---|---|---|---|
-| A1 | P1-5 | `skipRows` 差一错：`slice(skipRows-1)`，填 1 等于不忽略 | 15 min | ⬜ |
-| A2 | P1-10 | `weatherHistoryChart` 的 `return {}` 是 truthy → `setOption({},true)` 清空上一个图表 | 30 min | ⬜ |
-| A3 | P2-12 | `geocodeStore` 的 `apiKeys` 明文持久化到 localStorage | 15 min | ⬜ |
-| A4 | P2-13 | 无效 Key 时弹窗把含完整 Key 的 URL 渲染到 DOM | 20 min | ⬜ |
-| A5 | P2-14 | GDACS 外链未过滤 `javascript:` 协议 | 20 min | ⬜ |
+| A1 | P1-5 | `skipRows` 差一错：`slice(skipRows-1)`，填 1 等于不忽略 | 15 min | ✅ `f013589` |
+| A2 | P1-10 | `weatherHistoryChart` 的 `return {}` 是 truthy → `setOption({},true)` 清空上一个图表 | 30 min | ✅ `5957c24` |
+| A3 | P2-12 | `geocodeStore` 的 `apiKeys` 明文持久化到 localStorage | 15 min | ✅ `81f9099` |
+| A4 | P2-13 | 无效 Key 时弹窗把含完整 Key 的 URL 渲染到 DOM | 20 min | ✅ `7a7a285` |
+| A5 | P2-14 | GDACS 外链未过滤 `javascript:` 协议 | 20 min | ✅ `248b485` |
 
 ### B 档 · 值得排期（约 1.5 天）
 
@@ -142,3 +143,43 @@
 3. **同一个 bug 会在 N 处出现**——`Number('')`、`endsWith('.csv')`、`push(...arr)`、`escapeXml` 都是这个模式。修复时应全局搜索同模式。
 4. **测试断言的是「代码现在做什么」而非「应该做什么」**——`KmlGenerator.spec.ts` 曾因构造未规范化输入而假绿。
 5. **计划赶不上变化**——P0-4 计划针对 GeoJSON `MultiPoint`，实测 KML `<MultiGeometry>` 是 `GeometryCollection`。端到端测试才能暴露这类。
+
+---
+
+## 三-A、A 档执行明细（2026-10-11 完成）
+
+> A 档 = 「立即可做」5 项，合计预估 1.5 小时，实际约 3 小时（含调试与返工）。
+
+| # | 编号 | 提交 | 变更 | 新增测试 |
+|---|---|---|---|---|
+| A1 | P1-5 | `f013589` | `slice(skipRows-1)` → `slice(skipRows)`；默认 1→0；抽出模块级 `normalizeSkipRows`；UI 文案与行数提示同步 | `template_export/__tests__/skipRows.spec.ts` ×6 |
+| A2 | P1-10 | `5957c24` | 3 文件 8 处 `return {}` → `return null`，返回类型同步 `EChartsOption \| null` | `weather_history/__tests__/weatherHistoryChart.spec.ts` ×4 |
+| A3 | P2-12 | `81f9099` | `persist: true` → `pick` 白名单；`apiKeys` 退出 localStorage | `stores/__tests__/geocodeStore.spec.ts` ×3 |
+| A4 | P2-13 | `7a7a285` | 新增 `maskSensitiveUrl`；`validateApiKey` 返回值脱敏；删"复制 URL"提示；**改掉 1 条固化 Key 外泄的旧断言** | `amapService.spec.ts` 追加 ×6 |
+| A5 | P2-14 | `248b485` | 新增 `utils/safeUrl.ts`；GDACS + 地震两处 `:href` 接入 | `utils/__tests__/safeUrl.spec.ts` ×10 |
+| — | lint 修复 | `ebef5bb` | A5 引入 `no-control-regex`，正则改逐字符 `stripControlChars` | — |
+
+**测试增量**：577 → 606（+29）
+
+### A 档期间踩到的坑（重要经验）
+
+1. **Pinia 3.0.4 插件安装语义**（A3 最大耗时点）
+   `pinia.use(plugin)` 在没有 active app 时只把插件推进 `toBeInstalled` 队列，
+   必须 `app.use(pinia)`（即 `install()`）才搬进 `_p`，而 store 创建时才读 `_p`。
+   → 测试里只写 `createPinia + use + setActivePinia`，插件根本不执行，
+     `$persist` 恒 undefined，写入库恒空，「不含 Key」退化成**空集合上的假绿**。
+     修正：`createApp({ render: () => null }).use(pinia)`，与 main.ts 一致。
+
+2. **两次覆盖既有测试文件**（A3 / A4 各一次）
+   A3 写 `geocodeStore.spec.ts`、A4 写 `amapService.spec.ts` 时直接 write 新建，
+   未先确认文件已存在，覆盖了原有 3 个和 19 个用例。
+   A3 由测试数 587→583 发现；A4 由"24 passed 但原文件 19 用例"发现。
+   两次均 `git show HEAD:` 取回原文后改为追加。
+
+3. **一条测试固化了 bug 行为**（A4）
+   `amapService.spec.ts`「状态 1 判定有效」原断言 `result.url` 含 `key=k1`，
+   锁死了明文 Key 必须出现在返回值。修安全问题时这类断言必须同步改。
+
+4. **教训 1 一天内犯了两次** —— 报告中"改代码前先确认引用与覆盖"这条，
+   在 A3/A4 各违反一次。**写新 spec 前必须先 `git ls-files` / `Test-Path`。**
+
