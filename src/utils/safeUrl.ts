@@ -16,6 +16,26 @@ const SAFE_PROTOCOLS = ['http:', 'https:', 'mailto:'] as const
 const FALLBACK_HREF = '#'
 
 /**
+ * 剔除 C0 控制字符与 DEL（U+0000-U+001F、U+007F）。
+ *
+ * 浏览器在解析 URL 前会剥掉 javascript: 这类 scheme 前面的制表符/换行/
+ * 回车等空白与控制字符，所以校验协议前必须先自己剥一遍，否则
+ * java<TAB>script:alert(1) 之类会穿透校验。
+ *
+ * 用逐字符判断而非正则：no-control-regex 规则不允许在正则里写控制字符
+ * 范围，逐字符写法既规避该规则也更直观。
+ */
+function stripControlChars(input: string): string {
+  let out = ''
+  for (const ch of input) {
+    const code = ch.codePointAt(0) ?? 0
+    if (code <= 0x1f || code === 0x7f) continue
+    out += ch
+  }
+  return out
+}
+
+/**
  * 校验并规整外部 URL，只放行白名单协议。
  *
  * @param raw     外部来源的 URL 字符串
@@ -39,7 +59,7 @@ export function toSafeExternalUrl(raw: unknown, fallback: string = FALLBACK_HREF
   }
 
   // 浏览器会把 "javascript:..." 前面的空白/控制字符剥掉，这里显式剥离后再判断
-  const normalized = trimmed.replace(/[\u0000-\u0020\u007f]+/g, '').toLowerCase()
+  const normalized = stripControlChars(trimmed).toLowerCase()
 
   // 无明显协议前缀时按相对路径处理
   const schemeMatch = normalized.match(/^([a-z][a-z0-9+.-]*):/)
