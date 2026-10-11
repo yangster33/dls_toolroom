@@ -89,9 +89,12 @@ export function oklchToHex(color: string): string {
   return `#${hex(r)}${hex(g)}${hex(bl)}`
 }
 
-export function generateEventTypeChart(data: GdacsEvent[], theme: ChartThemeColors): EChartsOption {
+export function generateEventTypeChart(
+  data: GdacsEvent[],
+  theme: ChartThemeColors,
+): EChartsOption | null {
   if (!data || data.length === 0) {
-    return {}
+    return null
   }
 
   const typeCounts: Record<string, number> = {}
@@ -156,9 +159,9 @@ export function generateEventTypeChart(data: GdacsEvent[], theme: ChartThemeColo
 export function generateAlertLevelChart(
   data: GdacsEvent[],
   theme: ChartThemeColors,
-): EChartsOption {
+): EChartsOption | null {
   if (!data || data.length === 0) {
-    return {}
+    return null
   }
 
   const levelCounts: Record<string, number> = {}
@@ -220,9 +223,12 @@ export function generateAlertLevelChart(
   }
 }
 
-export function generateTimeChart(data: GdacsEvent[], theme: ChartThemeColors): EChartsOption {
+export function generateTimeChart(
+  data: GdacsEvent[],
+  theme: ChartThemeColors,
+): EChartsOption | null {
   if (!data || data.length === 0) {
-    return {}
+    return null
   }
 
   const sortedEvents = [...data].sort(

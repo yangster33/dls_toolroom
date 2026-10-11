@@ -3,6 +3,17 @@ import * as echarts from 'echarts'
 import type { WeatherApiResponse } from './weatherHistoryService'
 import { oklchToHex } from '@/utils/colorUtils'
 
+/**
+ * 天气图表 option 生成器
+ *
+ * ⚠️ 缺数据时必须返回 `null` 而不是 `{}`。
+ *
+ * 历史 Bug（审计 P1-10）：旧实现缺数据时 `return {}`，而 `useECharts` 的
+ * 判断是 `if (option)` —— 空对象是 truthy，于是 `setOption({}, true)` 带
+ * notMerge=true 执行，把上一个已经渲染好的图表整个清成空白，且没有
+ * 任何错误提示。返回 null 时 useECharts 会跳过 setOption，保留原图。
+ */
+
 export interface ChartThemeColors {
   base100: string
   base200: string
@@ -16,10 +27,10 @@ export interface ChartThemeColors {
 export function generateTemperatureChart(
   data: WeatherApiResponse,
   theme: ChartThemeColors,
-): EChartsOption {
+): EChartsOption | null {
   const hourly = data.hourly
   if (!hourly?.time || !hourly.temperature_2m) {
-    return {}
+    return null
   }
 
   return {
@@ -90,10 +101,10 @@ export function generateTemperatureChart(
 export function generatePrecipitationChart(
   data: WeatherApiResponse,
   theme: ChartThemeColors,
-): EChartsOption {
+): EChartsOption | null {
   const daily = data.daily
   if (!daily?.time || !daily.precipitation_sum) {
-    return {}
+    return null
   }
 
   return {
@@ -157,10 +168,10 @@ export function generatePrecipitationChart(
 export function generateHumidityChart(
   data: WeatherApiResponse,
   theme: ChartThemeColors,
-): EChartsOption {
+): EChartsOption | null {
   const hourly = data.hourly
   if (!hourly?.time || !hourly.relative_humidity_2m) {
-    return {}
+    return null
   }
 
   return {
@@ -233,10 +244,10 @@ export function generateHumidityChart(
 export function generateWindSpeedChart(
   data: WeatherApiResponse,
   theme: ChartThemeColors,
-): EChartsOption {
+): EChartsOption | null {
   const hourly = data.hourly
   if (!hourly?.time || !hourly.wind_speed_10m) {
-    return {}
+    return null
   }
 
   return {
@@ -301,10 +312,10 @@ export function generateWindSpeedChart(
 export function generateTemperatureRangeChart(
   data: WeatherApiResponse,
   theme: ChartThemeColors,
-): EChartsOption {
+): EChartsOption | null {
   const daily = data.daily
   if (!daily?.time || !daily.temperature_2m_max || !daily.temperature_2m_min) {
-    return {}
+    return null
   }
 
   return {

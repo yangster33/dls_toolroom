@@ -109,10 +109,10 @@ export function getMagnitudeColor(mag: number): string {
 export function generateMagnitudeTimeChart(
   data: EarthquakeApiResponse,
   theme: ChartThemeColors,
-): EChartsOption {
+): EChartsOption | null {
   const features = data.features
   if (!features || features.length === 0) {
-    return {}
+    return null
   }
 
   const sortedFeatures = [...features].sort((a, b) => a.properties.time - b.properties.time)
@@ -207,10 +207,10 @@ export function generateMagnitudeTimeChart(
 export function generateMagnitudeDistributionChart(
   data: EarthquakeApiResponse,
   theme: ChartThemeColors,
-): EChartsOption {
+): EChartsOption | null {
   const features = data.features
   if (!features || features.length === 0) {
-    return {}
+    return null
   }
 
   const bins = [
@@ -298,10 +298,10 @@ export function generateMagnitudeDistributionChart(
 export function generateDepthChart(
   data: EarthquakeApiResponse,
   theme: ChartThemeColors,
-): EChartsOption {
+): EChartsOption | null {
   const features = data.features
   if (!features || features.length === 0) {
-    return {}
+    return null
   }
 
   const sortedFeatures = [...features].sort((a, b) => a.properties.time - b.properties.time)
