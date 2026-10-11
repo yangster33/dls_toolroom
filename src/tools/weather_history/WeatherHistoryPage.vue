@@ -187,7 +187,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
+import { createRequestGate } from '@/utils/fetchWithTimeout'
 import { VueDatePicker } from '@vuepic/vue-datepicker'
 import { zhCN } from 'date-fns/locale'
 import { getToolById } from '@/tools/toolData'
@@ -293,6 +294,14 @@ function toggleVariable(key: string) {
   }
 }
 
+/**
+ * 单飞请求闸门（审计 B2）：
+ * - 新查询取消上一次未完成的查询，避免旧响应覆盖新结果（race）；
+ * - 组件卸载时取消在途请求，避免卸载后继续改状态。
+ */
+const requestGate = createRequestGate()
+onUnmounted(() => requestGate.abort())
+
 async function queryWeather() {
   if (!isValid.value) {
     error.value = '请填写完整的查询参数'
@@ -300,6 +309,7 @@ async function queryWeather() {
     return
   }
 
+  const signal = requestGate.begin()
   isLoading.value = true
   error.value = ''
   errorDialogOpen.value = false
@@ -314,7 +324,11 @@ async function queryWeather() {
         endDate: endDateModel.value,
       },
       selectedVariables.value,
+      signal,
     )
+
+    // 请求已被取消（卸载或被新查询取代）→ 丢弃结果，不碰任何状态
+    if (signal.aborted) return
 
     if (result.success && result.data) {
       weatherData.value = result.data
@@ -326,10 +340,11 @@ async function queryWeather() {
       errorDialogOpen.value = true
     }
   } catch (err) {
+    if (signal.aborted) return
     error.value = err instanceof Error ? err.message : '请求失败'
     errorDialogOpen.value = true
   } finally {
-    isLoading.value = false
+    if (!signal.aborted) isLoading.value = false
   }
 }
 

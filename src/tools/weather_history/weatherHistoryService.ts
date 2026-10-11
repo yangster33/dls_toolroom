@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from '@/utils/fetchWithTimeout'
+
 export interface WeatherVariable {
   key: string
   label: string
@@ -65,6 +67,7 @@ export interface QueryResult {
 export async function fetchWeatherHistory(
   formData: WeatherFormData,
   variables: string[],
+  signal?: AbortSignal,
 ): Promise<QueryResult> {
   const params = new URLSearchParams({
     latitude: formData.latitude,
@@ -78,7 +81,7 @@ export async function fetchWeatherHistory(
 
   try {
     const url = `https://archive-api.open-meteo.com/v1/archive?${params.toString()}`
-    const response = await fetch(url)
+    const response = await fetchWithTimeout(url, { signal })
 
     if (!response.ok) {
       return {

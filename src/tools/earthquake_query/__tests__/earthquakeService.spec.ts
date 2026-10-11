@@ -147,3 +147,31 @@ describe('fetchEarthquakeData', () => {
     expect(result.error).toBe('boom')
   })
 })
+
+describe('fetchEarthquakeData · 请求取消（审计 B2）', () => {
+  it('外部 AbortSignal 已 abort 时不再发起 fetch', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const controller = new AbortController()
+    controller.abort()
+
+    const result = await fetchEarthquakeData(FORM, controller.signal)
+
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(result.success).toBe(false)
+  })
+
+  it('传入的 signal 会透传给底层 fetch', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ type: 'FeatureCollection', features: [] }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const controller = new AbortController()
+
+    await fetchEarthquakeData(FORM, controller.signal)
+
+    const init = fetchMock.mock.calls[0]![1] as RequestInit
+    expect(init.signal).toBeInstanceOf(AbortSignal)
+  })
+})

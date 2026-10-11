@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from '@/utils/fetchWithTimeout'
+
 export interface EarthquakeFeature {
   type: string
   properties: {
@@ -78,7 +80,10 @@ export const magnitudeOptions = [
   { value: '8', label: '8 级及以上' },
 ]
 
-export async function fetchEarthquakeData(formData: EarthquakeFormData): Promise<QueryResult> {
+export async function fetchEarthquakeData(
+  formData: EarthquakeFormData,
+  signal?: AbortSignal,
+): Promise<QueryResult> {
   const params = new URLSearchParams({
     format: 'geojson',
     starttime: formData.startDate,
@@ -103,7 +108,7 @@ export async function fetchEarthquakeData(formData: EarthquakeFormData): Promise
 
   try {
     const url = `https://earthquake.usgs.gov/fdsnws/event/1/query?${params.toString()}`
-    const response = await fetch(url)
+    const response = await fetchWithTimeout(url, { signal })
 
     if (!response.ok) {
       return {

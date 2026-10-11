@@ -279,21 +279,28 @@ watch(
   },
 )
 
+// 标记组件是否已卸载。onMounted 是 async 的，await 之后组件可能已被
+// 卸载——若不检查，tryInitOrResize / addEventListener / ResizeObserver 仍会
+// 在已销毁的组件上执行，造成泄漏与"卸载后仍改状态"（审计 B2）。
+let disposed = false
+
 onMounted(async () => {
   await loadChinaMap()
 
-  if (mapError.value) return
+  if (mapError.value || disposed) return
 
   await nextTick()
+  if (disposed) return
   tryInitOrResize()
   window.addEventListener('resize', tryInitOrResize)
-  if (chartContainer.value) {
+  if (chartContainer.value && !disposed) {
     resizeObserver = new ResizeObserver(tryInitOrResize)
     resizeObserver.observe(chartContainer.value)
   }
 })
 
 onUnmounted(() => {
+  disposed = true
   window.removeEventListener('resize', tryInitOrResize)
   if (resizeObserver) {
     resizeObserver.disconnect()

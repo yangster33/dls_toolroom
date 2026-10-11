@@ -142,7 +142,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { logger } from '@/utils/logger'
 
 type CommentType = 'complaint' | 'bug' | 'praise' | 'other'
@@ -300,6 +300,9 @@ function validate(): boolean {
 }
 
 // ── API 调用 ────────────────────────────────────
+// 组件卸载标记：fetch 返回后若已卸载则不再写入 ref，
+// 否则会在已销毁组件上改状态（审计 B2）。
+let disposed = false
 const comments = ref<Comment[]>([])
 const stats = ref<PageStats>({ page_key: props.pageKey, view_count: 0, comment_count: 0 })
 
@@ -307,6 +310,7 @@ const fetchComments = async () => {
   try {
     const res = await fetch(`/api/comments?page_key=${props.pageKey}`)
     const data = await res.json()
+    if (disposed) return
     if (data.code === 0) {
       comments.value = data.data.list
     }
@@ -319,6 +323,7 @@ const fetchStats = async () => {
   try {
     const res = await fetch(`/api/page-stats/${props.pageKey}`)
     const data = await res.json()
+    if (disposed) return
     if (data.code === 0) {
       stats.value = data.data
     }
@@ -330,6 +335,7 @@ const fetchStats = async () => {
 const incrementView = async () => {
   try {
     await fetch(`/api/page-stats/${props.pageKey}/view`, { method: 'POST' })
+    if (disposed) return
     stats.value.view_count++
   } catch (error) {
     logger.error('Failed to increment view:', error)
@@ -390,5 +396,10 @@ onMounted(() => {
   fetchComments()
   fetchStats()
   incrementView()
+})
+
+// 组件卸载后，进行中的 fetch 返回时不得再写 ref（审计 B2）。
+onUnmounted(() => {
+  disposed = true
 })
 </script>

@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from '@/utils/fetchWithTimeout'
+
 export interface GdacsEvent {
   id: string
   title: string
@@ -138,7 +140,10 @@ function toFiniteNumber(value: unknown): number | null {
   return Number.isFinite(n) ? n : null
 }
 
-export async function fetchGdacsData(formData: GdacsFormData): Promise<QueryResult> {
+export async function fetchGdacsData(
+  formData: GdacsFormData,
+  signal?: AbortSignal,
+): Promise<QueryResult> {
   try {
     const today = new Date().toISOString().split('T')[0]
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
@@ -167,7 +172,7 @@ export async function fetchGdacsData(formData: GdacsFormData): Promise<QueryResu
     params.set('pagesize', formData.pageSize.toString())
 
     const url = `https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH?${params.toString()}`
-    const response = await fetch(url)
+    const response = await fetchWithTimeout(url, { signal })
 
     if (!response.ok) {
       const errorText = await response.text()
