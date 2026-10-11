@@ -503,13 +503,27 @@ function getMarkerIcon(color?: string): L.DivIcon {
 }
 
 // ===================== Lifecycle =====================
+/**
+ * 全屏状态变化处理（审计 B3 / P2-14）。
+ *
+ * 必须是具名函数且注册/移除配对：旧实现在 setup 顶层用匿名函数注册，
+ * onBeforeUnmount 从未移除，每次访问 KML 查看器都会泄漏一个闭包，
+ * 该闭包持有整个组件作用域（map / layers / tree）。
+ */
+function onFullscreenChange() {
+  isWebFullscreen.value = !!document.fullscreenElement
+  nextTick(() => map?.invalidateSize())
+}
+
 onMounted(async () => {
   await nextTick()
   if (!mapContainerRef.value) return
   initMap()
+  document.addEventListener('fullscreenchange', onFullscreenChange)
 })
 
 onBeforeUnmount(() => {
+  document.removeEventListener('fullscreenchange', onFullscreenChange)
   cleanupDrawListeners()
   if (map) {
     map.remove()
@@ -604,14 +618,6 @@ function toggleMapFullscreen() {
       map?.invalidateSize()
     })
   }
-}
-
-// Listen for fullscreen change
-if (typeof document !== 'undefined') {
-  document.addEventListener('fullscreenchange', () => {
-    isWebFullscreen.value = !!document.fullscreenElement
-    nextTick(() => map?.invalidateSize())
-  })
 }
 
 // ===================== Tianditu Key =====================

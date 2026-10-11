@@ -446,7 +446,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import {
   PhCalendarCheck,
   PhArrowCounterClockwise,
@@ -800,9 +800,42 @@ function destroyGantt() {
   }
 }
 
+/**
+ * 重建甘特图（带节流）。
+ *
+ * 背景（审计 B3 / P2-14）：frappe-gantt 构造函数内部用**匿名箭头函数**
+ * 注册 document.addEventListener("mouseup", ...)，且库不提供任何解绑
+ * API（clear() 只清 DOM，不动 document 上的监听器）。
+ * 因此每 new Gantt() 一次就永久多一个 document 监听器，点 N 次缩放
+ * = 累积 N 个监听器，各持有一份完整的 Gantt 对象图。
+ *
+ * 缩放按钮（barHeight ±5 / containerHeight ±60）会以 5px 粒度连续点击，
+ * 逐次全量重建既慢又持续泄漏。这里用 trailing 节流把连续 pending 的
+ * 重建请求合并为一次：500ms 内的多次调用只执行最后一次。
+ *
+ * 注意这是**缓解而非根治**——根治需要上游支持解绑或改用其它甘特库。
+ */
+const REINIT_THROTTLE_MS = 500
+let reinitTimer: ReturnType<typeof setTimeout> | null = null
+let reinitPending = false
+
 function reinitGantt() {
+  if (reinitTimer !== null) {
+    // 已在节流窗口内，只记录"还有待处理的重建"
+    reinitPending = true
+    return
+  }
+
   destroyGantt()
-  nextTick(() => initGantt())
+  initGantt()
+
+  reinitTimer = setTimeout(() => {
+    reinitTimer = null
+    if (reinitPending) {
+      reinitPending = false
+      reinitGantt()
+    }
+  }, REINIT_THROTTLE_MS)
 }
 
 function refreshGantt() {
@@ -1732,6 +1765,12 @@ onMounted(() => {
 onUnmounted(() => {
   themeObserver.disconnect()
   window.removeEventListener('keydown', handleKeydown)
+  // 清掉节流定时器，避免卸载后仍触发一次无意义的重建
+  if (reinitTimer !== null) {
+    clearTimeout(reinitTimer)
+    reinitTimer = null
+    reinitPending = false
+  }
   destroyGantt()
 })
 </script>
