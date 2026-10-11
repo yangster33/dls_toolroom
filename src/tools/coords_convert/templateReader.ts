@@ -2,6 +2,7 @@
  * 模板读取 - 批量坐标转换专用验证器
  */
 import { readAndValidateTemplate as readGenericTemplate } from '@/utils/TemplateReader'
+import { parseStrictNumber } from '@/utils/coordinateValue'
 
 // 批量坐标转换的表头（原地迁移自已删除的 templateExporter.ts）
 export const COORD_CONVERT_HEADERS = ['名称', '经度/X（必填）', '纬度/Y（必填）']
@@ -79,29 +80,29 @@ export function validateCoordRow(
 
   if (isLngLatMode) {
     // 经纬度模式验证
-    const lngNum = typeof lngVal === 'number' ? lngVal : parseFloat(String(lngVal || ''))
-    const latNum = typeof latVal === 'number' ? latVal : parseFloat(String(latVal || ''))
+    const lngNum = parseStrictNumber(lngVal)
+    const latNum = parseStrictNumber(latVal)
 
-    if (isNaN(lngNum)) {
+    if (lngNum === null) {
       errors.push(`经度"${lngVal}"不是有效的数字。`)
     } else if (lngNum < -180 || lngNum > 180) {
       errors.push(`经度值 ${lngNum} 超出有效范围 (-180 ~ 180)。`)
     }
 
-    if (isNaN(latNum)) {
+    if (latNum === null) {
       errors.push(`纬度"${latVal}"不是有效的数字。`)
     } else if (latNum < -90 || latNum > 90) {
       errors.push(`纬度值 ${latNum} 超出有效范围 (-90 ~ 90)。`)
     }
   } else if (isXYMode) {
     // 平面坐标模式验证
-    const xNum = typeof lngVal === 'number' ? lngVal : parseFloat(String(lngVal || ''))
-    const yNum = typeof latVal === 'number' ? latVal : parseFloat(String(latVal || ''))
+    const xNum = parseStrictNumber(lngVal)
+    const yNum = parseStrictNumber(latVal)
 
-    if (isNaN(xNum)) {
+    if (xNum === null) {
       errors.push(`X 坐标"${lngVal}"不是有效的数字。`)
     }
-    if (isNaN(yNum)) {
+    if (yNum === null) {
       errors.push(`Y 坐标"${latVal}"不是有效的数字。`)
     }
   }

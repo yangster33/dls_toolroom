@@ -3,6 +3,8 @@
  * 提供通用的 CSV 文件解析功能
  */
 
+import { parseStrictNumber } from './coordinateValue'
+
 /**
  * 解析 CSV 行，处理引号和转义
  * @param line CSV 行字符串
@@ -86,8 +88,10 @@ export function parseCSV(
       // 发给高程/距离 API，产出「看起来合理但完全错误」的结果（审计 P0-4）。
       if (convertNumbers) {
         const trimmed = value.trim()
-        const numValue = trimmed === '' ? Number.NaN : Number(trimmed)
-        row[header] = Number.isNaN(numValue) ? value : numValue
+        // 用严格解析而非 Number()：后者把 '0x1A' 当 26、'1e5' 当 100000、
+        // 'Infinity' 当 Infinity。这里只接受标准十进制（含科学计数法）。
+        const numValue = parseStrictNumber(trimmed)
+        row[header] = numValue === null ? value : numValue
       } else {
         row[header] = value
       }

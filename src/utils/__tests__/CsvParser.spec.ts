@@ -100,3 +100,22 @@ describe('parseCSV', () => {
     expect(rows).toEqual([{ a: 1, b: '' }])
   })
 })
+
+describe('parseCSV · 数字转换严格化（审计 P1-9 / B5）', () => {
+  it('普通数字与科学计数法仍转成 number', () => {
+    const rows = parseCSV('v\n116.4\n1e5')
+    expect(rows[0]!.v).toBe(116.4)
+    expect(rows[1]!.v).toBe(100000)
+  })
+
+  it('十六进制与 Infinity 保持字符串（不再静默变成 26 / Infinity）', () => {
+    const rows = parseCSV('v\n0x1A\nInfinity')
+    expect(rows[0]!.v).toBe('0x1A')
+    expect(rows[1]!.v).toBe('Infinity')
+  })
+
+  it('宽松前缀保持字符串', () => {
+    const rows = parseCSV('v\n116.4abc')
+    expect(rows[0]!.v).toBe('116.4abc')
+  })
+})

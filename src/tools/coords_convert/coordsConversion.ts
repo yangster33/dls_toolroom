@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 import { convert, type CoordinateSystemType, COORDINATE_SYSTEMS } from '@/utils/coordinateConverter'
+import { parseStrictNumber } from '@/utils/coordinateValue'
 import {
   type CGCS2000Params,
   DEFAULT_CGCS2000_PARAMS,
@@ -131,10 +132,10 @@ export async function batchConvertCoordinates(
               const nameVal =
                 nameIndex !== -1 && row[nameHeader] ? row[nameHeader] : `点位${rowNum}`
 
-              const lngNum = typeof lngVal === 'number' ? lngVal : parseFloat(String(lngVal || ''))
-              const latNum = typeof latVal === 'number' ? latVal : parseFloat(String(latVal || ''))
+              const lngNum = parseStrictNumber(lngVal)
+              const latNum = parseStrictNumber(latVal)
 
-              if (isNaN(lngNum) || isNaN(latNum)) {
+              if (lngNum === null || latNum === null) {
                 result.errors.push(`第 ${rowNum} 行: 坐标值不是有效的数字`)
                 continue
               }

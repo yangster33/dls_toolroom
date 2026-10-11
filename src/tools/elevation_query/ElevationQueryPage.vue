@@ -81,6 +81,7 @@ import { ref, computed } from 'vue'
 import { getToolById } from '../toolData'
 import { elevationService } from './elevationService'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
+import { parseStrictNumber } from '@/utils/coordinateValue'
 
 const toolConfig = getToolById('elevation_query')
 
@@ -92,9 +93,9 @@ const error = ref<string>('')
 const errorDialogOpen = ref(false)
 
 const isValid = computed(() => {
-  const lat = parseFloat(latitude.value)
-  const lng = parseFloat(longitude.value)
-  return !isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
+  const lat = parseStrictNumber(latitude.value)
+  const lng = parseStrictNumber(longitude.value)
+  return lat !== null && lng !== null && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
 })
 
 const closeErrorDialog = () => {
@@ -109,15 +110,17 @@ const queryElevation = async () => {
     return
   }
 
+  // isValid 已做严格解析校验，这里再解析一次以获得 number 类型
+  const lng = parseStrictNumber(longitude.value)
+  const lat = parseStrictNumber(latitude.value)
+  if (lng === null || lat === null) return
+
   isLoading.value = true
   error.value = ''
   result.value = null
 
   try {
-    const data = await elevationService.getElevation(
-      parseFloat(longitude.value),
-      parseFloat(latitude.value),
-    )
+    const data = await elevationService.getElevation(lng, lat)
     result.value = data
   } catch (err) {
     error.value = err instanceof Error ? err.message : '查询失败，请稍后重试'

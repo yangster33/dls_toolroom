@@ -1,6 +1,7 @@
 // ===================== 通用模板处理工具 =====================
 
 import { pushAll } from './arrayUtils'
+import { parseStrictNumber } from './coordinateValue'
 
 export interface TemplateHeaders {
   required: string[]
@@ -36,9 +37,9 @@ export function validateCoordinate(
   type: 'longitude' | 'latitude',
   rowIndex: number,
 ): { valid: boolean; error?: string; value?: number } {
-  const numValue = typeof value === 'number' ? value : parseFloat(String(value))
+  const numValue = parseStrictNumber(value)
 
-  if (isNaN(numValue)) {
+  if (numValue === null) {
     return {
       valid: false,
       error: `第 ${rowIndex + 1} 行：${type === 'longitude' ? '经度' : '纬度'}必须是数字`,
@@ -98,8 +99,9 @@ export function validateRow(
     if (value === '') {
       data[fieldName] = ''
     } else {
-      const numValue = Number(value)
-      data[fieldName] = isNaN(numValue) ? value : numValue
+      // 用严格解析而非 Number()：后者把 '0x1A' 当 26、'Infinity' 当 Infinity
+      const numValue = parseStrictNumber(value)
+      data[fieldName] = numValue === null ? value : numValue
     }
   }
 

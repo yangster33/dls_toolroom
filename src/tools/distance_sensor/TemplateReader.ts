@@ -2,6 +2,7 @@
  * 距离传感器模板读取与验证
  */
 import { type LocationPoint, isValidCoordinate } from '@/utils/DistanceCalculator'
+import { parseStrictNumber } from '@/utils/coordinateValue'
 
 export interface TemplateValidationResult {
   isValid: boolean
@@ -68,15 +69,15 @@ export function readAndValidateTemplate(
       const latKey = getColumnName('纬度')
 
       const name = String(row[nameKey] || '').trim()
-      const longitude = parseFloat(String(row[lonKey] || ''))
-      const latitude = parseFloat(String(row[latKey] || ''))
+      const longitude = parseStrictNumber(row[lonKey])
+      const latitude = parseStrictNumber(row[latKey])
 
       if (!name) {
         errors.push(`第${i + 2}行：名称不能为空`)
         continue
       }
 
-      if (!isValidCoordinate(latitude, longitude)) {
+      if (longitude === null || latitude === null || !isValidCoordinate(latitude, longitude)) {
         errors.push(`第${i + 2}行：经纬度坐标无效（经度${longitude}, 纬度${latitude}）`)
         continue
       }
@@ -95,11 +96,11 @@ export function readAndValidateTemplate(
 
       // 处理第一组（目标集，被查找的站址库）
       const name1 = String(row[nameKey1] || '').trim()
-      const longitude1 = parseFloat(String(row[lonKey1] || ''))
-      const latitude1 = parseFloat(String(row[latKey1] || ''))
+      const longitude1 = parseStrictNumber(row[lonKey1])
+      const latitude1 = parseStrictNumber(row[latKey1])
 
       if (name1) {
-        if (isValidCoordinate(latitude1, longitude1)) {
+        if (longitude1 !== null && latitude1 !== null && isValidCoordinate(latitude1, longitude1)) {
           data1.push({ name: name1, longitude: longitude1, latitude: latitude1 })
         } else {
           errors.push(`第${i + 2}行：第一组经纬度坐标无效`)
@@ -108,11 +109,11 @@ export function readAndValidateTemplate(
 
       // 处理第二组（源集，需查找的站址）
       const name2 = String(row[nameKey2] || '').trim()
-      const longitude2 = parseFloat(String(row[lonKey2] || ''))
-      const latitude2 = parseFloat(String(row[latKey2] || ''))
+      const longitude2 = parseStrictNumber(row[lonKey2])
+      const latitude2 = parseStrictNumber(row[latKey2])
 
       if (name2) {
-        if (isValidCoordinate(latitude2, longitude2)) {
+        if (longitude2 !== null && latitude2 !== null && isValidCoordinate(latitude2, longitude2)) {
           data2.push({ name: name2, longitude: longitude2, latitude: latitude2 })
         } else {
           errors.push(`第${i + 2}行：第二组经纬度坐标无效`)

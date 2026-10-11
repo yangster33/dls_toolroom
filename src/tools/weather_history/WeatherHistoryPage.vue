@@ -189,6 +189,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { createRequestGate } from '@/utils/fetchWithTimeout'
+import { parseStrictNumber } from '@/utils/coordinateValue'
 import { VueDatePicker } from '@vuepic/vue-datepicker'
 import { zhCN } from 'date-fns/locale'
 import { getToolById } from '@/tools/toolData'
@@ -258,11 +259,11 @@ const dateRangeMessage = computed(() => {
 })
 
 const isValid = computed(() => {
-  const lng = parseFloat(form.value.longitude)
-  const lat = parseFloat(form.value.latitude)
+  const lng = parseStrictNumber(form.value.longitude)
+  const lat = parseStrictNumber(form.value.latitude)
   return (
-    !isNaN(lng) &&
-    !isNaN(lat) &&
+    lng !== null &&
+    lat !== null &&
     lng >= -180 &&
     lng <= 180 &&
     lat >= -90 &&

@@ -6,6 +6,7 @@ import {
 } from '@/utils/coordinateConverter'
 import { type CGCS2000Params, validateCGCS2000Params } from '@/utils/coordTransform'
 import { logger } from '@/utils/logger'
+import { parseStrictNumber } from '@/utils/coordinateValue'
 
 export {
   type CGCS2000Params,
@@ -46,10 +47,10 @@ export function validateCoordinate(
   xStr: string,
   yStr: string,
 ): ValidationResult {
-  const x = parseFloat(xStr)
-  const y = parseFloat(yStr)
+  const x = parseStrictNumber(xStr)
+  const y = parseStrictNumber(yStr)
 
-  if (isNaN(x) || isNaN(y)) {
+  if (x === null || y === null) {
     return { isValid: false, x: null, y: null, error: '坐标必须为有效数字' }
   }
 

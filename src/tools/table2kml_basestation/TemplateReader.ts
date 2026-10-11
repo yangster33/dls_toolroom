@@ -8,6 +8,7 @@ import {
   type DataRow,
 } from '@/utils/TemplateReader'
 import { TEMPLATE_HEADERS } from './TemplateExporter'
+import { parseStrictNumber } from '@/utils/coordinateValue'
 
 export interface BasestationRow {
   [key: string]: string | number | undefined
@@ -50,40 +51,40 @@ export function validateRow(row: DataRow, _rowIndex: number): string[] {
   }
 
   // 经度（必填，数字）
-  const lng = parseFloat(String(row['经度'] ?? ''))
-  if (isNaN(lng)) {
+  const lng = parseStrictNumber(row['经度'])
+  if (lng === null) {
     errors.push(`经度必须是数字`)
   } else if (lng < -180 || lng > 180) {
     errors.push(`经度必须在-180到180之间`)
   }
 
   // 纬度（必填，数字）
-  const lat = parseFloat(String(row['纬度'] ?? ''))
-  if (isNaN(lat)) {
+  const lat = parseStrictNumber(row['纬度'])
+  if (lat === null) {
     errors.push(`纬度必须是数字`)
   } else if (lat < -90 || lat > 90) {
     errors.push(`纬度必须在-90到90之间`)
   }
 
   // 方位角（必填，数字）- 扇形对称线
-  const azimuth = parseFloat(String(row['方位角'] ?? ''))
-  if (isNaN(azimuth)) {
+  const azimuth = parseStrictNumber(row['方位角'])
+  if (azimuth === null) {
     errors.push(`方位角必须是数字`)
   } else if (azimuth < 0 || azimuth > 360) {
     errors.push(`方位角必须在0到360之间`)
   }
 
   // 半功率角（必填，数字）- 扇形总角度
-  const halfPowerAngle = parseFloat(String(row['半功率角'] ?? ''))
-  if (isNaN(halfPowerAngle)) {
+  const halfPowerAngle = parseStrictNumber(row['半功率角'])
+  if (halfPowerAngle === null) {
     errors.push(`半功率角必须是数字`)
   } else if (halfPowerAngle <= 0 || halfPowerAngle >= 180) {
     errors.push(`半功率角必须大于0且小于180`)
   }
 
   // 半径（必填，数字）
-  const radius = parseFloat(String(row['半径'] ?? ''))
-  if (isNaN(radius)) {
+  const radius = parseStrictNumber(row['半径'])
+  if (radius === null) {
     errors.push(`半径必须是数字`)
   } else if (radius <= 0) {
     errors.push(`半径必须大于0`)
@@ -99,16 +100,16 @@ export function validateRow(row: DataRow, _rowIndex: number): string[] {
 
   // 天线挂高（选填，数字）
   if (row['天线挂高'] && String(row['天线挂高']).trim() !== '') {
-    const height = parseFloat(String(row['天线挂高']))
-    if (isNaN(height)) {
+    const height = parseStrictNumber(row['天线挂高'])
+    if (height === null) {
       errors.push(`天线挂高必须是数字`)
     }
   }
 
   // 半透明度（选填，数字）
   if (row['半透明度'] && String(row['半透明度']).trim() !== '') {
-    const opacity = parseFloat(String(row['半透明度']))
-    if (isNaN(opacity)) {
+    const opacity = parseStrictNumber(row['半透明度'])
+    if (opacity === null) {
       errors.push(`半透明度必须是数字`)
     } else if (opacity < 0 || opacity > 1) {
       errors.push(`半透明度必须在0到1之间`)

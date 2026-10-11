@@ -2,6 +2,7 @@
  * 表格转 KML - 数据验证器
  */
 import { parseColor } from './ColorParser'
+import { parseStrictNumber } from '@/utils/coordinateValue'
 import { TEMPLATE_HEADERS } from './TemplateExporter'
 
 export interface PointRow {
@@ -46,8 +47,10 @@ export async function readAndValidateKmlTemplate(file: File): Promise<TableKmlRe
 
     for (const dataRow of templateResult.dataRows) {
       const name = String(dataRow['名称'] ?? '').trim()
-      const lng = parseFloat(String(dataRow['经度'] ?? ''))
-      const lat = parseFloat(String(dataRow['纬度'] ?? ''))
+      const lng = parseStrictNumber(dataRow['经度'])
+      const lat = parseStrictNumber(dataRow['纬度'])
+      // 校验阶段已拦截无效坐标；此处显式跳过，避免写入 0 或 NaN
+      if (lng === null || lat === null) continue
       const folder = String(dataRow['文件夹'] ?? '').trim() || defaultFolder
       const colorRaw = String(dataRow['颜色'] ?? '').trim()
 
@@ -89,16 +92,16 @@ export function validateKmlRow(row: Record<string, unknown>): string[] {
   }
 
   // 验证经度
-  const lng = parseFloat(lngStr)
-  if (isNaN(lng)) {
+  const lng = parseStrictNumber(lngStr)
+  if (lng === null) {
     errors.push(`经度"${lngStr}"不是有效数字。`)
   } else if (lng < -180 || lng > 180) {
     errors.push(`经度 ${lng} 超出范围 (-180 ~ 180)。`)
   }
 
   // 验证纬度
-  const lat = parseFloat(latStr)
-  if (isNaN(lat)) {
+  const lat = parseStrictNumber(latStr)
+  if (lat === null) {
     errors.push(`纬度"${latStr}"不是有效数字。`)
   } else if (lat < -90 || lat > 90) {
     errors.push(`纬度 ${lat} 超出范围 (-90 ~ 90)。`)

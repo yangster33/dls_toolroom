@@ -93,6 +93,7 @@ import { ref, computed } from 'vue'
 import { getToolById } from '../toolData'
 import { elevationService } from '../elevation_query/elevationService'
 import { exportData } from '@/utils/TemplateExporter'
+import { parseStrictNumber } from '@/utils/coordinateValue'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
 
 const toolConfig = getToolById('elevations_convert')
@@ -126,9 +127,9 @@ const parsePoints = (): ParsedPoint[] => {
     if (parts.length !== 2) {
       return { longitude: 0, latitude: 0, valid: false, error: '格式错误' }
     }
-    const lng = parseFloat(parts[0]!.trim())
-    const lat = parseFloat(parts[1]!.trim())
-    if (isNaN(lng) || isNaN(lat)) {
+    const lng = parseStrictNumber(parts[0]!)
+    const lat = parseStrictNumber(parts[1]!)
+    if (lng === null || lat === null) {
       return { longitude: 0, latitude: 0, valid: false, error: '数值无效' }
     }
     if (lng < -180 || lng > 180 || lat < -90 || lat > 90) {

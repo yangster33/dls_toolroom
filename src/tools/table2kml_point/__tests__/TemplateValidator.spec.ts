@@ -55,3 +55,14 @@ describe('validateKmlRow', () => {
     expect(errors).toHaveLength(4)
   })
 })
+
+describe('validateKmlRow · 严格解析（审计 P1-9 / B5）', () => {
+  it('经度宽松前缀报错', () => {
+    const errors = validateKmlRow({ 名称: '站1', 经度: '116.4abc', 纬度: '39.9' })
+    expect(errors).toEqual(['经度"116.4abc"不是有效数字。'])
+  })
+
+  it('科学计数法与首尾空格通过', () => {
+    expect(validateKmlRow({ 名称: '站1', 经度: '1.164e2', 纬度: ' 39.9 ' })).toEqual([])
+  })
+})

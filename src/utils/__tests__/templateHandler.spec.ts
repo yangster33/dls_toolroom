@@ -177,3 +177,23 @@ describe('字段映射预设', () => {
     })
   })
 })
+
+describe('validateCoordinate · 严格解析（审计 P1-9 / B5）', () => {
+  it('拒绝宽松前缀（区别于 parseFloat）', () => {
+    expect(validateCoordinate('116.4abc', 'longitude', 0).valid).toBe(false)
+    expect(validateCoordinate('N39.9', 'latitude', 0).valid).toBe(false)
+    expect(validateCoordinate('39.9度', 'latitude', 0).valid).toBe(false)
+  })
+
+  it('接受合法写法（含科学计数法、首尾空格）', () => {
+    expect(validateCoordinate('116.4', 'longitude', 0).valid).toBe(true)
+    expect(validateCoordinate('-39.9', 'latitude', 0).valid).toBe(true)
+    expect(validateCoordinate('1.16e2', 'longitude', 0).valid).toBe(true)
+    expect(validateCoordinate(' 116.4 ', 'longitude', 0).valid).toBe(true)
+  })
+
+  it('拒绝 Infinity 与十六进制', () => {
+    expect(validateCoordinate('Infinity', 'longitude', 0).valid).toBe(false)
+    expect(validateCoordinate('0x1A', 'longitude', 0).valid).toBe(false)
+  })
+})

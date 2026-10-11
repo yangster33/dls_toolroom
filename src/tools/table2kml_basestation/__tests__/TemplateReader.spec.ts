@@ -79,3 +79,19 @@ describe('validateRow - 可选字段', () => {
     ])
   })
 })
+
+describe('validateRow · 严格解析（审计 P1-9 / B5）', () => {
+  it('经度/纬度宽松前缀被拒绝', () => {
+    expect(validateRow({ ...VALID_ROW, 经度: '116.4abc' }, 0)).toContain('经度必须是数字')
+    expect(validateRow({ ...VALID_ROW, 纬度: '39.9度' }, 0)).toContain('纬度必须是数字')
+  })
+
+  it('方位角/半径等数字字段的宽松前缀也被拒绝', () => {
+    expect(validateRow({ ...VALID_ROW, 方位角: '90度' }, 0)).toContain('方位角必须是数字')
+    expect(validateRow({ ...VALID_ROW, 半径: '500m' }, 0)).toContain('半径必须是数字')
+  })
+
+  it('科学计数法与首尾空格通过', () => {
+    expect(validateRow({ ...VALID_ROW, 经度: ' 116.4 ', 半径: '5e2' }, 0)).toEqual([])
+  })
+})
