@@ -178,6 +178,13 @@
           ref="fileInputRef"
         />
         <div class="text-sm text-gray-500 mt-2" v-if="!canUploadFile">请先选择输入和输出坐标系</div>
+        <div class="text-sm text-gray-500 mt-2" v-else-if="inputSystemResolution.mismatched">
+          当前文件是按
+          <span class="font-semibold">{{ uploadInputSystem }}</span>
+          校验的，而输入坐标系已改为
+          <span class="font-semibold">{{ inputCoordinateSystem }}</span
+          >。转换仍会按上传时的{{ uploadInputSystem }}解释；如需改为其它系，请改回后重新上传。
+        </div>
         <div class="text-sm text-gray-500 mt-2" v-else>
           支持 CSV 或 Excel 格式，请确保格式与模板一致
         </div>
@@ -370,6 +377,7 @@ import {
 } from './coordsConversion'
 import { validateCGCS2000Params } from '@/utils/coordTransform'
 import { readAndValidateCoordTemplate, type CoordReadResult } from './templateReader'
+import { resolveInputSystem } from './coordsConversion'
 
 const templateHeaders = ['名称', '经度/X（必填）', '纬度/Y（必填）']
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -429,6 +437,15 @@ const cgcsParamError = computed(() => {
 
 // 转换相关状态
 const validatedDataRows = ref<DataRow[]>([])
+/**
+ * 上传时锁定的输入坐标系（审计 C2 / P0-5 余项）。
+ *
+ * 数据是按**上传当时**的坐标系校验的（lnglat 模式还是 XY 模式的列语义不同），
+ * 所以转换也必须用同一个系统解释。若用户上传后改了输入坐标系，内存里的
+ * 已校验数据会被按错误语义解释 —— 静默产出错误坐标。
+ * 因此这里快照当时的系统名，`startConversion` 只用快照值。
+ */
+const uploadInputSystem = ref<string>('')
 const isProcessing = ref<boolean>(false)
 const conversionProgress = ref<number>(0)
 const conversionCompleted = ref<boolean>(false)
@@ -444,6 +461,15 @@ const abortController = ref<AbortController | null>(null)
 const canUploadFile = computed(() => {
   return inputCoordinateSystem.value !== '' && outputCoordinateSystem.value !== ''
 })
+
+/**
+ * 上传快照 vs 当前选择 的裁决结果（审计 C2 / P0-5 余项）。
+ * `effectiveSystem` 是转换真正该用的输入坐标系；`mismatched` 表示两者已不一致，
+ * 需要向用户明示口径不同（不自动废掉数据，也不静默按新系统解释）。
+ */
+const inputSystemResolution = computed(() =>
+  resolveInputSystem(uploadInputSystem.value, inputCoordinateSystem.value),
+)
 
 const canStartConversion = computed(() => {
   return (
@@ -476,6 +502,8 @@ const onFileUpload = async (event: Event) => {
   const file = target.files[0]!
   validationErrors.value = []
   validatedDataRows.value = []
+  // 先清掉旧快照：本次若校验失败，就不该留下上一次上传的系统
+  uploadInputSystem.value = ''
 
   try {
     const validateResult: CoordReadResult = await readAndValidateCoordTemplate(
@@ -485,6 +513,8 @@ const onFileUpload = async (event: Event) => {
 
     if (validateResult.isValid) {
       validatedDataRows.value = validateResult.dataRows
+      // 锁定上传时的输入坐标系，后续转换一律用它解释数据（审计 C2 / P0-5 余项）
+      uploadInputSystem.value = inputCoordinateSystem.value
     } else {
       validationErrors.value = validateResult.errors
       const errorMessage =
@@ -529,7 +559,8 @@ const startConversion = async () => {
 
   try {
     const conversionOptions = {
-      inputSystem: inputCoordinateSystem.value,
+      // 按上传时的输入坐标系解释数据，不用当前下拉值（审计 C2 / P0-5 余项）
+      inputSystem: inputSystemResolution.value.effectiveSystem,
       outputSystem: outputCoordinateSystem.value,
       cgcs2000Params: cgcs2000Params.value,
       abortSignal: abortController.value.signal,

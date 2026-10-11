@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
   batchConvertCoordinates,
+  resolveInputSystem,
   convertToCsv,
   convertToXlsx,
   type DataRow,
@@ -177,5 +178,56 @@ describe('convertToXlsx', () => {
     const blob = convertToXlsx([{ 名称: '甲' }], ['名称'])
     expect(blob.type).toContain('spreadsheetml')
     expect(blob.size).toBeGreaterThan(0)
+  })
+})
+
+/**
+ * 审计 C2 / P0-5 余项：转换必须按【上传时】的输入坐标系解释数据，
+ * 而不是用户当前下拉里选的那个。
+ */
+describe('resolveInputSystem', () => {
+  it('尚无成功上传的数据时，用当前选择', () => {
+    const r = resolveInputSystem('', 'gcj02')
+    expect(r.effectiveSystem).toBe('gcj02')
+    expect(r.mismatched).toBe(false)
+  })
+
+  it('快照与当前一致时，正常且不提示', () => {
+    const r = resolveInputSystem('wgs84', 'wgs84')
+    expect(r.effectiveSystem).toBe('wgs84')
+    expect(r.mismatched).toBe(false)
+  })
+
+  it('上传后改了输入坐标系：仍按快照解释，并标记不一致', () => {
+    // 关键用例：数据是按 wgs84 校验的，用户把下拉改成了 cgcs2000_xy。
+    // 旧行为会按 cgcs2000_xy 解释经纬度值 —— 静默出错。
+    const r = resolveInputSystem('wgs84', 'cgcs2000_xy')
+    expect(r.effectiveSystem).toBe('wgs84')
+    expect(r.mismatched).toBe(true)
+  })
+
+  it('同模式但不同系统时也标记不一致（gcj02 → bd09）', () => {
+    const r = resolveInputSystem('gcj02', 'bd09')
+    expect(r.effectiveSystem).toBe('gcj02')
+    expect(r.mismatched).toBe(true)
+  })
+
+  it('反证：沿用旧的「按当前下拉解释」确实会算出不同结果', async () => {
+    // 这份数据上传时是按 wgs84（经纬度）校验的，之后用户把下拉改成了 gcj02。
+    const rows = [row('A', 116.4, 39.9)]
+
+    const bySnapshot = await batchConvertCoordinates(rows, {
+      inputSystem: resolveInputSystem('wgs84', 'gcj02').effectiveSystem,
+      outputSystem: 'wgs84',
+    })
+    const byCurrent = await batchConvertCoordinates(rows, {
+      inputSystem: 'gcj02', // 旧行为：改完下拉后直接用它
+      outputSystem: 'wgs84',
+    })
+
+    expect(bySnapshot.success).toBe(true)
+    expect(byCurrent.success).toBe(true)
+    // 同一份数据按不同输入系解释，坐标值必然不同 —— 旧行为就是这样静默出错的
+    expect(bySnapshot.data[0]).not.toEqual(byCurrent.data[0])
   })
 })

@@ -36,6 +36,35 @@ export interface ConversionProgressInfo {
   estimatedRemainingTime: number
 }
 
+/**
+ * 裁决「该用哪个输入坐标系来解释已上传的数据」（审计 C2 / P0-5 余项）。
+ *
+ * 数据是按**上传当时**的坐标系校验的（经纬度模式与 XY 模式的列语义、取值范围
+ * 都不同）。若用户上传后改了输入坐标系，内存里的已校验数据会被按新系统解释，
+ * 静默产出错误坐标 —— 这正是 P0-5 遗留的那一半（阶段 2 只修了 CGCS2000 的 NaN）。
+ *
+ * 规则：
+ * - 有上传快照时，`effectiveSystem` **一律**取快照（上传时的口径）；
+ * - 快照与当前选择不一致时置 `mismatched`，交由 UI 显式告知，
+ *   既不静默按新系统解释，也不自作主张废掉用户上传的文件。
+ *
+ * @param uploadedSystem 上传时锁定的输入坐标系（空串表示尚无成功上传的数据）
+ * @param currentSystem  用户当前在下拉里选的输入坐标系
+ */
+export function resolveInputSystem(
+  uploadedSystem: string,
+  currentSystem: string,
+): { effectiveSystem: string; mismatched: boolean } {
+  if (!uploadedSystem) {
+    // 还没有成功上传的数据：用当前选择
+    return { effectiveSystem: currentSystem, mismatched: false }
+  }
+  return {
+    effectiveSystem: uploadedSystem,
+    mismatched: uploadedSystem !== currentSystem,
+  }
+}
+
 export interface ConversionOptions {
   inputSystem: string
   outputSystem: string
