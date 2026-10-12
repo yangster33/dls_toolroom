@@ -76,3 +76,7 @@ docs/*
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# deepwork local state (git-local, not tracked)
+.slim/deepwork/
+
