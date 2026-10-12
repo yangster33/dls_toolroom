@@ -355,13 +355,26 @@
       </div>
     </div>
   </div>
+
+  <!-- 导入/导出进度弹窗（C4 阶段 2 / P2-20） -->
+  <ProgressModal
+    :is-open="pipelineProgress.open"
+    :title="pipelineProgress.title"
+    :percent="pipelineProgress.percent"
+    :message="pipelineProgress.message"
+    :remaining-time="pipelineTimer.remainingText.value"
+    :show-cancel="false"
+  />
 </template>
 
 <script setup lang="ts">
-import { ref, computed, shallowRef } from 'vue'
+import { ref, computed, shallowRef, reactive } from 'vue'
 import { exportTemplate } from '@/utils/TemplateExporter'
 import { getToolById } from '../toolData'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
+import ProgressModal from '@/components/common/ProgressModal.vue'
+import { useProgressTimer } from '@/composables/useProgressTimer'
+import type { ProgressCallback } from '@/utils/progress'
 
 const toolConfig = getToolById('coords_convert')
 import {
@@ -457,6 +470,27 @@ const totalRows = ref<number>(0)
 const estimatedRemainingTime = ref<number>(0)
 const abortController = ref<AbortController | null>(null)
 
+// 导入/导出进度（C4 阶段 2 / P2-20）：仅用于模板导入与文件导出，
+// 与上面批量转换的内联进度区（isProcessing）互不影响。
+const pipelineProgress = reactive({ open: false, title: '正在处理...', percent: 0, message: '' })
+const pipelineTimer = useProgressTimer()
+
+function beginPipeline(title: string) {
+  pipelineProgress.open = true
+  pipelineProgress.title = title
+  pipelineProgress.percent = 0
+  pipelineProgress.message = ''
+  pipelineTimer.start()
+}
+function endPipeline() {
+  pipelineProgress.open = false
+}
+const pipelineReporter: ProgressCallback = (percent, message) => {
+  pipelineProgress.percent = percent
+  pipelineProgress.message = message
+  pipelineTimer.update(percent)
+}
+
 // 计算属性
 const canUploadFile = computed(() => {
   return inputCoordinateSystem.value !== '' && outputCoordinateSystem.value !== ''
@@ -487,11 +521,21 @@ const canDownloadResult = computed(() => {
 })
 
 // 模板下载
-const downloadCsvTemplate = () => {
-  exportTemplate(templateHeaders, 'csv', '坐标转换模板')
+const downloadCsvTemplate = async () => {
+  beginPipeline('正在下载模板...')
+  try {
+    await exportTemplate(templateHeaders, 'csv', '坐标转换模板', pipelineReporter)
+  } finally {
+    endPipeline()
+  }
 }
-const downloadXlsxTemplate = () => {
-  exportTemplate(templateHeaders, 'xlsx', '坐标转换模板')
+const downloadXlsxTemplate = async () => {
+  beginPipeline('正在下载模板...')
+  try {
+    await exportTemplate(templateHeaders, 'xlsx', '坐标转换模板', pipelineReporter)
+  } finally {
+    endPipeline()
+  }
 }
 
 // 文件上传
@@ -505,10 +549,12 @@ const onFileUpload = async (event: Event) => {
   // 先清掉旧快照：本次若校验失败，就不该留下上一次上传的系统
   uploadInputSystem.value = ''
 
+  beginPipeline('正在导入模板...')
   try {
     const validateResult: CoordReadResult = await readAndValidateCoordTemplate(
       file,
       inputCoordinateSystem.value,
+      pipelineReporter,
     )
 
     if (validateResult.isValid) {
@@ -528,6 +574,8 @@ const onFileUpload = async (event: Event) => {
     const errorMsg = `文件处理失败: ${error instanceof Error ? error.message : String(error)}`
     validationErrors.value.push(errorMsg)
     showErrorDialog('error', '文件处理失败', errorMsg)
+  } finally {
+    endPipeline()
   }
 }
 

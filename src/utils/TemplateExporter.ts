@@ -5,6 +5,14 @@
 import * as XLSX from 'xlsx'
 import { logger } from './logger'
 import { pushAll } from './arrayUtils'
+import { yieldToUI } from './yieldToUI'
+import type { ProgressCallback } from './progress'
+
+/**
+ * 边框遍历的让出粒度：每处理这么多单元格让出一次主线程。
+ * 5 万行 × 3 列 = 15 万单元格 → 约 30 次让出，开销可忽略。
+ */
+const BORDER_YIELD_INTERVAL = 5000
 
 /**
  * CSV 字段转义
@@ -39,19 +47,29 @@ export function generateCsv(headers: string[], dataRows?: string[][]): string {
 
 /**
  * 生成 XLSX Blob
+ *
+ * C4 阶段 2：改为 async —— 边框遍历按批 `await yieldToUI()`，
+ * 让进度条能逐格推进、页面在处理大表时仍可交互。
+ * `XLSX.write` 本身是不可中断的同步块（彻底根治需阶段 3 的 streaming writer）。
+ *
  * @param headers 表头数组
  * @param dataRows 数据行数组（可选）
  * @param sheetName 工作表名称
+ * @param onProgress 进度回调（可选，默认不传则行为不变）
  * @returns XLSX Blob
  */
-export function generateXlsx(
+export async function generateXlsx(
   headers: string[],
   dataRows?: string[][],
   sheetName: string = 'Sheet1',
-): Blob {
+  onProgress?: ProgressCallback,
+): Promise<Blob> {
   if (!headers || headers.length === 0) {
     return new Blob([], { type: 'application/octet-stream' })
   }
+
+  onProgress?.(0, '正在整理数据...')
+  await yieldToUI()
 
   const workbook = XLSX.utils.book_new()
   const worksheetData = [headers].concat(dataRows || [])
@@ -71,7 +89,11 @@ export function generateXlsx(
     right: { style: 'thin', color: { rgb: '000000' } },
   }
 
-  // 遍历所有单元格
+  // 遍历所有单元格。进度按「已处理单元格 / 估算总单元格」映射到 30~90。
+  const estimatedCells = Math.max(worksheetData.length * headers.length, 1)
+  let processedCells = 0
+  let lastReportedPercent = 30
+
   for (const key in worksheet) {
     // 跳过特殊属性（以 ! 开头的）
     if (key.startsWith('!')) continue
@@ -82,9 +104,23 @@ export function generateXlsx(
       cell.s = cell.s || {}
       cell.s.border = borderStyle
     }
+
+    processedCells++
+    if (processedCells % BORDER_YIELD_INTERVAL === 0) {
+      await yieldToUI()
+      const percent = Math.min(90, 30 + Math.round((processedCells / estimatedCells) * 60))
+      if (percent !== lastReportedPercent) {
+        lastReportedPercent = percent
+        onProgress?.(percent, '正在设置单元格样式...')
+      }
+    }
   }
 
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
+
+  // XLSX.write 是单一不可中断的同步块：先上报 + 让出一帧，让 UI 画出"正在生成文件"
+  onProgress?.(95, '正在生成文件...')
+  await yieldToUI()
 
   const wbout = XLSX.write(workbook, {
     bookType: 'xlsx',
@@ -92,6 +128,7 @@ export function generateXlsx(
     bookSST: false,
   })
 
+  onProgress?.(100, '生成完成')
   return new Blob([wbout], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   })
@@ -137,11 +174,12 @@ function triggerDownload(content: string | Blob, filename: string, type: 'csv' |
  * @param format 文件格式
  * @param filename 文件名（不含扩展名）
  */
-export function exportTemplate(
+export async function exportTemplate(
   headers: string[],
   format: 'csv' | 'xlsx',
   filename: string = 'template',
-): void {
+  onProgress?: ProgressCallback,
+): Promise<void> {
   if (!headers || headers.length === 0) {
     logger.warn('表头数组为空，无法导出文件')
     return
@@ -152,7 +190,7 @@ export function exportTemplate(
       const csvContent = generateCsv(headers)
       triggerDownload(csvContent, filename, 'csv')
     } else if (format === 'xlsx') {
-      const xlsxBlob = generateXlsx(headers)
+      const xlsxBlob = await generateXlsx(headers, undefined, 'Sheet1', onProgress)
       triggerDownload(xlsxBlob, filename, 'xlsx')
     }
   } catch (error) {
@@ -166,13 +204,15 @@ export function exportTemplate(
  * @param dataRows 数据行数组
  * @param format 文件格式
  * @param filename 文件名
+ * @param onProgress 进度回调（可选）
  */
-export function exportData(
+export async function exportData(
   headers: string[],
   dataRows: string[][],
   format: 'csv' | 'xlsx',
   filename: string = 'export',
-): void {
+  onProgress?: ProgressCallback,
+): Promise<void> {
   if (!headers || headers.length === 0) {
     logger.warn('表头数组为空，无法导出文件')
     return
@@ -183,7 +223,7 @@ export function exportData(
       const csvContent = generateCsv(headers, dataRows)
       triggerDownload(csvContent, filename, 'csv')
     } else if (format === 'xlsx') {
-      const xlsxBlob = generateXlsx(headers, dataRows)
+      const xlsxBlob = await generateXlsx(headers, dataRows, 'Sheet1', onProgress)
       triggerDownload(xlsxBlob, filename, 'xlsx')
     }
   } catch (error) {
@@ -199,8 +239,8 @@ export function exportTable(
   headers: string[],
   format: 'csv' | 'xlsx',
   filename: string = 'template',
-): void {
-  exportTemplate(headers, format, filename)
+): Promise<void> {
+  return exportTemplate(headers, format, filename)
 }
 
 /**
@@ -216,9 +256,9 @@ export function downloadCsvTemplate(): void {
 /**
  * 下载 XLSX 模板（兼容 table2kml）
  */
-export function downloadXlsxTemplate(): void {
+export async function downloadXlsxTemplate(): Promise<void> {
   const headers = ['名称', '经度', '纬度', '文件夹', '颜色']
   const sampleRow = ['示例点位', '116.397428', '39.909204', '北京', '红色']
-  const xlsxBlob = generateXlsx(headers, [sampleRow])
+  const xlsxBlob = await generateXlsx(headers, [sampleRow])
   triggerDownload(xlsxBlob, '点位导入模板', 'xlsx')
 }

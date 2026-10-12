@@ -178,9 +178,13 @@ export interface AnalysisResult {
   errors?: string[]
 }
 
-export interface ProgressCallback {
-  (progress: number, message: string): void
-}
+import type { ProgressCallback as SharedProgressCallback } from '@/utils/progress'
+
+/**
+ * 进度回调（P3-4 收敛）：历史上本文件、`DistanceCalculator.ts`、
+ * `geoAnalysisService.ts` 各有一份逐字节等价的定义，现统一指向 `@/utils/progress`。
+ */
+export type ProgressCallback = SharedProgressCallback
 
 export interface PointAnalysisData {
   序号: number
@@ -344,6 +348,11 @@ export async function parseKML(file: File, onProgress?: ProgressCallback): Promi
     let lastReportedPercent = 70
 
     for (let index = 0; index < totalFeatures; index++) {
+      // 让出放在循环**开头**：`continue`（无几何要素）会跳过循环尾部，放在那里会被整批漏掉
+      if (index % FEATURE_YIELD_INTERVAL === 0) {
+        await yieldToUI()
+      }
+
       const feature = geojson.features[index]!
       if (!feature.geometry) continue
 
@@ -372,10 +381,6 @@ export async function parseKML(file: File, onProgress?: ProgressCallback): Promi
           feature,
         })
       })
-
-      if (index % FEATURE_YIELD_INTERVAL === 0) {
-        await yieldToUI()
-      }
 
       // 按 1% 粒度上报：5 万要素只会触发约 30 次回调，每次之间页面可交互。
       // 阈值用原始浮点比较，上报值取整 —— 否则页面会渲染出 "71.0002%"。
@@ -468,6 +473,11 @@ export async function parseKMZ(file: File, onProgress?: ProgressCallback): Promi
     let lastReportedPercent = 80
 
     for (let index = 0; index < totalFeatures; index++) {
+      // 让出放在循环**开头**：switch 的 default 分支 `continue` 会跳过循环尾部
+      if (index % FEATURE_YIELD_INTERVAL === 0) {
+        await yieldToUI()
+      }
+
       const feature = geojson.features[index]!
       const geometryType = feature.geometry?.type
       if (!geometryType) continue
@@ -503,10 +513,6 @@ export async function parseKMZ(file: File, onProgress?: ProgressCallback): Promi
         properties: feature.properties || {},
         feature,
       })
-
-      if (index % FEATURE_YIELD_INTERVAL === 0) {
-        await yieldToUI()
-      }
 
       const percent = 80 + ((index + 1) / totalFeatures) * 20
       if (percent - lastReportedPercent >= 1 || index === totalFeatures - 1) {

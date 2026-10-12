@@ -7,6 +7,14 @@
       :message="errorDialogMessage"
       @close="closeErrorDialog"
     />
+    <ProgressModal
+      :is-open="pipelineProgress.open"
+      :title="pipelineProgress.title"
+      :percent="pipelineProgress.percent"
+      :message="pipelineProgress.message"
+      :remaining-time="pipelineTimer.remainingText.value"
+      :show-cancel="false"
+    />
     <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || '批量高程查询' }}</h1>
     <p class="text-base-content/70">
       {{ toolConfig?.description || '通过上传模板批量查询高程数据' }}
@@ -303,6 +311,9 @@ import { logger } from '@/utils/logger'
 import { getToolById } from '../toolData'
 import { ELEVATION_HEADERS } from './TemplateExporter'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
+import ProgressModal from '@/components/common/ProgressModal.vue'
+import { useProgressTimer } from '@/composables/useProgressTimer'
+import type { ProgressCallback } from '@/utils/progress'
 import {
   readAndValidateTemplate,
   type TemplateValidationResult,
@@ -348,6 +359,33 @@ const progressMessage = ref('')
 /** true 表示本次结果里有失败点，下载时要明确标注「部分失败」 */
 const hasPartialFailures = ref(false)
 
+// 导入/导出（管线阶段）进度：与查询阶段的内联进度条分开，用统一 ProgressModal 呈现
+const pipelineProgress = reactive({
+  open: false,
+  title: '正在处理...',
+  percent: 0,
+  message: '',
+})
+const pipelineTimer = useProgressTimer()
+
+function beginPipeline(title: string) {
+  pipelineProgress.open = true
+  pipelineProgress.title = title
+  pipelineProgress.percent = 0
+  pipelineProgress.message = ''
+  pipelineTimer.start()
+}
+
+function endPipeline() {
+  pipelineProgress.open = false
+}
+
+const pipelineReporter: ProgressCallback = (percent, message) => {
+  pipelineProgress.percent = percent
+  pipelineProgress.message = message
+  pipelineTimer.update(percent)
+}
+
 // 错误对话框状态
 const errorDialogOpen = ref(false)
 const errorDialogType = ref<'error' | 'warning' | 'success' | 'info'>('error')
@@ -391,8 +429,13 @@ const hasData = computed(() => validationResult.value !== null || queryResults.v
 
 const displayResults = computed(() => queryResults.value.slice(0, 10))
 
-const downloadTemplate = (format: 'csv' | 'xlsx') => {
-  exportTemplate(ELEVATION_HEADERS, format, '高程查询模板')
+const downloadTemplate = async (format: 'csv' | 'xlsx') => {
+  beginPipeline('正在导出模板...')
+  try {
+    await exportTemplate(ELEVATION_HEADERS, format, '高程查询模板', pipelineReporter)
+  } finally {
+    endPipeline()
+  }
 }
 
 const triggerFileUpload = () => {
@@ -406,6 +449,7 @@ const onFileUpload = async (event: Event) => {
 
   uploadedFileName.value = file.name
 
+  beginPipeline('正在导入模板...')
   try {
     let rows: Record<string, string | number>[]
 
@@ -429,7 +473,7 @@ const onFileUpload = async (event: Event) => {
       rows = parseCSV(cleanText)
     }
 
-    validationResult.value = readAndValidateTemplate(rows)
+    validationResult.value = await readAndValidateTemplate(rows, pipelineReporter)
     queryResults.value = []
 
     if (!validationResult.value.isValid && validationResult.value.errors.length > 0) {
@@ -456,6 +500,8 @@ const onFileUpload = async (event: Event) => {
       errors: ['文件读取失败，请确保文件格式正确'],
     }
     showErrorDialog('error', '文件读取失败', '请确保文件格式正确')
+  } finally {
+    endPipeline()
   }
 }
 
@@ -586,7 +632,7 @@ const delay = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-const downloadResult = (format: 'csv' | 'xlsx') => {
+const downloadResult = async (format: 'csv' | 'xlsx') => {
   if (queryResults.value.length === 0) return
 
   const suffix = hasPartialFailures.value ? '_partial' : ''
@@ -603,7 +649,12 @@ const downloadResult = (format: 'csv' | 'xlsx') => {
     result.error ? '失败' : '成功',
   ])
 
-  exportData(headers, dataRows, format, `高程查询结果${suffix}`)
+  beginPipeline('正在导出结果...')
+  try {
+    await exportData(headers, dataRows, format, `高程查询结果${suffix}`, pipelineReporter)
+  } finally {
+    endPipeline()
+  }
 }
 
 const clearAll = () => {

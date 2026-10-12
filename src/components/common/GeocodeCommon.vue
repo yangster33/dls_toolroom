@@ -568,16 +568,29 @@
       :details="errorModalData.url ? { url: errorModalData.url } : undefined"
       @close="closeErrorModal"
     />
+
+    <!-- 导入/导出进度弹窗（模板下载、文件解析、结果导出） -->
+    <ProgressModal
+      :is-open="pipelineProgress.open"
+      :title="pipelineProgress.title"
+      :percent="pipelineProgress.percent"
+      :message="pipelineProgress.message"
+      :remaining-time="pipelineTimer.remainingText.value"
+      :show-cancel="false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, shallowRef } from 'vue'
+import { ref, computed, shallowRef, reactive } from 'vue'
 import * as XLSX from 'xlsx'
 import { exportData, exportTemplate } from '@/utils/TemplateExporter'
 import { logger } from '@/utils/logger'
 import { getToolById } from '../../tools/toolData'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
+import ProgressModal from '@/components/common/ProgressModal.vue'
+import { useProgressTimer } from '@/composables/useProgressTimer'
+import type { ProgressCallback } from '@/utils/progress'
 import { useGeocodeStore, type QueryOptions } from '@/stores/geocodeStore'
 
 type GeocodeMode = 'add' | 'lonlat'
@@ -756,6 +769,35 @@ const isQuerying = ref(false)
 const progressPercent = ref(0)
 const progressMessage = ref('')
 
+// 导入/导出（模板下载、文件解析、结果导出）统一进度弹窗。
+// 与上方查询阶段的内联进度（isQuerying / progressPercent）相互独立 ——
+// 本弹窗只服务文件相关的长任务（C4 阶段 2 / P2-20），查询进度保持原样。
+const pipelineProgress = reactive({
+  open: false,
+  title: '正在处理...',
+  percent: 0,
+  message: '',
+})
+const pipelineTimer = useProgressTimer()
+
+function beginPipeline(title: string) {
+  pipelineProgress.open = true
+  pipelineProgress.title = title
+  pipelineProgress.percent = 0
+  pipelineProgress.message = ''
+  pipelineTimer.start()
+}
+
+function endPipeline() {
+  pipelineProgress.open = false
+}
+
+const pipelineReporter: ProgressCallback = (percent, message) => {
+  pipelineProgress.percent = percent
+  pipelineProgress.message = message
+  pipelineTimer.update(percent)
+}
+
 const hasValidApiKeys = computed(() =>
   currentConfig.value.apiKeys.some((k) => k.isValid && k.provider),
 )
@@ -765,10 +807,15 @@ const canExecuteQuery = computed(
 )
 const canDownloadResult = computed(() => queryResults.value.length > 0)
 
-const downloadTemplate = (format: 'csv' | 'xlsx') => {
+const downloadTemplate = async (format: 'csv' | 'xlsx') => {
   const headers = mode === 'add' ? ADDRESS_HEADERS : LONLAT_HEADERS
   const fileName = mode === 'add' ? '地址查询模板' : '经纬度查询模板'
-  exportTemplate(headers, format, fileName)
+  beginPipeline('正在下载模板...')
+  try {
+    await exportTemplate(headers, format, fileName, pipelineReporter)
+  } finally {
+    endPipeline()
+  }
 }
 
 const validateApiKey = async (index: number) => {
@@ -854,6 +901,7 @@ const onFileUpload = async (event: Event) => {
   const file = target.files?.[0]
   if (!file) return
 
+  beginPipeline('正在解析文件...')
   try {
     let rows: Record<string, string | number>[]
 
@@ -878,15 +926,14 @@ const onFileUpload = async (event: Event) => {
     }
 
     const validateFn = mode === 'add' ? validateAddTemplate : validateLonLatTemplate
-    validationResult.value = validateFn(rows)
+    const result = await validateFn(rows, pipelineReporter)
+    validationResult.value = result
     queryResults.value = []
 
-    if (!validationResult.value.isValid && validationResult.value.errors.length > 0) {
+    if (!result.isValid && result.errors.length > 0) {
       const errorMessage =
-        validationResult.value.errors.slice(0, 5).join('\n') +
-        (validationResult.value.errors.length > 5
-          ? `\n...还有 ${validationResult.value.errors.length - 5} 个错误`
-          : '')
+        result.errors.slice(0, 5).join('\n') +
+        (result.errors.length > 5 ? `\n...还有 ${result.errors.length - 5} 个错误` : '')
       showErrorDialog('error', '数据校验失败', errorMessage)
     }
   } catch (error) {
@@ -897,6 +944,8 @@ const onFileUpload = async (event: Event) => {
       errors: ['文件读取失败，请确保文件格式正确'],
     }
     showErrorDialog('error', '文件读取失败', '请确保文件格式正确')
+  } finally {
+    endPipeline()
   }
 }
 
@@ -949,7 +998,7 @@ const executeQuery = async () => {
   }
 }
 
-const downloadResult = (format: 'csv' | 'xlsx') => {
+const downloadResult = async (format: 'csv' | 'xlsx') => {
   if (queryResults.value.length === 0) return
 
   // 两个 exportResultsToRows 签名不同，按 mode 分别调用（用三元会导致类型交集）
@@ -961,19 +1010,24 @@ const downloadResult = (format: 'csv' | 'xlsx') => {
           currentConfig.value.selectedFields,
         )
 
-  if (mode === 'add') {
-    const headers = [
-      '名称',
-      '经度',
-      '纬度',
-      ...currentConfig.value.selectedFields.map((f: string) => getFieldLabel(f)),
-    ]
-    const dataRows = rows.slice(1)
-    exportData(headers, dataRows, format, '地址查询结果')
-  } else {
-    const headers = rows[0] || []
-    const dataRows = rows.slice(1)
-    exportData(headers, dataRows, format, '经纬度查询结果')
+  beginPipeline('正在导出结果...')
+  try {
+    if (mode === 'add') {
+      const headers = [
+        '名称',
+        '经度',
+        '纬度',
+        ...currentConfig.value.selectedFields.map((f: string) => getFieldLabel(f)),
+      ]
+      const dataRows = rows.slice(1)
+      await exportData(headers, dataRows, format, '地址查询结果', pipelineReporter)
+    } else {
+      const headers = rows[0] || []
+      const dataRows = rows.slice(1)
+      await exportData(headers, dataRows, format, '经纬度查询结果', pipelineReporter)
+    }
+  } finally {
+    endPipeline()
   }
 }
 

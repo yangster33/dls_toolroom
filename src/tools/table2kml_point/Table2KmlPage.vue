@@ -135,13 +135,26 @@
       />
     </div>
   </div>
+
+  <!-- 导入/导出进度弹窗（C4 阶段 2 / P2-20） -->
+  <ProgressModal
+    :is-open="pipelineProgress.open"
+    :title="pipelineProgress.title"
+    :percent="pipelineProgress.percent"
+    :message="pipelineProgress.message"
+    :remaining-time="pipelineTimer.remainingText.value"
+    :show-cancel="false"
+  />
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { downloadCsvTemplate, downloadXlsxTemplate } from '@/utils/TemplateExporter'
 import { getToolById } from '../toolData'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
+import ProgressModal from '@/components/common/ProgressModal.vue'
+import { useProgressTimer } from '@/composables/useProgressTimer'
+import type { ProgressCallback } from '@/utils/progress'
 
 const toolConfig = getToolById('table2kml_point')
 import { readAndValidateKmlTemplate, type TableKmlReadResult } from './TemplateValidator'
@@ -151,6 +164,26 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 const showErrorDialog = ref(false)
 const validateResult = ref<TableKmlReadResult | null>(null)
 const validationErrors = ref<string[]>([])
+
+// 导入进度（C4 阶段 2 / P2-20）
+const pipelineProgress = reactive({ open: false, title: '正在处理...', percent: 0, message: '' })
+const pipelineTimer = useProgressTimer()
+
+function beginPipeline(title: string) {
+  pipelineProgress.open = true
+  pipelineProgress.title = title
+  pipelineProgress.percent = 0
+  pipelineProgress.message = ''
+  pipelineTimer.start()
+}
+function endPipeline() {
+  pipelineProgress.open = false
+}
+const pipelineReporter: ProgressCallback = (percent, message) => {
+  pipelineProgress.percent = percent
+  pipelineProgress.message = message
+  pipelineTimer.update(percent)
+}
 
 const canDownload = computed(() => {
   return validateResult.value?.isValid === true && validateResult.value.points.length > 0
@@ -187,8 +220,9 @@ async function onFileUpload(event: Event) {
   validationErrors.value = []
   validateResult.value = null
 
+  beginPipeline('正在导入模板...')
   try {
-    const result = await readAndValidateKmlTemplate(file)
+    const result = await readAndValidateKmlTemplate(file, pipelineReporter)
     if (result.isValid) {
       validateResult.value = result
     } else {
@@ -200,6 +234,8 @@ async function onFileUpload(event: Event) {
       `处理文件时发生错误：${err instanceof Error ? err.message : String(err)}`,
     ]
     showErrorDialog.value = true
+  } finally {
+    endPipeline()
   }
 }
 

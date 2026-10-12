@@ -223,14 +223,27 @@
       :message="validationErrors.join('\n')"
       @close="showErrorDialog = false"
     />
+
+    <!-- 导入/导出进度弹窗（C4 阶段 2 / P2-20） -->
+    <ProgressModal
+      :is-open="pipelineProgress.open"
+      :title="pipelineProgress.title"
+      :percent="pipelineProgress.percent"
+      :message="pipelineProgress.message"
+      :remaining-time="pipelineTimer.remainingText.value"
+      :show-cancel="false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 import { exportTemplate } from '@/utils/TemplateExporter'
 import { getToolById } from '../toolData'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
+import ProgressModal from '@/components/common/ProgressModal.vue'
+import { useProgressTimer } from '@/composables/useProgressTimer'
+import type { ProgressCallback } from '@/utils/progress'
 
 const toolConfig = getToolById('table2kml_basestation')
 import { readAndValidateBasestationTemplate, type BasestationReadResult } from './TemplateReader'
@@ -242,6 +255,26 @@ const showErrorDialog = ref(false)
 const uploadedFile = ref<File | null>(null)
 const validateResult = ref<BasestationReadResult | null>(null)
 const validationErrors = ref<string[]>([])
+
+// 导入/导出进度（C4 阶段 2 / P2-20）
+const pipelineProgress = reactive({ open: false, title: '正在处理...', percent: 0, message: '' })
+const pipelineTimer = useProgressTimer()
+
+function beginPipeline(title: string) {
+  pipelineProgress.open = true
+  pipelineProgress.title = title
+  pipelineProgress.percent = 0
+  pipelineProgress.message = ''
+  pipelineTimer.start()
+}
+function endPipeline() {
+  pipelineProgress.open = false
+}
+const pipelineReporter: ProgressCallback = (percent, message) => {
+  pipelineProgress.percent = percent
+  pipelineProgress.message = message
+  pipelineTimer.update(percent)
+}
 
 // 触发文件选择
 const triggerFileInput = () => {
@@ -271,8 +304,9 @@ const processFile = async (file: File) => {
   validateResult.value = null
   validationErrors.value = []
 
+  beginPipeline('正在导入模板...')
   try {
-    const result = await readAndValidateBasestationTemplate(file)
+    const result = await readAndValidateBasestationTemplate(file, pipelineReporter)
     validateResult.value = result
 
     if (!result.isValid) {
@@ -282,6 +316,8 @@ const processFile = async (file: File) => {
   } catch (error) {
     validationErrors.value = [error instanceof Error ? error.message : '文件读取失败']
     showErrorDialog.value = true
+  } finally {
+    endPipeline()
   }
 }
 
@@ -296,13 +332,23 @@ const clearUpload = () => {
 }
 
 // 下载CSV模板
-const downloadCsvTemplate = () => {
-  exportTemplate(TEMPLATE_HEADERS, 'csv', 'basestation_template')
+const downloadCsvTemplate = async () => {
+  beginPipeline('正在下载模板...')
+  try {
+    await exportTemplate(TEMPLATE_HEADERS, 'csv', 'basestation_template', pipelineReporter)
+  } finally {
+    endPipeline()
+  }
 }
 
 // 下载XLSX模板
-const downloadXlsxTemplate = () => {
-  exportTemplate(TEMPLATE_HEADERS, 'xlsx', 'basestation_template')
+const downloadXlsxTemplate = async () => {
+  beginPipeline('正在下载模板...')
+  try {
+    await exportTemplate(TEMPLATE_HEADERS, 'xlsx', 'basestation_template', pipelineReporter)
+  } finally {
+    endPipeline()
+  }
 }
 
 // 生成KML文件

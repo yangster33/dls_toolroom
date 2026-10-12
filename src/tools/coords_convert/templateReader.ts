@@ -3,6 +3,7 @@
  */
 import { readAndValidateTemplate as readGenericTemplate } from '@/utils/TemplateReader'
 import { parseStrictNumber } from '@/utils/coordinateValue'
+import type { ProgressCallback } from '@/utils/progress'
 
 // 批量坐标转换的表头（原地迁移自已删除的 templateExporter.ts）
 export const COORD_CONVERT_HEADERS = ['名称', '经度/X（必填）', '纬度/Y（必填）']
@@ -20,10 +21,12 @@ export interface CoordReadResult {
 
 /**
  * 读取并验证坐标转换模板
+ * @param onProgress 进度回调（C4 阶段 2，可选）
  */
 export async function readAndValidateCoordTemplate(
   file: File,
   coordinateSystemType: string,
+  onProgress?: ProgressCallback,
 ): Promise<CoordReadResult> {
   const result: CoordReadResult = {
     isValid: false,
@@ -45,6 +48,7 @@ export async function readAndValidateCoordTemplate(
 
     const templateResult = await readGenericTemplate(file, COORD_CONVERT_HEADERS, {
       validateRow: (row) => validateCoordRow(row, isLngLatMode, isXYMode),
+      onProgress,
     })
 
     if (!templateResult.isValid) {

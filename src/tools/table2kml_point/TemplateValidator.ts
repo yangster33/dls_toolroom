@@ -4,6 +4,7 @@
 import { parseColor } from './ColorParser'
 import { parseStrictNumber } from '@/utils/coordinateValue'
 import { TEMPLATE_HEADERS } from './TemplateExporter'
+import type { ProgressCallback } from '@/utils/progress'
 
 export interface PointRow {
   name: string
@@ -25,8 +26,12 @@ export interface TableKmlReadResult {
 
 /**
  * 验证并读取 KML 模板数据
+ * @param onProgress 进度回调（C4 阶段 2，可选）
  */
-export async function readAndValidateKmlTemplate(file: File): Promise<TableKmlReadResult> {
+export async function readAndValidateKmlTemplate(
+  file: File,
+  onProgress?: ProgressCallback,
+): Promise<TableKmlReadResult> {
   const result: TableKmlReadResult = { isValid: false, points: [], errors: [] }
 
   try {
@@ -34,6 +39,7 @@ export async function readAndValidateKmlTemplate(file: File): Promise<TableKmlRe
 
     const templateResult = await readAndValidateTemplate(file, TEMPLATE_HEADERS, {
       validateRow: (row) => validateKmlRow(row as Record<string, unknown>),
+      onProgress,
     })
 
     if (!templateResult.isValid) {

@@ -85,16 +85,29 @@
       :message="error"
       @close="closeErrorDialog"
     />
+
+    <!-- 导出进度弹窗（C4 阶段 2 / P2-20） -->
+    <ProgressModal
+      :is-open="pipelineProgress.open"
+      :title="pipelineProgress.title"
+      :percent="pipelineProgress.percent"
+      :message="pipelineProgress.message"
+      :remaining-time="pipelineTimer.remainingText.value"
+      :show-cancel="false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { getToolById } from '../toolData'
 import { elevationService } from '../elevation_query/elevationService'
 import { exportData } from '@/utils/TemplateExporter'
 import { parseStrictNumber } from '@/utils/coordinateValue'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
+import ProgressModal from '@/components/common/ProgressModal.vue'
+import { useProgressTimer } from '@/composables/useProgressTimer'
+import type { ProgressCallback } from '@/utils/progress'
 
 const toolConfig = getToolById('elevations_convert')
 
@@ -112,6 +125,26 @@ interface ElevationRow {
 const results = ref<ElevationRow[]>([])
 const error = ref<string>('')
 const errorDialogOpen = ref(false)
+
+// 导出进度（C4 阶段 2 / P2-20）
+const pipelineProgress = reactive({ open: false, title: '正在处理...', percent: 0, message: '' })
+const pipelineTimer = useProgressTimer()
+
+function beginPipeline(title: string) {
+  pipelineProgress.open = true
+  pipelineProgress.title = title
+  pipelineProgress.percent = 0
+  pipelineProgress.message = ''
+  pipelineTimer.start()
+}
+function endPipeline() {
+  pipelineProgress.open = false
+}
+const pipelineReporter: ProgressCallback = (percent, message) => {
+  pipelineProgress.percent = percent
+  pipelineProgress.message = message
+  pipelineTimer.update(percent)
+}
 
 interface ParsedPoint {
   longitude: number
@@ -221,7 +254,7 @@ const clearAll = () => {
   error.value = ''
 }
 
-const exportResults = () => {
+const exportResults = async () => {
   const headers = ['序号', '经度', '纬度', '海拔高度', '状态']
   const dataRows = results.value.map((result, index) => [
     (index + 1).toString(),
@@ -233,6 +266,11 @@ const exportResults = () => {
     result.error ? '失败' : '成功',
   ])
 
-  exportData(headers, dataRows, 'xlsx', '批量高程查询结果')
+  beginPipeline('正在导出结果...')
+  try {
+    await exportData(headers, dataRows, 'xlsx', '批量高程查询结果', pipelineReporter)
+  } finally {
+    endPipeline()
+  }
 }
 </script>

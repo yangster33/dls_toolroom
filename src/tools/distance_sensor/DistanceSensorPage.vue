@@ -423,7 +423,7 @@
     </div>
   </div>
 
-  <!-- 进度弹窗 -->
+  <!-- 匹配计算进度弹窗 -->
   <ProgressModal
     :is-open="isMatching"
     title="距离匹配计算中..."
@@ -432,12 +432,23 @@
     :remaining-time="progressTimer.remainingText.value"
     @cancel="cancelMatch"
   />
+
+  <!-- 导入/导出进度弹窗（与匹配进度相互独立） -->
+  <ProgressModal
+    :is-open="ioProgress.open"
+    :title="ioProgress.title"
+    :percent="ioProgress.percent"
+    :message="ioProgress.message"
+    :remaining-time="ioTimer.remainingText.value"
+    :show-cancel="false"
+  />
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, reactive } from 'vue'
 import * as XLSX from 'xlsx'
 import { exportTemplate, exportData } from '@/utils/TemplateExporter'
+import type { ProgressCallback } from '@/utils/progress'
 import { logger } from '@/utils/logger'
 import { getToolById } from '../toolData'
 import { parseCSV } from '@/utils/CsvParser'
@@ -493,10 +504,32 @@ const matchResult = ref<MatchResult | null>(null)
 const isMatching = ref(false)
 const abortController = ref<AbortController | null>(null)
 
-// 进度
+// 进度（匹配计算用，保留不动）
 const progressPercent = ref(0)
 const progressMessage = ref('')
 const progressTimer = useProgressTimer()
+
+// 导入/导出进度（与匹配进度相互独立的 ui/进度状态）
+const ioProgress = reactive({ open: false, title: '正在处理...', percent: 0, message: '' })
+const ioTimer = useProgressTimer()
+
+function beginIo(title: string) {
+  ioProgress.open = true
+  ioProgress.title = title
+  ioProgress.percent = 0
+  ioProgress.message = ''
+  ioTimer.start()
+}
+
+function endIo() {
+  ioProgress.open = false
+}
+
+const ioReporter: ProgressCallback = (percent, message) => {
+  ioProgress.percent = percent
+  ioProgress.message = message
+  ioTimer.update(percent)
+}
 
 // 错误对话框状态
 const errorDialogOpen = ref(false)
@@ -550,13 +583,23 @@ watch(matchCount, (newVal) => {
 })
 
 // 下载同站址模板
-const downloadSameSiteTemplate = (format: 'csv' | 'xlsx' = 'csv') => {
-  exportTemplate(SAME_SITE_HEADERS, format, '同站址距离匹配模板')
+const downloadSameSiteTemplate = async (format: 'csv' | 'xlsx' = 'csv') => {
+  beginIo('正在导出模板...')
+  try {
+    await exportTemplate(SAME_SITE_HEADERS, format, '同站址距离匹配模板', ioReporter)
+  } finally {
+    endIo()
+  }
 }
 
 // 下载异站址模板
-const downloadDifferentSiteTemplate = (format: 'csv' | 'xlsx' = 'csv') => {
-  exportTemplate(DIFFERENT_SITE_HEADERS, format, '异站址距离匹配模板')
+const downloadDifferentSiteTemplate = async (format: 'csv' | 'xlsx' = 'csv') => {
+  beginIo('正在导出模板...')
+  try {
+    await exportTemplate(DIFFERENT_SITE_HEADERS, format, '异站址距离匹配模板', ioReporter)
+  } finally {
+    endIo()
+  }
 }
 
 // 处理文件上传
@@ -565,6 +608,7 @@ const onFileUpload = async (event: Event) => {
   const file = target.files?.[0]
   if (!file) return
 
+  beginIo('正在导入数据...')
   try {
     let rows: Record<string, string | number>[]
     let columns: string[]
@@ -587,7 +631,7 @@ const onFileUpload = async (event: Event) => {
       // 不能用默认的对象模式：它不给空单元格建 key，第一条数据的
       // data2 三列为空时会被误判成 3 列（同站址）。（审计 C1 / P1-6）
       const aoa = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][]
-      const parsed = aoaToTemplateRows(aoa)
+      const parsed = await aoaToTemplateRows(aoa, ioReporter)
       rows = parsed.rows
       columns = parsed.columns
     } else {
@@ -619,6 +663,8 @@ const onFileUpload = async (event: Event) => {
       mode: 'same-site',
     }
     showErrorDialog('error', '文件读取失败', '请确保文件格式正确')
+  } finally {
+    endIo()
   }
 }
 
@@ -671,7 +717,7 @@ const executeMatch = async () => {
 }
 
 // 下载匹配结果
-const downloadResult = (format: 'csv' | 'xlsx' = 'csv') => {
+const downloadResult = async (format: 'csv' | 'xlsx' = 'csv') => {
   if (!matchResult.value || !validationResult.value) return
 
   const headers = getResultHeaders(validationResult.value.mode, matchCount.value)
@@ -688,7 +734,12 @@ const downloadResult = (format: 'csv' | 'xlsx' = 'csv') => {
     matchCount.value,
   )
 
-  exportData(headers, rows, format, '距离匹配结果')
+  beginIo('正在导出结果...')
+  try {
+    await exportData(headers, rows, format, '距离匹配结果', ioReporter)
+  } finally {
+    endIo()
+  }
 }
 
 // 清除所有数据

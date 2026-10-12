@@ -31,30 +31,30 @@ const SAME_SITE_AOA = [
 ]
 
 /** 走真实 xlsx 库：aoa → sheet → sheet_to_json(header:1) → 整形 */
-function roundTripViaXlsx(aoa: unknown[][]) {
+async function roundTripViaXlsx(aoa: unknown[][]) {
   const worksheet = XLSX.utils.aoa_to_sheet(aoa)
   const matrix = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][]
   return aoaToTemplateRows(matrix)
 }
 
 describe('aoaToTemplateRows', () => {
-  it('列名来自表头行，而不是数据行', () => {
-    const { columns, rows } = aoaToTemplateRows(DIFFERENT_SITE_AOA)
+  it('列名来自表头行，而不是数据行', async () => {
+    const { columns, rows } = await aoaToTemplateRows(DIFFERENT_SITE_AOA)
     expect(columns).toHaveLength(6)
     // 即便某行单元格为空，每行也必须带齐全部表头 key
     expect(Object.keys(rows[0]!)).toHaveLength(6)
     expect(Object.keys(rows[1]!)).toHaveLength(6)
   })
 
-  it('空单元格补为空串，不是 undefined', () => {
-    const { rows } = aoaToTemplateRows(DIFFERENT_SITE_AOA)
+  it('空单元格补为空串，不是 undefined', async () => {
+    const { rows } = await aoaToTemplateRows(DIFFERENT_SITE_AOA)
     expect(rows[0]!['名称2']).toBe('')
     expect(rows[0]!['经度2']).toBe('')
     expect(rows[0]!['纬度2']).toBe('')
   })
 
-  it('整行为空的行被跳过', () => {
-    const { rows } = aoaToTemplateRows([
+  it('整行为空的行被跳过', async () => {
+    const { rows } = await aoaToTemplateRows([
       ['名称', '经度', '纬度'],
       ['', '', ''],
       ['丙地', '116.4', '39.9'],
@@ -62,22 +62,46 @@ describe('aoaToTemplateRows', () => {
     expect(rows).toHaveLength(1)
   })
 
-  it('数据行短于表头时不越界', () => {
-    const { rows, columns } = aoaToTemplateRows([['a', 'b', 'c'], ['x']])
+  it('数据行短于表头时不越界', async () => {
+    const { rows, columns } = await aoaToTemplateRows([['a', 'b', 'c'], ['x']])
     expect(columns).toHaveLength(3)
     expect(rows[0]).toEqual({ a: 'x', b: '', c: '' })
   })
 
-  it('columnsFromRows 从行对象读表头', () => {
-    const { rows } = aoaToTemplateRows(SAME_SITE_AOA)
+  it('columnsFromRows 从行对象读表头', async () => {
+    const { rows } = await aoaToTemplateRows(SAME_SITE_AOA)
     expect(columnsFromRows(rows)).toEqual(['名称', '经度', '纬度'])
     expect(columnsFromRows([])).toEqual([])
+  })
+
+  it('传入 onProgress 时回调被调用，percent 单调不减且末次为 100', async () => {
+    // ≥1200 行：跨过 ROW_YIELD_INTERVAL(500) 的让出分片，覆盖多片进度上报
+    const dataRowCount = 1200
+    const aoa: unknown[][] = [['名称', '经度', '纬度']]
+    for (let i = 0; i < dataRowCount; i++) {
+      aoa.push([`站${i}`, String(116 + i * 0.0001), String(39 + i * 0.0001)])
+    }
+
+    const percents: number[] = []
+    const result = await aoaToTemplateRows(aoa, (percent) => {
+      percents.push(percent)
+    })
+
+    // 回调确实被调用
+    expect(percents.length).toBeGreaterThan(0)
+    expect(result.rows).toHaveLength(dataRowCount)
+    // percent 单调不减
+    for (let i = 1; i < percents.length; i++) {
+      expect(percents[i]!).toBeGreaterThanOrEqual(percents[i - 1]!)
+    }
+    // 末次上报 100
+    expect(percents[percents.length - 1]).toBe(100)
   })
 })
 
 describe('异站址模板：首行 data2 为空（审计 C1 核心用例）', () => {
-  it('正确识别为异站址模式，而不是同站址', () => {
-    const { columns, rows } = roundTripViaXlsx(DIFFERENT_SITE_AOA)
+  it('正确识别为异站址模式，而不是同站址', async () => {
+    const { columns, rows } = await roundTripViaXlsx(DIFFERENT_SITE_AOA)
     const result = readAndValidateTemplate(rows, columns)
 
     expect(result.mode).toBe('different-site')
@@ -85,8 +109,8 @@ describe('异站址模板：首行 data2 为空（审计 C1 核心用例）', ()
     expect(result.errors).toEqual([])
   })
 
-  it('两组数据量正确：目标集 2 条、源集 1 条', () => {
-    const { columns, rows } = roundTripViaXlsx(DIFFERENT_SITE_AOA)
+  it('两组数据量正确：目标集 2 条、源集 1 条', async () => {
+    const { columns, rows } = await roundTripViaXlsx(DIFFERENT_SITE_AOA)
     const result = readAndValidateTemplate(rows, columns)
 
     expect(result.data1.map((p) => p.name)).toEqual(['甲地', '乙地'])
@@ -122,8 +146,8 @@ describe('异站址模板：首行 data2 为空（审计 C1 核心用例）', ()
 })
 
 describe('同站址模板', () => {
-  it('3 列仍识别为同站址', () => {
-    const { columns, rows } = roundTripViaXlsx(SAME_SITE_AOA)
+  it('3 列仍识别为同站址', async () => {
+    const { columns, rows } = await roundTripViaXlsx(SAME_SITE_AOA)
     const result = readAndValidateTemplate(rows, columns)
 
     expect(result.mode).toBe('same-site')

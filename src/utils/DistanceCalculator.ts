@@ -37,9 +37,10 @@ export interface SiteMatchResult {
   }>
 }
 
-export interface ProgressCallback {
-  (progress: number, message: string): void
-}
+import type { ProgressCallback as SharedProgressCallback } from './progress'
+
+/** 进度回调（P3-4 收敛）：统一指向 `@/utils/progress` */
+export type ProgressCallback = SharedProgressCallback
 
 /** 匹配算法可调配置 */
 export interface MatchConfig {

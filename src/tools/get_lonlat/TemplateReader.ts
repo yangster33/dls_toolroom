@@ -1,4 +1,9 @@
 import type { TemplateValidationResult } from '@/utils/templateHandler'
+import { yieldToUI } from '@/utils/yieldToUI'
+import type { ProgressCallback } from '@/utils/progress'
+
+/** 行循环的让出粒度（C4 阶段 2） */
+const ROW_YIELD_INTERVAL = 500
 
 // 定义地址数据类型 - 去掉名称
 export interface FullAddress {
@@ -52,14 +57,21 @@ function validateRow(
   }
 }
 
-// 读取并验证模板数据
-export function readAndValidateTemplate(
+// 读取并验证模板数据（C4 阶段 2：改为 async 并支持进度回调）
+export async function readAndValidateTemplate(
   rows: Record<string, string | number>[],
-): TemplateValidationResult<FullAddress> {
+  onProgress?: ProgressCallback,
+): Promise<TemplateValidationResult<FullAddress>> {
   const data: FullAddress[] = []
   const errors: string[] = []
 
   for (let i = 0; i < rows.length; i++) {
+    if (i % ROW_YIELD_INTERVAL === 0) {
+      await yieldToUI()
+    }
+    const percent = rows.length > 0 ? Math.round((i / rows.length) * 100) : 100
+    onProgress?.(Math.min(99, percent), `正在校验第 ${i + 1} 行...`)
+
     const row = rows[i]
     if (!row) continue
 
@@ -72,6 +84,7 @@ export function readAndValidateTemplate(
     }
   }
 
+  onProgress?.(100, '校验完成')
   return {
     isValid: errors.length === 0 && data.length > 0,
     data,

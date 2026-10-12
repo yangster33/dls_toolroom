@@ -4,6 +4,14 @@
  */
 import * as XLSX from 'xlsx'
 import { pushAll } from './arrayUtils'
+import { yieldToUI } from './yieldToUI'
+import type { ProgressCallback } from './progress'
+
+/**
+ * 行循环的让出粒度：每处理这么多行让出一次主线程。
+ * 按**批**而非逐行：逐行 yield 会产生几万次微任务，反而拖慢整体吞吐（计划风险 R4）。
+ */
+const ROW_YIELD_INTERVAL = 500
 
 /**
  * 单元格值类型
@@ -40,6 +48,8 @@ export async function readAndValidateTemplate(
   options?: {
     validateRow?: (row: DataRow, rowIndex: number) => string[]
     skipEmptyRows?: boolean
+    /** 进度回调（C4 阶段 2）。不传则行为与改造前完全一致 */
+    onProgress?: ProgressCallback
   },
 ): Promise<TemplateReadResult> {
   const result: TemplateReadResult = {
@@ -49,11 +59,13 @@ export async function readAndValidateTemplate(
     rawData: [],
   }
 
-  const { validateRow, skipEmptyRows = true } = options || {}
+  const { validateRow, skipEmptyRows = true, onProgress } = options || {}
 
   try {
     // 1. 读取文件
+    onProgress?.(0, '正在读取文件...')
     const arrayBuffer = await file.arrayBuffer()
+    onProgress?.(20, '正在解析表格...')
     const workbook = XLSX.read(arrayBuffer, { type: 'array' })
 
     // 获取第一个工作表
@@ -98,7 +110,28 @@ export async function readAndValidateTemplate(
     })
 
     // 3. 遍历数据行
+    // XLSX.read + sheet_to_json 是不可中断的同步块，先让出一帧，
+    // 让 UI 把「正在校验数据」画出来（审计缺陷 B 的同类问题）。
+    onProgress?.(30, '正在校验数据...')
+    await yieldToUI()
+
+    const totalRows = rawData.length - 1
+    let lastReportedPercent = 30
+
     for (let rowIndex = 1; rowIndex < rawData.length; rowIndex++) {
+      // 让出放在循环**开头**：校验失败的行会 `continue`，放在结尾会被整批跳过，
+      // 一份「全是坏行」的文件就会退化成同步阻塞。
+      if ((rowIndex - 1) % ROW_YIELD_INTERVAL === 0) {
+        await yieldToUI()
+      }
+      if (totalRows > 0) {
+        const percent = Math.round(((rowIndex - 1) / totalRows) * 70) + 30
+        if (percent !== lastReportedPercent) {
+          lastReportedPercent = percent
+          onProgress?.(Math.min(99, percent), `正在校验第 ${rowIndex + 1} 行...`)
+        }
+      }
+
       const rawRow = rawData[rowIndex]!
       const rowNum = rowIndex + 1
 
@@ -134,6 +167,7 @@ export async function readAndValidateTemplate(
     }
 
     // 4. 最终判定
+    onProgress?.(100, '校验完成')
     result.isValid = result.errors.length === 0
     return result
   } catch (error) {
@@ -147,14 +181,20 @@ export async function readAndValidateTemplate(
 /**
  * 读取模板文件（不进行验证）
  * @param file 上传的 File 对象
+ * @param onProgress 进度回调（C4 阶段 2，可选）
  * @returns 原始数据
  */
-export async function readTemplate(file: File): Promise<{
+export async function readTemplate(
+  file: File,
+  onProgress?: ProgressCallback,
+): Promise<{
   headers: CellValue[]
   dataRows: DataRow[]
   rawData: CellValue[][]
 }> {
+  onProgress?.(0, '正在读取文件...')
   const arrayBuffer = await file.arrayBuffer()
+  onProgress?.(20, '正在解析表格...')
   const workbook = XLSX.read(arrayBuffer, { type: 'array' })
 
   const firstSheetName = workbook.SheetNames[0]
@@ -176,7 +216,24 @@ export async function readTemplate(file: File): Promise<{
   const headers = rawData[0] || []
   const dataRows: DataRow[] = []
 
+  onProgress?.(30, '正在整理数据...')
+  await yieldToUI()
+
+  const totalRows = rawData.length - 1
+  let lastReportedPercent = 30
+
   for (let i = 1; i < rawData.length; i++) {
+    if ((i - 1) % ROW_YIELD_INTERVAL === 0) {
+      await yieldToUI()
+    }
+    if (totalRows > 0) {
+      const percent = Math.round(((i - 1) / totalRows) * 70) + 30
+      if (percent !== lastReportedPercent) {
+        lastReportedPercent = percent
+        onProgress?.(Math.min(99, percent), `正在整理第 ${i + 1} 行...`)
+      }
+    }
+
     const row = rawData[i]
     if (
       !row ||
@@ -192,5 +249,6 @@ export async function readTemplate(file: File): Promise<{
     dataRows.push(rowData)
   }
 
+  onProgress?.(100, '整理完成')
   return { headers, dataRows, rawData }
 }

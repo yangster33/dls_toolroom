@@ -9,6 +9,7 @@ import {
 } from '@/utils/TemplateReader'
 import { TEMPLATE_HEADERS } from './TemplateExporter'
 import { parseStrictNumber } from '@/utils/coordinateValue'
+import type { ProgressCallback } from '@/utils/progress'
 
 export interface BasestationRow {
   [key: string]: string | number | undefined
@@ -145,13 +146,16 @@ export function validateRow(row: DataRow, _rowIndex: number): string[] {
 
 /**
  * 读取并验证基站扇区模板
+ * @param onProgress 进度回调（C4 阶段 2，可选）
  */
 export async function readAndValidateBasestationTemplate(
   file: File,
+  onProgress?: ProgressCallback,
 ): Promise<BasestationReadResult> {
   const result = await readAndValidateTemplate(file, TEMPLATE_HEADERS, {
     validateRow,
     skipEmptyRows: true,
+    onProgress,
   })
 
   // 转换数据类型

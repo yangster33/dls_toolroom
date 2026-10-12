@@ -1,6 +1,24 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import * as XLSX from 'xlsx'
 import { readAndValidateTemplate, readTemplate } from '../TemplateReader'
+
+/** 统计一次调用期间的「让出主线程」次数（yieldToUI 走 setTimeout(fn, 0)） */
+function countYields() {
+  const realSetTimeout = globalThis.setTimeout.bind(globalThis)
+  let zeroDelayCalls = 0
+  const spy = vi.spyOn(globalThis, 'setTimeout').mockImplementation(((
+    fn: () => void,
+    ms?: number,
+  ) => {
+    if (ms === 0) zeroDelayCalls++
+    return realSetTimeout(fn, ms)
+  }) as unknown as typeof setTimeout)
+  return { getCount: () => zeroDelayCalls, restore: () => spy.mockRestore() }
+}
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 function makeCsvFile(content: string, name = '模板.csv'): File {
   return new File(['\uFEFF' + content], name, { type: 'text/csv' })
@@ -131,5 +149,71 @@ describe('readTemplate', () => {
     const file = makeCsvFile('')
     const result = await readTemplate(file)
     expect(result.dataRows).toEqual([])
+  })
+
+  it('readTemplate 支持 onProgress（末次为 100）', async () => {
+    const reports: number[] = []
+    const result = await readTemplate(makeCsvFile('名称,经度\n站点A,116.4'), (percent) =>
+      reports.push(percent),
+    )
+    expect(result.dataRows).toHaveLength(1)
+    expect(reports[reports.length - 1]).toBe(100)
+  })
+})
+
+describe('C4 阶段 2：读表进度与分片让出', () => {
+  const headers = ['名称', '经度', '纬度']
+
+  function bigCsv(rows: number): File {
+    const body = Array.from({ length: rows }, (_, i) => `站点${i},116.4,39.9`).join('\n')
+    return makeCsvFile(`名称,经度,纬度\n${body}`)
+  }
+
+  it('onProgress 上报 0→100，整数、单调不减', async () => {
+    const reports: number[] = []
+    const result = await readAndValidateTemplate(bigCsv(1200), headers, {
+      onProgress: (percent) => reports.push(percent),
+    })
+
+    expect(result.isValid).toBe(true)
+    expect(result.dataRows).toHaveLength(1200)
+    expect(reports[0]).toBe(0)
+    expect(reports[reports.length - 1]).toBe(100)
+    for (let i = 1; i < reports.length; i++) {
+      expect(reports[i]!).toBeGreaterThanOrEqual(reports[i - 1]!)
+    }
+    for (const p of reports) {
+      expect(Number.isInteger(p)).toBe(true)
+    }
+  })
+
+  it('1200 行至少 yield 3 次（控制权真的交还事件循环）', async () => {
+    const counter = countYields()
+    try {
+      await readAndValidateTemplate(bigCsv(1200), headers)
+    } finally {
+      counter.restore()
+    }
+    // 让出粒度 500 行：index 0 / 500 / 1000
+    expect(counter.getCount()).toBeGreaterThanOrEqual(3)
+  })
+
+  it('全部行校验失败时仍让出（让出在循环开头，不会被 continue 吞掉）', async () => {
+    const counter = countYields()
+    try {
+      await readAndValidateTemplate(bigCsv(1200), headers, {
+        validateRow: () => ['永远失败'],
+      })
+    } finally {
+      counter.restore()
+    }
+    // 反证点：若让出写在循环结尾，1200 行全部 continue → 一次都不让出，断言变红
+    expect(counter.getCount()).toBeGreaterThanOrEqual(3)
+  })
+
+  it('不传 onProgress 时行为与改造前一致', async () => {
+    const result = await readAndValidateTemplate(bigCsv(10), headers)
+    expect(result.isValid).toBe(true)
+    expect(result.dataRows).toHaveLength(10)
   })
 })

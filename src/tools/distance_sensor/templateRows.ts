@@ -12,6 +12,8 @@
  * 本模块把 `sheet_to_json(ws, { header: 1 })` 的二维数组整成行对象，
  * 保证每一行都带齐全部表头 key（空单元格补 ''），XLSX 与 CSV 行为一致。
  */
+import { yieldToUI } from '@/utils/yieldToUI'
+import type { ProgressCallback } from '@/utils/progress'
 
 /** 表头为空时的占位 key（保持列序，不会让某列凭空消失） */
 function normalizeHeader(cell: unknown): string {
@@ -24,20 +26,39 @@ function isBlankRow(raw: readonly unknown[] | undefined): boolean {
   return raw.every((v) => v === undefined || v === null || String(v).trim() === '')
 }
 
+/** 行循环的让出粒度（C4 阶段 2）：按批而非逐行 */
+const ROW_YIELD_INTERVAL = 500
+
 /**
  * `sheet_to_json(ws, { header: 1 })` 的二维数组 → { columns, rows }
  *
+ * C4 阶段 2：改为 async 并支持进度回调；大表逐行整形时按批让出主线程。
+ *
  * @param aoa 二维数组，第 0 行是表头
+ * @param onProgress 进度回调（可选，不传则行为不变）
  */
-export function aoaToTemplateRows(aoa: readonly unknown[][]): {
+export async function aoaToTemplateRows(
+  aoa: readonly unknown[][],
+  onProgress?: ProgressCallback,
+): Promise<{
   columns: string[]
   rows: Record<string, string | number>[]
-} {
+}> {
   const headerRow = aoa[0] ?? []
   const columns = headerRow.map(normalizeHeader)
 
   const rows: Record<string, string | number>[] = []
-  for (const raw of aoa.slice(1)) {
+  const body = aoa.slice(1)
+  const total = body.length
+
+  for (let i = 0; i < total; i++) {
+    if (i % ROW_YIELD_INTERVAL === 0) {
+      await yieldToUI()
+    }
+    const percent = total > 0 ? Math.round((i / total) * 100) : 100
+    onProgress?.(Math.min(99, percent), `正在整理第 ${i + 1} 行...`)
+
+    const raw = body[i]
     if (isBlankRow(raw)) continue
 
     const row: Record<string, string | number> = {}
@@ -48,6 +69,7 @@ export function aoaToTemplateRows(aoa: readonly unknown[][]): {
     rows.push(row)
   }
 
+  onProgress?.(100, '整理完成')
   return { columns, rows }
 }
 

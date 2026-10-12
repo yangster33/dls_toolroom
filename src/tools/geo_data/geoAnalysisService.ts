@@ -15,9 +15,10 @@ function asLineFeature(value: unknown): Feature<LineString, GeoJSON.GeoJsonPrope
   return value as Feature<LineString, GeoJSON.GeoJsonProperties>
 }
 
-export interface AnalysisProgressCallback {
-  (progress: number, taskName: string): void
-}
+import type { ProgressCallback as SharedProgressCallback } from '@/utils/progress'
+
+/** 进度回调（P3-4 收敛）：统一指向 `@/utils/progress` */
+export type AnalysisProgressCallback = SharedProgressCallback
 
 export interface AnalysisCancelCallback {
   (): boolean
