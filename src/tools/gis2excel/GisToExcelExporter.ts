@@ -1,6 +1,18 @@
 import * as XLSX from 'xlsx'
 import type { GisFeature } from './GisFileReader'
 import { maxOf } from '@/utils/arrayUtils'
+import { yieldToUI } from '@/utils/yieldToUI'
+
+/**
+ * 分文件下载之间的让出间隔。
+ *
+ * 历史代码这里是 `setTimeout(() => {}, 200)` —— **未 await、空回调、在 forEach 里**，
+ * 是一个"看起来让出了其实完全没有"的伪 yield（审计缺陷 A）。留着一个骗人的 yield
+ * 比没有更糟：后人会以为这里已经让出过了。
+ * 现在改为真正 await：既保留 200ms 的下载间隔意图（浏览器对连续程序化下载可能丢包），
+ * 又真的把控制权交还主线程。
+ */
+const DOWNLOAD_YIELD_MS = 200
 
 export interface ExportOptions {
   lonLatSeparator: string
@@ -117,41 +129,51 @@ function triggerDownload(content: string | Blob, filename: string, type: 'csv' |
   }, 100)
 }
 
-export function exportToExcel(
+export async function exportToExcel(
   groupedFeatures: GisFeature[][],
   format: 'xlsx' | 'csv',
   options: ExportOptions,
-): void {
+): Promise<void> {
   if (format === 'xlsx') {
-    exportToXlsx(groupedFeatures, options)
+    await exportToXlsx(groupedFeatures, options)
   } else {
-    exportToCsv(groupedFeatures, options)
+    await exportToCsv(groupedFeatures, options)
   }
 }
 
-export function exportSeparateFiles(
+export async function exportSeparateFiles(
   groupedFeatures: GisFeature[][],
   format: 'xlsx' | 'csv',
   options: ExportOptions,
-): void {
-  groupedFeatures.forEach((features) => {
-    if (features.length === 0 || !features[0]) return
+): Promise<void> {
+  for (const [groupIndex, features] of groupedFeatures.entries()) {
+    // 组与组之间让出主线程（第一组除外：它仍发生在点击的同一个任务里，
+    // 保留用户手势上下文，Safari 对"跨任务边界才触发的下载"历史上会拦截）。
+    if (groupIndex > 0) {
+      await yieldToUI(DOWNLOAD_YIELD_MS)
+    }
+
+    if (features.length === 0 || !features[0]) continue
 
     const type = features[0].type
     const typeName = getTypeName(type)
     const filename = `gis_${typeName}`
 
     if (format === 'xlsx') {
-      exportSingleTypeToXlsx(features, type, filename, options)
+      await exportSingleTypeToXlsx(features, type, filename, options)
     } else {
       exportSingleTypeToCsv(features, type, filename, options)
     }
-
-    setTimeout(() => {}, 200)
-  })
+  }
 }
 
-function exportToXlsx(groupedFeatures: GisFeature[][], options: ExportOptions): void {
+async function exportToXlsx(
+  groupedFeatures: GisFeature[][],
+  options: ExportOptions,
+): Promise<void> {
+  // 先让出一帧：调用方（点击处理函数）可以先重绘"转换中"状态，再跑重活
+  await yieldToUI(0)
+
   const workbook = XLSX.utils.book_new()
 
   groupedFeatures.forEach((features) => {
@@ -278,12 +300,15 @@ function exportToCsv(groupedFeatures: GisFeature[][], options: ExportOptions): v
   triggerDownload(blob, 'gis_export', 'csv')
 }
 
-function exportSingleTypeToXlsx(
+async function exportSingleTypeToXlsx(
   features: GisFeature[],
   type: 'Point' | 'LineString' | 'Polygon',
   filename: string,
   options: ExportOptions,
-): void {
+): Promise<void> {
+  // 先让出一帧：分文件下载时，每份之间页面可交互
+  await yieldToUI(0)
+
   const workbook = XLSX.utils.book_new()
 
   const sheetName = getSheetName(type)

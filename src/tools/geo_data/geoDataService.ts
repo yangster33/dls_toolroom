@@ -3,6 +3,15 @@ import toGeoJSON from 'togeojson'
 import JSZip from 'jszip'
 import * as XLSX from 'xlsx'
 import type { Feature, LineString } from 'geojson'
+import { yieldToUI } from '@/utils/yieldToUI'
+
+/**
+ * 要素循环的让出粒度：每处理这么多要素让出一次主线程。
+ *
+ * 按**批**而非逐要素：逐要素 yield 会产生几万次微任务，反而拖慢整体吞吐
+ * （计划风险 R4）。500 与 TemplateReader 的分片粒度保持一致。
+ */
+const FEATURE_YIELD_INTERVAL = 500
 
 /**
  * turf.polygonToLine 的返回类型是
@@ -306,6 +315,9 @@ export async function parseKML(file: File, onProgress?: ProgressCallback): Promi
     }
 
     onProgress?.(50, '正在转换为 GeoJSON...')
+    // 让 UI 先把 50% 画出来：下面 toGeoJSON 是单一不可中断的同步块，
+    // 不先 yield 的话用户看到的是进度条冻结在转换前的旧值。
+    await yieldToUI()
     const geojson = toGeoJson.kml(xmlDoc)
 
     if (!geojson.features || geojson.features.length === 0) {
@@ -325,8 +337,15 @@ export async function parseKML(file: File, onProgress?: ProgressCallback): Promi
     let lineCount = 0
     let polygonCount = 0
 
-    geojson.features.forEach((feature: GeoJSON.Feature, index: number) => {
-      if (!feature.geometry) return
+    // 历史 Bug（审计缺陷 B）：这里是 `geojson.features.forEach`，forEach 内不可 await，
+    // onProgress 被同步调用几千次 —— 浏览器一次都重绘不了，用户看到进度条死在 70%，
+    // 直到整个循环跑完才一把跳 100%。改为 for...of，按批 yield + 按 1% 粒度上报。
+    const totalFeatures = geojson.features.length
+    let lastReportedPercent = 70
+
+    for (let index = 0; index < totalFeatures; index++) {
+      const feature = geojson.features[index]!
+      if (!feature.geometry) continue
 
       const name = (feature.properties?.name as string) || `要素_${index + 1}`
 
@@ -354,8 +373,21 @@ export async function parseKML(file: File, onProgress?: ProgressCallback): Promi
         })
       })
 
-      onProgress?.(70 + (index / geojson.features.length) * 30, `正在处理要素: ${name}`)
-    })
+      if (index % FEATURE_YIELD_INTERVAL === 0) {
+        await yieldToUI()
+      }
+
+      // 按 1% 粒度上报：5 万要素只会触发约 30 次回调，每次之间页面可交互。
+      // 阈值用原始浮点比较，上报值取整 —— 否则页面会渲染出 "71.0002%"。
+      const percent = 70 + ((index + 1) / totalFeatures) * 30
+      if (percent - lastReportedPercent >= 1 || index === totalFeatures - 1) {
+        lastReportedPercent = percent
+        onProgress?.(
+          index === totalFeatures - 1 ? 100 : Math.round(percent),
+          `正在处理要素: ${name}`,
+        )
+      }
+    }
 
     onProgress?.(100, '解析完成')
 
@@ -421,6 +453,7 @@ export async function parseKMZ(file: File, onProgress?: ProgressCallback): Promi
     }
 
     onProgress?.(80, '正在转换为 GeoJSON...')
+    await yieldToUI()
     const geojson = toGeoJson.kml(xmlDoc)
 
     const features: GeoFeature[] = []
@@ -428,9 +461,16 @@ export async function parseKMZ(file: File, onProgress?: ProgressCallback): Promi
     let lineCount = 0
     let polygonCount = 0
 
-    geojson.features.forEach((feature: GeoJSON.Feature, index: number) => {
+    // 与 parseKML 同一个历史 Bug（审计缺陷 B）：原本是同步 forEach，
+    // 且要素循环期间没有任何进度上报（卡在 80% 直到结束）。
+    // 改为 for...of + 按批 yield + 80→100 按 1% 粒度上报。
+    const totalFeatures = geojson.features.length
+    let lastReportedPercent = 80
+
+    for (let index = 0; index < totalFeatures; index++) {
+      const feature = geojson.features[index]!
       const geometryType = feature.geometry?.type
-      if (!geometryType) return
+      if (!geometryType) continue
 
       const name = (feature.properties?.name as string) || `要素_${index + 1}`
 
@@ -452,7 +492,7 @@ export async function parseKMZ(file: File, onProgress?: ProgressCallback): Promi
           polygonCount++
           break
         default:
-          return
+          continue
       }
 
       features.push({
@@ -463,7 +503,20 @@ export async function parseKMZ(file: File, onProgress?: ProgressCallback): Promi
         properties: feature.properties || {},
         feature,
       })
-    })
+
+      if (index % FEATURE_YIELD_INTERVAL === 0) {
+        await yieldToUI()
+      }
+
+      const percent = 80 + ((index + 1) / totalFeatures) * 20
+      if (percent - lastReportedPercent >= 1 || index === totalFeatures - 1) {
+        lastReportedPercent = percent
+        onProgress?.(
+          index === totalFeatures - 1 ? 100 : Math.round(percent),
+          `正在处理要素: ${name}`,
+        )
+      }
+    }
 
     onProgress?.(100, '解析完成')
 

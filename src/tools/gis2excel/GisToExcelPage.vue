@@ -181,17 +181,37 @@
             class="dropdown-content menu bg-base-100 rounded-box shadow-lg p-2 w-48 z-10"
           >
             <li>
-              <a @click="downloadAll('xlsx')" class="text-sm">Excel 格式（单文件）</a>
+              <a
+                @click="downloadAll('xlsx')"
+                class="text-sm"
+                :class="{ 'pointer-events-none opacity-50': isExporting }"
+                >Excel 格式（单文件）</a
+              >
             </li>
             <li>
-              <a @click="downloadAll('csv')" class="text-sm">CSV 格式（单文件）</a>
+              <a
+                @click="downloadAll('csv')"
+                class="text-sm"
+                :class="{ 'pointer-events-none opacity-50': isExporting }"
+                >CSV 格式（单文件）</a
+              >
             </li>
             <li class="divider"></li>
             <li>
-              <a @click="downloadSeparate('xlsx')" class="text-sm">Excel 格式（分文件）</a>
+              <a
+                @click="downloadSeparate('xlsx')"
+                class="text-sm"
+                :class="{ 'pointer-events-none opacity-50': isExporting }"
+                >Excel 格式（分文件）</a
+              >
             </li>
             <li>
-              <a @click="downloadSeparate('csv')" class="text-sm">CSV 格式（分文件）</a>
+              <a
+                @click="downloadSeparate('csv')"
+                class="text-sm"
+                :class="{ 'pointer-events-none opacity-50': isExporting }"
+                >CSV 格式（分文件）</a
+              >
             </li>
           </ul>
         </div>
@@ -260,6 +280,8 @@ const errorMessage = ref('')
 const progress = ref(0)
 const progressText = ref('')
 const isConverting = ref(false)
+/** 导出中的单飞标记：分文件下载现在按组 await yieldToUI，必须防止双击并发跑两个循环 */
+const isExporting = ref(false)
 const showAdvancedOptions = ref(false)
 const showError = ref(false)
 
@@ -350,8 +372,8 @@ async function handleConvert() {
   }
 }
 
-function downloadAll(format: 'xlsx' | 'csv') {
-  if (!convertedData.value) return
+async function downloadAll(format: 'xlsx' | 'csv') {
+  if (!convertedData.value || isExporting.value) return
 
   const options = {
     lonLatSeparator: advancedOptions.lonLatSeparator || ',',
@@ -361,11 +383,16 @@ function downloadAll(format: 'xlsx' | 'csv') {
     closePolygon: advancedOptions.closePolygon,
   }
 
-  exportToExcel(convertedData.value, format, options)
+  isExporting.value = true
+  try {
+    await exportToExcel(convertedData.value, format, options)
+  } finally {
+    isExporting.value = false
+  }
 }
 
-function downloadSeparate(format: 'xlsx' | 'csv') {
-  if (!convertedData.value) return
+async function downloadSeparate(format: 'xlsx' | 'csv') {
+  if (!convertedData.value || isExporting.value) return
 
   const options = {
     lonLatSeparator: advancedOptions.lonLatSeparator || ',',
@@ -375,7 +402,12 @@ function downloadSeparate(format: 'xlsx' | 'csv') {
     closePolygon: advancedOptions.closePolygon,
   }
 
-  exportSeparateFiles(convertedData.value, format, options)
+  isExporting.value = true
+  try {
+    await exportSeparateFiles(convertedData.value, format, options)
+  } finally {
+    isExporting.value = false
+  }
 }
 
 function handleClear() {

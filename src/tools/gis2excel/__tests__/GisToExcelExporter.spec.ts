@@ -103,7 +103,7 @@ describe('exportToExcel / exportSeparateFiles', () => {
       [makeFeature('Point', '站点A', '116.4,39.9')],
       [makeFeature('Polygon', '甲,乙', '1,2;3,4')],
     ]
-    exportToExcel(groups, 'csv', defaultOptions)
+    await exportToExcel(groups, 'csv', defaultOptions)
     expect(anchors[0]!.getAttribute('download')).toBe('gis_export.csv')
     const blob = createObjectURL.mock.calls[0]![0] as Blob
     const text = await blob.text()
@@ -116,32 +116,58 @@ describe('exportToExcel / exportSeparateFiles', () => {
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock')
   })
 
-  it('xlsx 导出：生成 xlsx Blob 并下载', () => {
-    exportToExcel([[makeFeature('Point', '站点A', '116.4,39.9')]], 'xlsx', defaultOptions)
+  it('xlsx 导出：生成 xlsx Blob 并下载', async () => {
+    const pending = exportToExcel(
+      [[makeFeature('Point', '站点A', '116.4,39.9')]],
+      'xlsx',
+      defaultOptions,
+    )
+    await vi.advanceTimersByTimeAsync(0)
+    await pending
     const blob = createObjectURL.mock.calls[0]![0] as Blob
     expect(blob.type).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     expect(anchors[0]!.getAttribute('download')).toBe('gis_export.xlsx')
   })
 
-  it('exportSeparateFiles：按类型分文件下载', async () => {
+  it('exportSeparateFiles：真的让出主线程，不再有伪 yield', async () => {
+    // 审计缺陷 A：旧实现是 `setTimeout(() => {}, 200)` —— 未 await、空回调、在 forEach 里，
+    // 所有文件在一次同步任务里全部下载完，"让出"从未发生。
+    // 现在每组之间 await yieldToUI(200)：第一份同步产出，第二份必须等定时器落地。
     const groups = [
       [makeFeature('Point', '站点A', '116.4,39.9')],
       [makeFeature('LineString', '线1', '1,2;3,4')],
     ]
-    exportSeparateFiles(groups, 'csv', defaultOptions)
+    const pending = exportSeparateFiles(groups, 'csv', defaultOptions)
+    expect(anchors.map((a) => a.getAttribute('download'))).toEqual(['gis_点.csv'])
+
+    await vi.advanceTimersByTimeAsync(200)
     expect(anchors.map((a) => a.getAttribute('download'))).toEqual(['gis_点.csv', 'gis_线.csv'])
+
+    await pending
     const text = await (createObjectURL.mock.calls[0]![0] as Blob).text()
     expect(text).toContain('站点A,"116.4,39.9",')
-    vi.advanceTimersByTime(200)
   })
 
-  it('exportSeparateFiles：xlsx 模式', () => {
-    exportSeparateFiles([[makeFeature('Point', '站点A', '116.4,39.9')]], 'xlsx', defaultOptions)
+  it('exportSeparateFiles：xlsx 模式', async () => {
+    const pending = exportSeparateFiles(
+      [[makeFeature('Point', '站点A', '116.4,39.9')]],
+      'xlsx',
+      defaultOptions,
+    )
+    await vi.advanceTimersByTimeAsync(0)
+    await pending
     expect(anchors[0]!.getAttribute('download')).toBe('gis_点.xlsx')
   })
 
-  it('空分组被跳过', () => {
-    exportSeparateFiles([[], [makeFeature('Point', 'a', '1,2')]], 'csv', defaultOptions)
+  it('空分组被跳过（且首组的 yield 不影响后续组）', async () => {
+    const pending = exportSeparateFiles(
+      [[], [makeFeature('Point', 'a', '1,2')]],
+      'csv',
+      defaultOptions,
+    )
+    expect(anchors).toHaveLength(0)
+    await vi.advanceTimersByTimeAsync(200)
+    await pending
     expect(anchors).toHaveLength(1)
   })
 })
