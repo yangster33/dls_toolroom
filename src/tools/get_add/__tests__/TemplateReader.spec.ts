@@ -68,6 +68,13 @@ describe('get_add TemplateReader - 空白单元格（P0-1 回归）', () => {
     expect(percents.length).toBeGreaterThan(0)
     expect(messages.length).toBe(percents.length)
 
+    // 首帧为 0：拒绝「只在结尾补一次 100」的假实现
+    expect(percents[0]).toBe(0)
+
+    // 分片粒度下必然出现多个中间值（1200 行 / 每 500 行一让出 → 至少 3 帧 + 末尾 100）
+    const intermediate = percents.filter((p) => p > 0 && p < 100)
+    expect(intermediate.length).toBeGreaterThanOrEqual(2)
+
     // 末次必为 100（校验完成）
     expect(percents[percents.length - 1]).toBe(100)
 

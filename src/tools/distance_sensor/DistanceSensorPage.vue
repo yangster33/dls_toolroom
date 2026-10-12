@@ -45,10 +45,20 @@
               class="dropdown-content menu bg-base-100 rounded-box shadow-lg p-2 w-48 z-10"
             >
               <li>
-                <a @click="downloadSameSiteTemplate('csv')" class="text-sm">CSV 格式</a>
+                <a
+                  @click="downloadSameSiteTemplate('csv')"
+                  class="text-sm"
+                  :class="{ 'pointer-events-none opacity-50': isMatching }"
+                  >CSV 格式</a
+                >
               </li>
               <li>
-                <a @click="downloadSameSiteTemplate('xlsx')" class="text-sm">Excel 格式</a>
+                <a
+                  @click="downloadSameSiteTemplate('xlsx')"
+                  class="text-sm"
+                  :class="{ 'pointer-events-none opacity-50': isMatching }"
+                  >Excel 格式</a
+                >
               </li>
             </ul>
           </div>
@@ -76,10 +86,20 @@
               class="dropdown-content menu bg-base-100 rounded-box shadow-lg p-2 w-48 z-10"
             >
               <li>
-                <a @click="downloadDifferentSiteTemplate('csv')" class="text-sm">CSV 格式</a>
+                <a
+                  @click="downloadDifferentSiteTemplate('csv')"
+                  class="text-sm"
+                  :class="{ 'pointer-events-none opacity-50': isMatching }"
+                  >CSV 格式</a
+                >
               </li>
               <li>
-                <a @click="downloadDifferentSiteTemplate('xlsx')" class="text-sm">Excel 格式</a>
+                <a
+                  @click="downloadDifferentSiteTemplate('xlsx')"
+                  class="text-sm"
+                  :class="{ 'pointer-events-none opacity-50': isMatching }"
+                  >Excel 格式</a
+                >
               </li>
             </ul>
           </div>
@@ -452,6 +472,7 @@ import type { ProgressCallback } from '@/utils/progress'
 import { logger } from '@/utils/logger'
 import { getToolById } from '../toolData'
 import { parseCSV } from '@/utils/CsvParser'
+import { yieldToUI } from '@/utils/yieldToUI'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
 import ProgressModal from '@/components/common/ProgressModal.vue'
 import { useProgressTimer } from '@/composables/useProgressTimer'
@@ -584,6 +605,8 @@ watch(matchCount, (newVal) => {
 
 // 下载同站址模板
 const downloadSameSiteTemplate = async (format: 'csv' | 'xlsx' = 'csv') => {
+  // 匹配进行中禁止触发：否则 ioProgress 弹窗会盖住匹配进度弹窗的“终止计算”按钮
+  if (isMatching.value) return
   beginIo('正在导出模板...')
   try {
     await exportTemplate(SAME_SITE_HEADERS, format, '同站址距离匹配模板', ioReporter)
@@ -594,6 +617,8 @@ const downloadSameSiteTemplate = async (format: 'csv' | 'xlsx' = 'csv') => {
 
 // 下载异站址模板
 const downloadDifferentSiteTemplate = async (format: 'csv' | 'xlsx' = 'csv') => {
+  // 匹配进行中禁止触发：否则 ioProgress 弹窗会盖住匹配进度弹窗的“终止计算”按钮
+  if (isMatching.value) return
   beginIo('正在导出模板...')
   try {
     await exportTemplate(DIFFERENT_SITE_HEADERS, format, '异站址距离匹配模板', ioReporter)
@@ -610,6 +635,13 @@ const onFileUpload = async (event: Event) => {
 
   beginIo('正在导入数据...')
   try {
+    // 先画进度文案并让出一帧：XLSX.read / sheet_to_json 是同步阻塞，
+    // 否则进度会冻结在 0% 整个解析阶段（C4 阶段 2 整改）。
+    ioProgress.percent = 10
+    ioProgress.message = '正在解析表格...'
+    ioTimer.update(10)
+    await yieldToUI()
+
     let rows: Record<string, string | number>[]
     let columns: string[]
 

@@ -37,7 +37,7 @@
               <a @click="downloadCsvTemplate" class="text-sm">CSV 格式</a>
             </li>
             <li>
-              <a @click="downloadXlsxTemplate" class="text-sm">Excel 格式</a>
+              <a @click="handleDownloadXlsxTemplate" class="text-sm">Excel 格式</a>
             </li>
           </ul>
         </div>
@@ -234,6 +234,15 @@ async function onFileUpload(event: Event) {
       `处理文件时发生错误：${err instanceof Error ? err.message : String(err)}`,
     ]
     showErrorDialog.value = true
+  } finally {
+    endPipeline()
+  }
+}
+
+async function handleDownloadXlsxTemplate() {
+  beginPipeline('正在导出模板...')
+  try {
+    await downloadXlsxTemplate(pipelineReporter)
   } finally {
     endPipeline()
   }

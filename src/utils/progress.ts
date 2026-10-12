@@ -15,6 +15,3 @@
  * 既有的 `(p, m) => …` 回调都会因严格函数类型而不兼容。
  */
 export type ProgressCallback = (percent: number, message: string) => void
-
-/** 默认 no-op：作为可选参数的默认值时用，避免调用方写 `?.()` 到处判空 */
-export const noopProgress: ProgressCallback = () => {}

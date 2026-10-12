@@ -591,6 +591,7 @@ import ErrorDialog from '@/components/common/ErrorDialog.vue'
 import ProgressModal from '@/components/common/ProgressModal.vue'
 import { useProgressTimer } from '@/composables/useProgressTimer'
 import type { ProgressCallback } from '@/utils/progress'
+import { yieldToUI } from '@/utils/yieldToUI'
 import { useGeocodeStore, type QueryOptions } from '@/stores/geocodeStore'
 
 type GeocodeMode = 'add' | 'lonlat'
@@ -903,6 +904,13 @@ const onFileUpload = async (event: Event) => {
 
   beginPipeline('正在解析文件...')
   try {
+    // 先画进度文案并让出一帧：XLSX.read / sheet_to_json 是同步阻塞，
+    // 否则进度会冻结在 0% 整个解析阶段（C4 阶段 2 整改）。
+    pipelineProgress.percent = 10
+    pipelineProgress.message = '正在解析表格...'
+    pipelineTimer.update(10)
+    await yieldToUI()
+
     let rows: Record<string, string | number>[]
 
     if (file.name.toLowerCase().endsWith('.xlsx')) {

@@ -89,6 +89,8 @@ describe('aoaToTemplateRows', () => {
 
     // 回调确实被调用
     expect(percents.length).toBeGreaterThan(0)
+    // 首帧为 0：拒绝「只在结尾补一次 100」的假实现
+    expect(percents[0]).toBe(0)
     expect(result.rows).toHaveLength(dataRowCount)
     // percent 单调不减
     for (let i = 1; i < percents.length; i++) {

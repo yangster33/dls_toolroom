@@ -146,6 +146,8 @@ describe('readAndValidateTemplate - 进度回调（C4 阶段 2 / P2-20）', () =
 
     // 回调至少被调用一次，且进度为整数、单调不减、收尾到 100
     expect(reports.length).toBeGreaterThan(0)
+    // 首帧为 0：拒绝「只在结尾补一次 100」的假实现
+    expect(reports[0]).toBe(0)
     expect(reports[reports.length - 1]).toBe(100)
     for (let i = 1; i < reports.length; i++) {
       expect(reports[i]!).toBeGreaterThanOrEqual(reports[i - 1]!)

@@ -52,21 +52,22 @@ afterEach(() => {
  *
  * 用 `Promise.race` 探测是否 settle，而不是「在 .then 里改局部变量再轮询」——
  * 后者会被 TS 控制流分析判定为恒定值而报 TS2367。
- * 每步只推进 1ms：不会误触动 100ms 的下载清理定时器，避免断言变假绿。
+ * 每步只推进 1ms、累计上限 90ms：既不会误触动 100ms 的下载清理定时器
+ * （避免断言变假绿），又能在超过 90 次让出时明确失败而不是伪装成超时。
  */
 async function settle<T>(promise: Promise<T>): Promise<T> {
   const outcome = promise.then(
     (value) => ({ ok: true as const, value }),
     (error: unknown) => ({ ok: false as const, error }),
   )
-  for (let i = 0; i < 2000; i++) {
+  for (let i = 0; i < 90; i++) {
     const winner = await Promise.race([outcome, vi.advanceTimersByTimeAsync(1).then(() => null)])
     if (winner) {
       if (!winner.ok) throw winner.error
       return winner.value
     }
   }
-  throw new Error('Promise 未在推进 2000ms 后 settle（可能是 yield 未接上定时器）')
+  throw new Error('Promise 未在推进 90ms 后 settle（可能是 yield 未接上定时器）')
 }
 
 /** 统计一次调用期间的「让出主线程」次数（yieldToUI 走 setTimeout(fn, 0)） */

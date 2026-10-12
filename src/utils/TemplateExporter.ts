@@ -255,10 +255,11 @@ export function downloadCsvTemplate(): void {
 
 /**
  * 下载 XLSX 模板（兼容 table2kml）
+ * @param onProgress 进度回调（可选，默认不传则行为不变）
  */
-export async function downloadXlsxTemplate(): Promise<void> {
+export async function downloadXlsxTemplate(onProgress?: ProgressCallback): Promise<void> {
   const headers = ['名称', '经度', '纬度', '文件夹', '颜色']
   const sampleRow = ['示例点位', '116.397428', '39.909204', '北京', '红色']
-  const xlsxBlob = await generateXlsx(headers, [sampleRow])
+  const xlsxBlob = await generateXlsx(headers, [sampleRow], 'Sheet1', onProgress)
   triggerDownload(xlsxBlob, '点位导入模板', 'xlsx')
 }
