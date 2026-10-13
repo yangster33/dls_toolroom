@@ -96,8 +96,14 @@
 | D-6 | 计划要求「exceljs streaming writer（逐行 addRow + commit）」 | 实测 exceljs@4.4.0 的浏览器 bundle（`dist/exceljs.min.js`，947 KB）**不含 WorkbookWriter**（只存在于 Node 的 `lib/stream/…`）。改用非流式 `Workbook` + 逐行 `addRow` 分片让出 + `xlsx.writeBuffer()`，与 `useTemplateExport.ts` 已验证的路径一致 |
 | D-7 | 新建共享管线文件，而不是在 4 处各写一遍 exceljs 代码 | P3-4「同一逻辑复制 N 份」的教训；同时让产物一致性断言只需一处 |
 
-**⚠ 迁移带来的有意行为变化：边框第一次真正生效**
-排查中期发现：旧实现的「为有内容的单元格添加边框」是**死代码**——xlsx@0.18.5 会把单元格样式整体丢弃：`<borders count="1">` 里只有一个空 `<border>`，`sheetData` 的单元格不带 `s=`；连官方 `add_style` 与 fill 同样落不了盘（有实测探针留档）。因此迁移前导出的文件**从来没有边框**。新实现按代码原意让边框生效，这是**有意的视觉行为修正**，由 `utils/__tests__/exceljsPipeline.spec.ts` 显式断言「新产物有边框、旧产物没有」。
+**⚠ 迁移中发现的既有死代码：旧实现的边框从未真正生效（经决策，本次保持关闭）**
+排查中期发现：旧实现的「为有内容的单元格添加边框」是**死代码**——xlsx@0.18.5 会把单元格样式整体丢弃：`<borders count="1">` 里只有一个空 `<border>`，`sheetData` 的单元格不带 `s=`；连官方 `add_style` 与 fill 同样落不了盘（有实测探针留档）。因此迁移前导出的文件**从来没有边框**。
+
+性能实测进一步表明：在 exceljs 里打开边框会让 5万×9 的总耗时从 1987ms 涨到 2967ms（+50%，1987ms 与旧 xlsx 的 1926ms 基本持平——差距几乎全部来自边框）。
+
+**用户决策（2026-10-12）：保留 exceljs 管线、生产路径关闭边框。** 即产物与旧实现零差异（含"本来就没有边框"这件事），总耗时与迁移前持平；管线的 `border` 能力保留为 opt-in 并有专项用例，确认要修这个老 bug 时把 `toSheetSpec`/`generateXlsx` 里改成 `border: true` 即可（相关断言会提醒同步预期）。
+
+**遗留立项建议**：「Toolroom 的 xlsx 导出没有边框」是代码意图与产物不一致的老 bug，修不修、何时修由产品决定。
 
 **已知残差（已显式钉住，非静默）**
 - `geo_data` 某类型 `data: []` 时：旧实现读回 `[]`，新实现读回 `[['']]`（sheet 维度导致的一个零单元格空行；Excel 里都渲染成空表，无列宽无边框）。已写成显式断言。
@@ -114,7 +120,9 @@
 
 **测试基建踩坑（已修复，复跑 3 次全量确认稳定）**：exceljs 是**懒加载**的，而 vitest 的 fake timers 会让首次 `await import('exceljs')` 永不 settle（探针实测：不推定时器、`vi.getTimerCount()` 为 0）。解法：在装 fake timers 的 spec 顶部预载 `await import('exceljs')`（`TemplateExporter.spec.ts`、`coordsConversion.spec.ts`、`GisToExcelExporter.spec.ts`；`exportXlsxParity.spec.ts` 用了静态 import 天然免疫）。另：大表用例改用真实计时器（fake timers 下 writeBuffer 内部推进成本很高）。
 
-**门禁**：type-check 0 / oxlint 0·0 / eslint 0 / prettier 全符合 / vitest **738 passed·54 files** / `npm run build` 全链路通过 / `npx playwright test` **7 passed**。
+**门禁**：type-check 0 / oxlint 0·0 / eslint 0 / prettier 全符合 / vitest **739 passed·54 files** / `npm run build` 全链路通过 / `npx playwright test` **7 passed**。
+
+**关掉边框后的最终状态（用户决策后）**：`TemplateExporter.generateXlsx` 与 `GisToExcelExporter.toSheetSpec` 的 `border` 均为 `false`；`coords_convert.convertToXlsx` 与 `geo_data.exportToXLSX` 本来就不设边框。管线 `writeXlsx(sheets, onProgress)` 的 `border` 仍可用，`utils/__tests__/exceljsPipeline.spec.ts` 有 opt-in 专项用例；生产路径无边框已由 gis2excel / exceljsPipeline 两个 spec 的断言钉住（改成 `true` 会红）。
 
 ### 评审整改（阶段 3）
 
@@ -127,18 +135,20 @@
 | 体验 | `await import('exceljs')` 发生在第一次让出之前，947 KB chunk 下载+eval 期间进度弹窗不出现 | 先把 `await yieldToUI()` 移到动态 import 之前 |
 | 覆盖 | 多 sheet 进度单调性、稀疏行无断言 | 各补 1 条用例 |
 
-### ⚠ 阶段 3 的性能实测：目标未达成（如实记录）
+### 阶段 3 的性能实测：与预期不同，已按数据决策（如实记录）
 
-计划阶段 3 的预期是「主线程最长连续阻塞显著低于阶段 2」。实测（Node 侧基准，两者相对趋势与浏览器一致；探针已删除，方法可复现）：
+计划阶段 3 的预期是「主线程最长连续阻塞显著低于阶段 2」。实测（Node 侧基准，与浏览器相对趋势一致；探针已删除，方法可复现）：
 
-| 规模 | 旧（xlsx aoa_to_sheet+write） | 新（exceljs addRow+边框+writeBuffer） |
-|---|---|---|
-| 2 万行 × 6 列 | 单次连续块 485ms，总 485ms | addRow 39ms（可分片）+ 边框 9ms（可分片）+ **writeBuffer 772ms（单一连续块）**，总 822ms |
-| 5 万行 × 9 列 | 单次连续块 1926ms，总 1926ms | addRow 129ms + 边框 29ms + **writeBuffer 2774ms（单一连续块）**，总 2932ms |
+| 规模 | 旧（xlsx aoa_to_sheet+write，无让出） | exceljs 关边框 | exceljs 开边框 |
+|---|---|---|---|
+| 2 万行 × 6 列 | 485ms 单次连续块 | 820ms（其中 writeBuffer 772ms 单一连续块） | 约 +50% |
+| 5 万行 × 9 列 | 1926ms 单次连续块 | 1987ms（≈持平） | 2967ms（+50%） |
 
-**结论：最长连续阻塞从 1926ms 变成 2774ms、总耗时多约 55%，方向与预期相反。** 原因是 exceljs 的 `writeBuffer`（zlib 压缩 + 整表 XML 字符串）比 SheetJS 的 `XLSX.write` 更重，且 `addRow` 阶段的分片让出只占总耗时约 7%。
+**结论：最长连续阻塞并没有变短**（旧是一次性 1926ms，新是 addRow 129ms + 边框 29ms 可分片让出 + **writeBuffer 2774ms 单一连续块**）；而**总耗时差距几乎全部来自边框**（关掉边框后与旧实现持平）。
 
-换言之：阶段 3 拿到的是**统一的 exceljs 管线、逐格一致性（已证明）、以及第一次真正生效的边框**；但"降低主线程阻塞"这个目标要在**阶段 4（Worker）**才可能达成——而到了 Worker 里，库的选择只影响总耗时、不影响阻塞。这一权衡已向用户提出决策（保留 exceljs 享受边框/统一管线，还是回退 xlsx 保住总耗时）。
+换言之：阶段 3 实际交付的是统一的 exceljs 管线 + 逐格一致性（已证明）+ 可分片的 addRow/边框阶段；"降低阻塞"要靠**阶段 4（Worker）**——而在 Worker 里只有总耗时重要，因此按上面的数据把边框关掉。
+
+补充：`addRow` 阶段（129ms / 5万行）虽然只占总耗时 6%，却是**唯一能被打断**的部分；`writeBuffer` 仍是单一同步块，彻底消除要等 Worker。
 
 ---
 

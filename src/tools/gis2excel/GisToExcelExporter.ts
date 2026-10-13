@@ -50,7 +50,9 @@ function toSheetSpec(
         20,
       ),
     ],
-    border: true,
+    // border 关闭：旧实现的边框从未真正生效，而在 exceljs 里打开它会让
+    // 5万×9 的总耗时 +50%（1987ms → 2967ms）。见实施记录「阶段 3 · 性能实测」。
+    border: false,
   }
 }
 

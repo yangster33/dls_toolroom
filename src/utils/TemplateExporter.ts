@@ -69,7 +69,11 @@ export async function generateXlsx(
     return new Blob([], { type: 'application/octet-stream' })
   }
 
-  return writeXlsx([{ name: sheetName, headers, rows: dataRows ?? [], border: true }], onProgress)
+  // border 关闭：见 docs/2026-10-12-c4-fix-record.md「阶段 3 · 性能实测」。
+  // 旧实现那段「给有内容单元格加边框」从未真正生效（xlsx 会把单元格样式整体丢弃），
+  // 在 exceljs 里打开它会让 5万×9 的总耗时从 1987ms 涨到 2967ms（+50%）。
+  // 管线的 border 能力保留为 opt-in，确认要修那个老 bug 时改成 true 即可。
+  return writeXlsx([{ name: sheetName, headers, rows: dataRows ?? [] }], onProgress)
 }
 
 /**

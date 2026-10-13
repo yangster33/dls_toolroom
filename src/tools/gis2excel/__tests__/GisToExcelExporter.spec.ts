@@ -441,26 +441,20 @@ describe('exportToXlsx：产物与旧 xlsx 实现逐格一致（C4 阶段 3 验�
     }
   })
 
-  it('边框真的落盘了（exceljs 读回）：旧实现一个边框都没有，新实现有内容的格子全有', async () => {
+  it('生产路径关掉了 border：新旧实现都一个边框都没有（与旧产物零差异）', async () => {
     const groups = fixtureGroups()
     await exportToExcel(groups, 'xlsx', defaultOptions)
 
     const wb = new ExcelJS.Workbook()
     await wb.xlsx.load(await exportedBlob().arrayBuffer())
 
+    // 旧实现的边框循环是死代码；生产路径为避免 +50% 耗时也显式关闭 border。
+    // （若将来要修那个老 bug，把 toSheetSpec 的 border 改 true，这条断言会提醒你同步预期）
     for (const name of ['点', '线', '面']) {
-      const ws = wb.getWorksheet(name)!
-      expect(ws.getRow(1).getCell(1).border?.top?.style).toBe('thin')
-      const bordered = borderedCellCount(ws)
-      expect(bordered).toBeGreaterThan(0)
+      expect(borderedCellCount(wb.getWorksheet(name)!)).toBe(0)
     }
 
-    // 「只给有内容的格子加边框」：点 sheet 第 2 行第 1 列是空名称 → 不该有边框
-    const pointSheet = wb.getWorksheet('点')!
-    expect(pointSheet.getRow(2).getCell(1).border?.top?.style).toBeUndefined()
-    expect(pointSheet.getRow(2).getCell(2).border?.top?.style).toBe('thin')
-
-    // 旧实现（xlsx 库）同样读法下拿不到任何边框 —— 这就是迁移前边框是死代码的证据
+    // 旧实现（xlsx 库）同样读法下也拿不到任何边框 —— 这就是迁移前边框是死代码的证据
     const legacyWorkbook = new ExcelJS.Workbook()
     await legacyWorkbook.xlsx.load(
       await legacyExportToXlsx(toLegacySheets(groups, defaultOptions)).arrayBuffer(),

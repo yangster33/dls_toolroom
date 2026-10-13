@@ -138,18 +138,27 @@ afterEach(() => {
 })
 
 describe('exceljsPipeline · 产物与旧 xlsx 实现逐格一致（C4 阶段 3 验收）', () => {
-  it('带边框 + 默认列宽：逐格一致', async () => {
+  it('默认（border 关闭）+ 默认列宽：与旧实现逐格一致，且同样没有边框', async () => {
     const legacy = await snapshot(legacyXlsx({ ...FIXTURE, border: true }))
+    const next = await snapshot(
+      await writeXlsx([{ name: FIXTURE.name, headers: FIXTURE.headers, rows: FIXTURE.rows }]),
+    )
+    expect(normalize(next)).toEqual(normalize(legacy))
+
+    // 旧实现的边框循环是死代码（xlsx 丢弃单元格样式），产物里一个边框都没有；
+    // 生产路径也关闭 border（性能实测见实施记录），因此两侧都必须为空。
+    expect(legacy[0]!.borderedRefs).toHaveLength(0)
+    expect(next[0]!.borderedRefs).toEqual([])
+  })
+
+  it('opt-in：显式 border:true 时边框真的生效（能力保留，生产路径未启用）', async () => {
     const next = await snapshot(
       await writeXlsx([
         { name: FIXTURE.name, headers: FIXTURE.headers, rows: FIXTURE.rows, border: true },
       ]),
     )
-    expect(normalize(next)).toEqual(normalize(legacy))
-
-    // 旧实现（xlsx）其实一个边框都没写出来；新实现必须真的写出来
-    expect(legacy[0]!.borderedRefs).toHaveLength(0)
-    expect(next[0]!.borderedRefs.length).toBeGreaterThan(10)
+    // 4 行 × 4 列，其中一行第 4 列是空串（不加边框）
+    expect(next[0]!.borderedRefs.length).toBeGreaterThanOrEqual(10)
     expect(next[0]!.borderedRefs).toContain('A1')
   })
 
