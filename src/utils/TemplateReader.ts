@@ -69,7 +69,9 @@ export async function readAndValidateTemplate(
     try {
       matrix = await filePipeline.parse(file, onProgress)
     } catch (error) {
-      result.errors.push(error instanceof Error ? error.message : String(error))
+      // 保持改造前的消息前缀：外层 catch 也是这个格式，两条路径风格必须一致
+      const reason = error instanceof Error ? error.message : String(error)
+      result.errors.push('读取文件时发生错误：' + reason)
       return result
     }
 

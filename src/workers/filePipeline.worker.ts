@@ -1,18 +1,21 @@
 /**
- * 文件生成/解析管线 Worker（C4 阶段 4 / P2-20）
+ * 文件解析管线 Worker（C4 阶段 4 / P2-20）
  *
- * 承接两类最重的纯计算工作，把它们从主线程搬走：
- * - `parse`：File → 二维矩阵（`XLSX.read` + `sheet_to_json`，单一不可中断同步块）
- * - `write`：SheetSpec[] → xlsx Blob（exceljs 逐行 addRow + writeBuffer）
+ * 只承接「表格解析」这一件事：`File → 二维矩阵`（`XLSX.read` + `sheet_to_json`，
+ * 导入链路里最重的单一同步块）。
+ *
+ * 为什么不承接「xlsx 生成」（exceljs）：`writeXlsx` 是主线程与 worker 都会用到的
+ * 公共实现，而 client 若在 worker 里调它会形成循环依赖。彻底解耦需要把
+ * 「exceljs 生成」抽成第三个模块（D 档工作）。在此之前，把 write 放进 worker
+ * 只会让 worker chunk 白胖 ~900KB（exceljs 死货）。
  *
  * **不承接**「逐行校验」：`validateRow` 是调用方的函数，无法结构化克隆进 Worker。
  * 那部分留在主线程，由 `utils/TemplateReader` 的 500 行分片让出兜住。
  *
- * 协议见 `./filePipelineClient.ts`（请求从这里发，响应回那里）。
+ * 协议见 `./filePipelineClient.ts`（请求从那里发，响应回那里）。
  */
 /// <reference lib="webworker" />
 import { parseTemplateMatrix, type CellValue } from '@/utils/templateMatrix'
-import { writeXlsx, type SheetSpec } from '@/utils/exceljsPipeline'
 import type { ProgressCallback } from '@/utils/progress'
 
 export interface WorkerParseRequest {
@@ -23,20 +26,16 @@ export interface WorkerParseRequest {
   }
 }
 
-export interface WorkerWriteRequest {
-  id: number
-  kind: 'write'
-  payload: {
-    sheets: SheetSpec[]
-  }
-}
+export type WorkerRequest = WorkerParseRequest
 
-export type WorkerRequest = WorkerParseRequest | WorkerWriteRequest
+export interface WorkerParseResult {
+  rawData: CellValue[][]
+  fileHeaders: string[]
+}
 
 export type WorkerResponse =
   | { id: number; type: 'progress'; percent: number; message: string }
-  | { id: number; type: 'ok'; kind: 'parse'; rawData: CellValue[][]; fileHeaders: string[] }
-  | { id: number; type: 'ok'; kind: 'write'; blob: Blob }
+  | ({ id: number; type: 'ok'; kind: 'parse' } & WorkerParseResult)
   | { id: number; type: 'error'; message: string }
 
 const post = (response: WorkerResponse) => {
@@ -50,14 +49,8 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   try {
-    if (request.kind === 'parse') {
-      const { rawData, fileHeaders } = await parseTemplateMatrix(request.payload.file, onProgress)
-      post({ id: request.id, type: 'ok', kind: 'parse', rawData, fileHeaders })
-      return
-    }
-
-    const blob = await writeXlsx(request.payload.sheets, onProgress)
-    post({ id: request.id, type: 'ok', kind: 'write', blob })
+    const { rawData, fileHeaders } = await parseTemplateMatrix(request.payload.file, onProgress)
+    post({ id: request.id, type: 'ok', kind: 'parse', rawData, fileHeaders })
   } catch (error) {
     post({
       id: request.id,

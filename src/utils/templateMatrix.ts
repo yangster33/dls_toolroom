@@ -52,7 +52,8 @@ export async function parseTemplateMatrix(
   const rawData: CellValue[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
 
   if (rawData.length === 0) {
-    throw new Error('文件为空。')
+    // 文案与改造前保持一致（旧实现是 '文件为空或无法读取。'，外层会再加前缀）
+    throw new Error('文件为空或无法读取。')
   }
 
   const fileHeaders: string[] = (rawData[0] || []).map((h) => String(h || '').trim())

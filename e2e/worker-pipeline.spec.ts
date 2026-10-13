@@ -9,10 +9,12 @@ import { fileURLToPath } from 'node:url'
  * 因此监听该请求即可证明「Worker 已加载并接管解析」。
  */
 test('文件管线 Worker：导入时真实加载 filePipeline.worker', async ({ page }) => {
-  const workerRequests: string[] = []
-  page.on('request', (request) => {
-    if (request.url().includes('filePipeline.worker')) {
-      workerRequests.push(request.url())
+  // 必须同时断言「请求了」和「响应 200」：只断言请求的话，worker chunk 404（被静默降级）
+  // 也会让测试通过，而那正是 C4 阶段 4 要避免的假绿。
+  const workerStatus: number[] = []
+  page.on('response', (response) => {
+    if (response.url().includes('filePipeline.worker')) {
+      workerStatus.push(response.status())
     }
   })
 
@@ -25,5 +27,6 @@ test('文件管线 Worker：导入时真实加载 filePipeline.worker', async ({
   // 走 Worker 解析：校验通过的文案证明矩阵解析成功
   await expect(page.getByText('验证通过，共 1 个有效点位')).toBeVisible()
 
-  expect(workerRequests.length).toBeGreaterThan(0)
+  expect(workerStatus.length).toBeGreaterThan(0)
+  expect(workerStatus.every((status) => status === 200)).toBe(true)
 })

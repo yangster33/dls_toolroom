@@ -14,8 +14,8 @@
 |---|---|---|---|
 | 1 | 止血：拆伪 yield、修假进度、新增 `yieldToUI` | ✅ | `50ff7d2` |
 | 2 | 表格链路进度化：共用 reader/exporter 加可选 `onProgress` + 分片让出，8 个页面接入 | ✅ | `309e6fe` + `59940c6`（评审整改） |
-| 3 | exceljs 迁移（非流式 `Workbook` + 逐行 `addRow` 分片让出，见偏离 D-6） | ✅ | 见下 |
-| 4 | Worker 化（根治主线程阻塞） | ⬜ | — |
+| 3 | exceljs 迁移（非流式 `Workbook` + 逐行 `addRow` 分片让出，见偏离 D-6） | ✅ | `b08b940` + `38141af` + `25c0a03` |
+| 4 | Worker 化：解析搬进 Web Worker，主线程阻塞 ~1900ms → 几十 ms | ✅ | `06d1399` + 评审整改 |
 
 **范围外**：D1（7 份 `TemplateReader` 收敛成参数化工厂）是台账 D 档独立项，本批不做。
 现有代码事实：`utils/TemplateReader.ts` 已是共用基座（coords_convert / table2kml_point / table2kml_basestation 三个包已包它），
@@ -182,7 +182,22 @@
 
 **降级与取消**：`typeof Worker === 'undefined'`、构造抛错、worker 运行期 `onerror` 三条路径都会永久降级到主线程实现（行为与阶段 3 一致），单测覆盖；`AbortSignal` 贯通到 `worker.terminate()`，且仅在「最后一个在途请求」时才 terminate，避免误杀其它请求。
 
-**已知残差**：未在真实 Chrome 做 Performance 录制取证（用 Node 基准 + e2e 证明 Worker 真的被加载）+ 生成仍未 Worker 化（见上）。
+### 评审整改（阶段 4）
+
+| # | 评审发现 | 处理 |
+|---|---|---|
+| H1 | 运行期 `onerror`（CSP 拦 worker-src / chunk 404 / MIME 不合规）只 reject 在途请求，**不重试** → 用户侧「第一次导入失败、第二次才好」 | 降级时把在途请求**改走主线程重算**（`fallback` 闭包保存原 payload），单测锁定 |
+| M1 | worker chunk 1272KB —— 里面那份 exceljs 是纯死货（`write` 根本没接进 Worker，循环依赖） | worker **只保留 parse**（不再导出 write 分支，client 也不再提供 write API）；chunk 降到 **325KB** |
+| M2 | `postMessage` 抛错会在 pending 里留下僵尸条目 → abort 永不 terminate + unhandled rejection | try/catch 包住 postMessage，失败即清条目；单测锁定 |
+| M3 | 两处文案回归：丢 `读取文件时发生错误：` 前缀、空文件消息变了 | 前缀补回；空文件消息与改造前一致 |
+| M4 | `AbortSignal` 在生产是死路（页面 ProgressModal 都是 `show-cancel=false`，没人传 signal） | **如实记档：客户端能力就绪，页面未接取消按钮**；接入属 D 档（8 个页面） |
+| M5 | e2e 只断言「worker 被请求」，404 也会绿 | 升级为断言**响应 200**（`page.on('response')`） |
+| M6 | worker 首次下载 1MB chunk 期间进度停在 0% 且 message 为空 | `parse` 前先 `onProgress(0, '正在准备解析环境...')` |
+| 覆盖 | 缺并发/乱序回包、progress 与 ok 混流、未知 id、onerror 多在途、并发中只 abort 一个 | 单测 13 → 19 例 |
+
+**踩坑记录（已写进代码注释）**：`new Worker(new URL(...))` 必须三处都保持字面形式（URL 字面量、URL 在构造器里、构造器本身是 `Worker`）。把 URL 抽成常量、或写成变量构造器，Vite 都不会切 chunk —— 本次踩了两次，都由「dist 里没有 worker 文件」发现，再由 e2e「响应 200」兜底。
+
+**已知残差**：未在真实 Chrome 做 Performance 录制取证（用 Node 基准 + e2e 证明 Worker 真的被加载且有正确结果）；生成仍未 Worker 化（见上）；worker 常驻不释放（50 万行级文件的瞬时双份内存未处理）；CSP 需要 `worker-src 'self'`（部署侧确认）。
 
 ---
 
