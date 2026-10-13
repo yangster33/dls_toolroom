@@ -278,12 +278,48 @@ describe('exceljsPipeline · 进度与让出', () => {
     expect(counter.getCount()).toBeGreaterThanOrEqual(25)
   })
 
-  it('列宽映射：给 wch，产物里的列宽必须正好是 wch（0.83 补偿被钉住）', async () => {
+  it('多 sheet 时进度单调不减（曾出现 46→45 倒退，见单调夹取）', async () => {
+    // 刻意让第二个 sheet 有 2000+ 行：旧的 sheetBase + span 公式在这里会越过下一个起点
+    // 4 个 sheet：sheetBase=round(i/4*90)={0,23,45,68} 而 span=round(90/4)=23，
+    // 于是 sheet1 末尾可到 23+23=46，下一张却从 45 开始 —— 这正是倒退的成因。
+    // 第三个 sheet 固定 2001 行（让出边界 i=0/2000，末次上报恰好封顶）。
+    const sheets = [
+      { name: 'A', headers: ['a'], rows: Array.from({ length: 10 }, (_, i) => ['a' + i]) },
+      { name: 'B', headers: ['b'], rows: Array.from({ length: 2001 }, (_, i) => ['b' + i]) },
+      { name: 'C', headers: ['c'], rows: Array.from({ length: 10 }, (_, i) => ['c' + i]) },
+      { name: 'D', headers: ['d'], rows: Array.from({ length: 10 }, (_, i) => ['d' + i]) },
+    ]
+    const reports: number[] = []
+    await writeXlsx(sheets, (percent) => reports.push(percent))
+    expect(reports.length).toBeGreaterThan(3)
+    for (let i = 1; i < reports.length; i++) {
+      expect(reports[i]!).toBeGreaterThanOrEqual(reports[i - 1]!)
+    }
+    expect(reports[reports.length - 1]).toBe(100)
+  })
+
+  it('列宽映射：给 wch，产物里的列宽必须正好是 wch（5/6 补偿被钉住）', async () => {
     const blob = await writeXlsx([
       { name: 'S', headers: ['a', 'b', 'c'], rows: [['1', '2', '3']], colWidths: [8, 30, 12.5] },
     ])
     const wb = XLSX.read(await blob.arrayBuffer(), { type: 'array', cellStyles: true })
     expect((wb.Sheets['S']!['!cols'] ?? []).map((c) => c.wch)).toEqual([8, 30, 12.5])
+  })
+
+  it('稀疏行（某行比表头短，中间留洞）与旧实现逐格一致', async () => {
+    const spec = {
+      name: 'S',
+      headers: ['a', 'b', 'c', 'd'],
+      rows: [['1', undefined, '3', undefined]] as unknown[][],
+    }
+    const legacy = XLSX.utils.book_new()
+    const legacySheet = XLSX.utils.aoa_to_sheet([spec.headers, ...spec.rows])
+    legacySheet['!cols'] = spec.headers.map(() => ({ wch: 10 }))
+    XLSX.utils.book_append_sheet(legacy, legacySheet, spec.name)
+    const legacyOut = XLSX.write(legacy, { bookType: 'xlsx', type: 'array', bookSST: false })
+    const legacySnapshot = await snapshot(new Blob([legacyOut]))
+    const nextSnapshot = await snapshot(await writeXlsx([spec]))
+    expect(normalize(nextSnapshot)).toEqual(normalize(legacySnapshot))
   })
 })
 

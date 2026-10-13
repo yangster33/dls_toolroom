@@ -27,12 +27,13 @@ const ROW_YIELD_INTERVAL = 2000
 const BORDER_ROW_YIELD_INTERVAL = 200
 
 /**
- * exceljs 写出的列宽比传入值**固定小 0.83**（实测 8→7.17、10→9.17、12.5→11.67），
- * 这是它对默认字号做的 padding。迁移目标是「产物与旧实现逐格一致」，
- * 因此这里显式补偿，并由 `exceljsPipeline.spec.ts` 的列宽断言钉住 ——
- * 将来 exceljs 改变该偏移时测试会红，而不是静默变形。
+ * exceljs 写出的列宽比传入值**固定小 5/6 ≈ 0.8333**（`col-xform.js` 原样写 width），
+ * 而 SheetJS 写入侧是 `wch + 5/6`（`char2width`）。两者相减正好抵消：
+ * 传 `wch + 5/6` 进去，读回的 `!cols.wch` 才正好等于我们要的 wch。
+ * 实测：传 8.8333 → xml width=8.8333 → SheetJS 读回 8.0；旧近似值 0.83 会残留 0.002。
+ * 由 `exceljsPipeline.spec.ts` 的列宽断言钉住（exceljs 改变该偏移时测试会红）。
  */
-const EXCELJS_WIDTH_OFFSET = 0.83
+const EXCELJS_WIDTH_OFFSET = 5 / 6
 
 /** 与旧 xlsx 实现一致的细边框（黑） */
 const BORDER_STYLE = { style: 'thin' as const, color: { argb: 'FF000000' } }
@@ -63,12 +64,27 @@ export interface SheetSpec {
 }
 
 /**
- * xlsx 的 `book_append_sheet` 不校验表名，exceljs 会直接抛错。
- * 这里按 OOXML 规则清洗，避免工具内部某天引入非法字符就从「能出文件」变成「抛异常」。
+ * 清洗工作表名，并保证同一工作簿内**不重名**。
+ *
+ * 为什么要清洗（评审纠正的错误认知，本函数旧注释写反了）：
+ * - xlsx 的 `book_append_sheet` **会**校验表名：非法字符（`: \ / ? * [ ]`）、
+ *   超过 31 字符、重名都会**直接抛错**（xlsx.js 的 check_ws_name）。
+ * - exceljs 的 `addWorksheet` **不校验**任何一项：非法字符会静默写进 XML，
+ *   超长静默截断，重名会写出两张同名表 —— 后者会让 Excel 弹"需要修复"并丢表。
+ *
+ * 因此把 exceljs 的宽松行为收敛成 xlsx 的**响亮失败**：重名直接抛错
+ * （与旧行为一致），非法字符与超长按 OOXML 规则清洗。
  */
-export function safeSheetName(name: string): string {
-  const cleaned = name.replace(/[\\/?*[\]:]/g, '_').trim()
-  return (cleaned || 'Sheet1').slice(0, 31)
+export function safeSheetName(name: string, used: Set<string> = new Set()): string {
+  const cleaned = name.replace(/[\\/?*[\]:]/g, '_').trim() || 'Sheet1'
+  const final = cleaned.slice(0, 31)
+
+  if (used.has(final)) {
+    throw new Error(`工作表名称重复或超长后重复：${final}（旧实现在此处同样会失败）`)
+  }
+  used.add(final)
+
+  return final
 }
 
 /**
@@ -93,6 +109,33 @@ export function rowsFromObjects(
 }
 
 /**
+ * 触发 xlsx 下载。
+ *
+ * 仓库里已有 3 份逐字节等价的 `triggerDownload`（`utils/TemplateExporter.ts`、
+ * `gis2excel/GisToExcelExporter.ts`、以及旧 `geoDataService.exportToXLSX` 用的
+ * `XLSX.writeFile` 内部那份）。这里统一收一份，供本管线与 geo_data 使用。
+ *
+ * 关键细节（评审 M2 修复）：`<a>` 必须**appendChild 进文档**（Firefox 历史上要求
+ * 节点在文档内才会触发下载），且 `revokeObjectURL` 必须**延迟**执行 ——
+ * 大文件的 Blob 在 click() 之后仍被浏览器读取，立即 revoke 会拿到空文件。
+ */
+export function downloadXlsxBlob(blob: Blob, filename: string): void {
+  const fullFilename = filename.toLowerCase().endsWith('.xlsx') ? filename : `${filename}.xlsx`
+
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', fullFilename)
+  document.body.appendChild(link)
+  link.click()
+
+  setTimeout(() => {
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }, 100)
+}
+
+/**
  * 生成 xlsx Blob（exceljs）。
  *
  * @param sheets 一个或多个工作表（按顺序）
@@ -102,24 +145,31 @@ export async function writeXlsx(
   sheets: readonly SheetSpec[],
   onProgress?: ProgressCallback,
 ): Promise<Blob> {
+  // exceljs 是 947 KB 的懒加载 chunk。先让出一帧再加载：否则进度弹窗要等
+  // chunk 下载+eval 完才出现，用户看到的是"点了没反应"。
+  await yieldToUI()
   const { Workbook } = await import('exceljs')
   const workbook = new Workbook()
 
   const total = Math.max(sheets.length, 1)
   let processedRows = 0
+  let reportedPercent = 0
+  const usedSheetNames = new Set<string>()
   const rowTotal = sheets.reduce((sum, sheet) => sum + (sheet.rows?.length ?? 0) + 1, 0)
 
-  const report = (base: number, span: number) => {
-    const percent = rowTotal > 0 ? base + Math.round((processedRows / rowTotal) * span) : base
-    onProgress?.(Math.min(99, percent), '正在写入工作表数据...')
+  // 单调夹取：多 sheet 时「上一个 sheet 末尾」的进度会超过下一个 sheet 的起点，
+  // 不夹会出现进度倒退（实测 46→45）。回调语义上进度不该倒退。
+  const report = (percent: number, message: string) => {
+    reportedPercent = Math.max(reportedPercent, Math.min(99, percent))
+    onProgress?.(reportedPercent, message)
   }
 
   for (const [index, spec] of sheets.entries()) {
     const sheetBase = Math.round((index / total) * 90)
-    onProgress?.(sheetBase, `正在生成工作表 ${spec.name}...`)
+    report(sheetBase, `正在生成工作表 ${spec.name}...`)
     await yieldToUI()
 
-    const worksheet = workbook.addWorksheet(safeSheetName(spec.name))
+    const worksheet = workbook.addWorksheet(safeSheetName(spec.name, usedSheetNames))
     const widthSpec = spec.colWidths ?? spec.headers.map((h) => Math.max(String(h).length, 10))
     if (spec.defaultColWidths !== false) {
       worksheet.columns = widthSpec.map((wch) => ({ width: wch + EXCELJS_WIDTH_OFFSET }))
@@ -138,7 +188,10 @@ export async function writeXlsx(
       worksheet.addRow(rows[i] as unknown as ExcelCellValue[])
       processedRows++
       if (i % ROW_YIELD_INTERVAL === 0) {
-        report(sheetBase, Math.round(90 / total))
+        report(
+          sheetBase + Math.round((processedRows / rowTotal) * Math.round(90 / total)),
+          '正在写入工作表数据...',
+        )
       }
     }
 

@@ -114,7 +114,31 @@
 
 **测试基建踩坑（已修复，复跑 3 次全量确认稳定）**：exceljs 是**懒加载**的，而 vitest 的 fake timers 会让首次 `await import('exceljs')` 永不 settle（探针实测：不推定时器、`vi.getTimerCount()` 为 0）。解法：在装 fake timers 的 spec 顶部预载 `await import('exceljs')`（`TemplateExporter.spec.ts`、`coordsConversion.spec.ts`、`GisToExcelExporter.spec.ts`；`exportXlsxParity.spec.ts` 用了静态 import 天然免疫）。另：大表用例改用真实计时器（fake timers 下 writeBuffer 内部推进成本很高）。
 
-**门禁**：type-check 0 / oxlint 0·0 / eslint 0 / prettier 全符合 / vitest **736 passed·54 files**（连跑 3 次）/ `npm run build` 全链路通过 / `npx playwright test` **7 passed**。
+**门禁**：type-check 0 / oxlint 0·0 / eslint 0 / prettier 全符合 / vitest **738 passed·54 files** / `npm run build` 全链路通过 / `npx playwright test` **7 passed**。
+
+### 评审整改（阶段 3）
+
+| # | 评审发现 | 处理 |
+|---|---|---|
+| M2 | geo_data 下载换了 `<a download>` 但丢了 `appendChild`、`revokeObjectURL` 立即执行、以及 `XLSX.writeFile` 原有的 saveAs 对话框 | 新增 `downloadXlsxBlob`（appendChild + 延迟 100ms revoke），统一收口仓库里 3 份逐字节等价的 `triggerDownload`；saveAs 差异记入残差 |
+| M3 | 多 sheet 时进度会倒退（4 个 sheet 时 `sheetBase=round(i/4*90)` 得到 0/23/45/68，而 span=round(90/4)=23，于是 sheet1 末尾可到 46、sheet2 却从 45 开始）| 上报统一走单调夹取（含 sheet 开始那次回调）；新增专项用例，反证可复现 `expected 45 to be greater than or equal to 46` |
+| 安全 | `safeSheetName` 的注释把两库的校验行为写反了（xlsx 会抛错、exceljs 静默写坏）；两个超长表名截断后同名会写出两张同名表 → Excel 弹"需要修复"并丢表 | 注释纠正 + 同工作簿内重名直接抛错（保持旧实现的响亮失败模式）|
+| 精度 | 列宽补偿 0.83 是近似值，XML 里系统性差 0.002 | 改为 `5/6`（由两个库的公式推导：exceljs 原样写 width，SheetJS 写入侧是 `wch + 5/6`），由列宽断言钉住 |
+| 体验 | `await import('exceljs')` 发生在第一次让出之前，947 KB chunk 下载+eval 期间进度弹窗不出现 | 先把 `await yieldToUI()` 移到动态 import 之前 |
+| 覆盖 | 多 sheet 进度单调性、稀疏行无断言 | 各补 1 条用例 |
+
+### ⚠ 阶段 3 的性能实测：目标未达成（如实记录）
+
+计划阶段 3 的预期是「主线程最长连续阻塞显著低于阶段 2」。实测（Node 侧基准，两者相对趋势与浏览器一致；探针已删除，方法可复现）：
+
+| 规模 | 旧（xlsx aoa_to_sheet+write） | 新（exceljs addRow+边框+writeBuffer） |
+|---|---|---|
+| 2 万行 × 6 列 | 单次连续块 485ms，总 485ms | addRow 39ms（可分片）+ 边框 9ms（可分片）+ **writeBuffer 772ms（单一连续块）**，总 822ms |
+| 5 万行 × 9 列 | 单次连续块 1926ms，总 1926ms | addRow 129ms + 边框 29ms + **writeBuffer 2774ms（单一连续块）**，总 2932ms |
+
+**结论：最长连续阻塞从 1926ms 变成 2774ms、总耗时多约 55%，方向与预期相反。** 原因是 exceljs 的 `writeBuffer`（zlib 压缩 + 整表 XML 字符串）比 SheetJS 的 `XLSX.write` 更重，且 `addRow` 阶段的分片让出只占总耗时约 7%。
+
+换言之：阶段 3 拿到的是**统一的 exceljs 管线、逐格一致性（已证明）、以及第一次真正生效的边框**；但"降低主线程阻塞"这个目标要在**阶段 4（Worker）**才可能达成——而到了 Worker 里，库的选择只影响总耗时、不影响阻塞。这一权衡已向用户提出决策（保留 exceljs 享受边框/统一管线，还是回退 xlsx 保住总耗时）。
 
 ---
 

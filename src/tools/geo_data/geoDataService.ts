@@ -6,7 +6,12 @@ import JSZip from 'jszip'
 import * as XLSX from 'xlsx'
 import type { Feature, LineString } from 'geojson'
 import { yieldToUI } from '@/utils/yieldToUI'
-import { collectHeaders, rowsFromObjects, writeXlsx } from '@/utils/exceljsPipeline'
+import {
+  collectHeaders,
+  downloadXlsxBlob,
+  rowsFromObjects,
+  writeXlsx,
+} from '@/utils/exceljsPipeline'
 
 /**
  * 要素循环的让出粒度：每处理这么多要素让出一次主线程。
@@ -1068,11 +1073,10 @@ export async function exportToXLSX(
 
   // 下载方式与下面的 exportToCSV 保持一致（旧实现是 XLSX.writeFile，
   // 它内部也是 <a download>；不引入 file-saver）
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = `空间分析报告_${new Date().toISOString().slice(0, 10)}.xlsx`
-  link.click()
-  URL.revokeObjectURL(link.href)
+  // 下载统一走 utils/exceljsPipeline 的 downloadXlsxBlob：appendChild 进文档
+  // + 延迟 revoke（大文件 Blob 在 click() 之后仍被浏览器读取，立即 revoke 会拿到空文件）。
+  // 旧实现是 XLSX.writeFile（它内部会走 chrome.downloads 的 saveAs）。
+  downloadXlsxBlob(blob, '空间分析报告_' + new Date().toISOString().slice(0, 10))
 }
 
 /**

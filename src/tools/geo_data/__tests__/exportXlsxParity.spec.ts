@@ -85,6 +85,9 @@ async function newExport(results: AnalysisResult[], selectedTypes: string[]): Pr
   expect(anchors).toHaveLength(1)
   expect(anchors[0]!.download).toBe(expectedFileName())
   expect(anchors[0]!.href).toBe('blob:mock')
+  // revoke 是延迟 100ms 的（评审 M2：大文件 Blob 在 click() 后仍被读取，
+  // 立即 revoke 会拿到空文件），所以这里要等一个宏任务
+  await new Promise((resolve) => setTimeout(resolve, 150))
   expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock')
 
   return createObjectURL.mock.calls[0]![0] as Blob
