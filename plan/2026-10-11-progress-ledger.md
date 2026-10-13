@@ -7,11 +7,11 @@
 | 属性 | 值 |
 |---|---|
 | 审查基线 | `c096944`（2026-10-09 审计） |
-| 台账更新 | 2026-10-11（A 档 + B 档 + C 档 C1~C3 完成） |
-| 当前 HEAD | `1f53c9d` |
+| 台账更新 | 2026-10-12（C4 四阶段 + C4 收尾全部完成） |
+| 当前 HEAD | `5bbf164` |
 | 工具数 | 26 个路由（预渲染 sitemap） |
-| 测试 | 693 passed / 50 files |
-| 最近更新 | 2026-10-11 · A 档 5 项 + B 档全部 + C 档 C1~C3 |
+| 测试 | **775 passed / 57 files** |
+| 最近更新 | 2026-10-12 · **C 档全部完成（C4 四阶段 + 收尾）**；剩余 D 档 / E 档 / F 档 |
 
 ---
 
@@ -78,7 +78,12 @@
 | C1 新增：`distance_sensor/__tests__/TemplateReader.spec.ts` | +13 |
 | C2 新增：`coordsConversion.spec.ts` 追加 | +5 |
 | C3 新增：`utils/__tests__/shallowRefArray.spec.ts` | +4 |
-| **合计** | 524 → **693** |
+| C4-1 新增：`utils/__tests__/yieldToUI.spec.ts` / `geo_data/__tests__/parseProgressYield.spec.ts` | +9 |
+| C4-2 新增：`TemplateReader`+4 / `TemplateExporter`+7 / `elevations_batch`+2 / `get_add`+1 / `distance_sensor`+1 | +15 |
+| C4-3 新增：`utils/__tests__/exceljsPipeline.spec.ts`（产物逐格比对）/ `geo_data/__tests__/exportXlsxParity.spec.ts` / `coordsConversion`+2 / `GisToExcelExporter`+4 | +22 |
+| C4-4 新增：`utils/__tests__/filePipelineClient.spec.ts`（协议/降级/取消/空闲释放） / `e2e/worker-pipeline.spec.ts` | +24 |
+| C4 收尾新增：`geo_data/__tests__/parseKmzGeometry.spec.ts` / `utils/__tests__/abort.spec.ts` | +14 |
+| **合计** | 524 → **775** / 50 → **57 files** |
 
 ### 门禁基线演进
 
@@ -88,8 +93,10 @@
 | `oxlint` | 0 / 0 | ✅ 0 / 0 |
 | `eslint` | ❌ 133 errors | ✅ **0** |
 | `prettier --check` | ❌ 216 files 不符 | ✅ 全符合 |
-| `vitest` | 524 / 35 files | ✅ **693 / 50 files** |
-| `playwright`（生产构建） | 未验证 | ✅ 6 passed / 1 flaky |
+| `vitest` | 524 / 35 files | ✅ **775 / 57 files** |
+| `playwright`（生产构建） | 未验证 | ✅ 6 passed / 1 flaky → C4 后 **dev 8 passed · preview 7 passed**（新增 worker 链路用例，断言 worker 模块响应 200） |
+| 产物一致性（C4 新增项） | — | 4 处导出与旧实现**逐格一致**（黄金参考内联在 spec 里，另有变异验证） |
+| 主线程阻塞（C4 新增项） | — | 5 万行导入 **~1900ms → 几十 ms**（Node 基准 + e2e 证真实加载） |
 | `npm run build` | 不带门禁 | ✅ 全链路通过 |
 
 ---
@@ -116,14 +123,30 @@
 | B4 | P2-11 | `manualChunks` 判据撞车，首屏含 datepicker/draggable；实测 387 KB→129 KB (gzip) | 3 h | ✅ `b98b0cd` |
 | B5 | P1-9 | `parseFloat` 宽松前缀，脏数据被"净化"（审计 8 处，实修 10 文件 20+ 站点） | 2 h | ✅ `b4c66c2` |
 
-### C 档 · 需专门排期（✅ C1~C3 完成，2026-10-11；C4 待单独立项）
+### C 档 · 需专门排期（✅ 全部完成，2026-10-12）
 
 | # | 编号 | 问题 | 工作量 | 状态 |
 |---|---|---|---|---|
 | C1 | P1-6 | `distance_sensor` XLSX 首行空单元格 → 列数误判，合法文件被拒（列数改从表头推） | 2 h | ✅ `2eebf23` |
 | C2 | P0-5 余项 | `CoordsConvertPage` 上传后切换坐标系 → 按错误语义解释坐标（阶段 2 只修了 CGCS2000 NaN，快照未做） | 2 h | ✅ `a9b09f4` |
 | C3 | P2-18 | 只读大数组 `ref` → `shallowRef`，避免深代理内存翻倍（审计 5 文件中 3 处是 push 累积，未纳入） | 2 h | ✅ `1f53c9d` |
-| C4 | P2-20 | 文件处理全内存、同步、无分块、无 Worker，大文件卡死主线程 | 3–5 d | ⬜ |
+| C4 | P2-20 | 文件处理全内存、同步、无分块、无 Worker，大文件卡死主线程。拆成**四阶段 + 收尾**，见下「C4 执行明细」 | 3–5 d | ✅ `50ff7d2`…`5bbf164` |
+
+#### C4 执行明细（2026-10-12，依据 `docs/2026-10-12-async-pipeline-plan.md`）
+
+| 阶段 | 内容 | 提交 |
+|---|---|---|
+| 1 止血 | 新增 `utils/yieldToUI.ts`；拆 `GisToExcelExporter` 的伪 yield（`setTimeout(()=>{},200)`）；`parseKML`/`parseKMZ` 改 `for...of` + 1% 粒度节流 | `50ff7d2` |
+| 2 表格链路进度化 | 统一 `utils/progress.ts`；reader/exporter 加可选 `onProgress` + 每 500 行让出；8 个页面接 `ProgressModal` | `309e6fe` + `59940c6`（评审整改） |
+| 3 exceljs 迁移 | 新建 `utils/exceljsCore.ts`（逐行 `addRow` 分片 + `writeBuffer`），4 处导出迁移，4 组**产物逐格比对** spec | `b08b940` + `38141af` + `25c0a03` |
+| 4 Worker 化 | 新增 `workers/filePipeline.worker.ts` + `filePipelineClient`（降级/取消/协议），解析与生成都进 Worker | `06d1399` + `fd78aba` |
+| 收尾 | `parseKMZ` 的 `<MultiGeometry>` 不再静默丢弃；最后一处 xlsx 写出也迁 exceljs；导入可取消；`gis2excel` 导出接进度；worker 60s 空闲释放；删死 barrel `utils/index.ts` | `5bbf164` |
+
+**关键决策与实测**（详见 `docs/2026-10-12-c4-fix-record.md`）：
+- 5 万行导入的主线程阻塞：**~1900ms → 几十 ms**（反序列化 24ms + 校验 6ms，最长连续段 0.1ms）。
+- exceljs 实测**更慢**（5万×9 最长连续块 1926→2774ms），且差距几乎全来自边框 → 经决策**关掉生产路径 border**（总耗时回到持平 1987 vs 1926ms，产物与旧实现零差异），`border` 保留为 opt-in。
+- 「exceljs streaming writer」**不可用**：exceljs@4.4.0 的浏览器 bundle 不含 `WorkbookWriter`（偏离 D-6）。
+- 踩坑：`new Worker(new URL(...))` 必须整句字面（抽常量/变量构造器都不切 chunk）；vitest 的 fake timers 会让首次 `await import('exceljs')` 永不 settle（spec 需预载）；`it()` 后不能写 `}),`。
 
 ### D 档 · 大重构（阶段 3）
 
@@ -139,9 +162,19 @@
 | # | 编号 | 问题 | 需要什么 | 状态 |
 |---|---|---|---|---|
 | E1 | P2-16 | `vercel.json` 裸 IP + 明文 HTTP 传输评论 PII | Vercel 控制台 | ⬜ |
-| E2 | P1-8 | README 写"无需后端"，实际 6 处 `/api/*` 调用 | 文档更新 | ⬜ |
+| E2 | P1-8 | README 写"无需后端"，实际 6 处 `/api/*` 调用。**主标语已被工作区那版重写解决**，仍缺「哪些功能依赖后端 + 后端不可用时的降级行为」章节 | 文档更新 | ◐ 部分 |
 | E3 | — | 浏览量双计（`router:85` + `DlsComment:332`） | 决定保留哪一端 | ⬜ |
 | E4 | — | lefthook 未装，git hook 从未生效 | 确认是否故意 | ⬜ |
+
+### F 档 · C4 期间新发现（2026-10-12）
+
+| # | 编号 | 问题 | 需要什么 | 状态 |
+|---|---|---|---|---|
+| F1 | — | **部署侧 CSP 需允许 `worker-src 'self'`**（阶段 4 引入的新硬需求）。没有 CSP 则无影响；有的话 Worker 被拦 → 自动降级主线程，功能不坏但 Worker 白设 | 部署侧确认 | ⬜ |
+| F2 | — | xlsx 导出**没有边框**（老 bug：xlsx@0.18.5 会静默丢弃所有单元格样式，连官方 `add_style` 也落不了盘）。改 `toSheetSpec`/`generateXlsx` 的 `border: false` → `true` 即可打开，代价是大表总耗时 **+50%**（5万×9：1987→2967ms） | 产品决策 | ⬜ |
+| F3 | — | `elevations_batch` / `GeocodeCommon` / `distance_sensor` 三页仍是页内 `XLSX.read`，取消只能停在它之后的校验阶段；根治要把页内解析也统一走 `filePipeline.parse`（与 D1 一并做更划算） | 排期 | ⬜ |
+| F4 | — | `geoDataService` 的要素强引用原始 GeoJSON 对象（`feature` 字段），大文件内存放大 | 排期 | ⬜ |
+| F5 | — | togeojson 对「MultiGeometry 里再嵌套 MultiGeometry」只返回最后一个几何（库局限，已用一条用例钉住，等库修好把期望 1 改成 2） | 跟上游 | ⬜ |
 
 ---
 
@@ -152,6 +185,9 @@
 3. **同一个 bug 会在 N 处出现**——`Number('')`、`endsWith('.csv')`、`push(...arr)`、`escapeXml` 都是这个模式。修复时应全局搜索同模式。
 4. **测试断言的是「代码现在做什么」而非「应该做什么」**——`KmlGenerator.spec.ts` 曾因构造未规范化输入而假绿。
 5. **计划赶不上变化**——P0-4 计划针对 GeoJSON `MultiPoint`，实测 KML `<MultiGeometry>` 是 `GeometryCollection`。端到端测试才能暴露这类。
+6. **库的"承诺"要实测**——xlsx 的 `cell.s` 样式写入其实是**完全无效**的（连官方 `add_style` 都不落盘）；exceljs 的浏览器 bundle 根本没有 streaming writer。都只看文档会得出错误结论，写 20 行探针就能证伪。
+7. **跨线程不是"复制一份逻辑"**——Worker 化的正解是把重活抽成主线程/Worker 共用的模块（`templateMatrix` / `exceljsCore`），否则要么循环依赖，要么两实现各自漂移。
+8. **性能目标要用基准数据验证，而不是照计划文字推进**——阶段 3 计划写「用 streaming writer 降低主线程阻塞」，实测 exceljs 反而更慢、browser bundle 也根本没有 streaming writer。据此改方案（关 border + 用产物比对保正确性）比硬按文字做完更有价值。
 
 ---
 
