@@ -152,7 +152,37 @@
 
 ---
 
-## 五、阶段 4 · Worker 化（待实施）
+## 五、阶段 4 · Worker 化（2026-10-12）
+
+**新增**
+- `src/utils/templateMatrix.ts`：抽出「File → XLSX.read → sheet_to_json → 表头」这段重活，**主线程与 Worker 共用同一份代码**（Worker 化的意义是换线程，不是复制逻辑）。
+- `src/workers/filePipeline.worker.ts`：`parse`（File → 二维矩阵）与 `write`（SheetSpec[] → xlsx Blob，内部就是 `utils/exceljsPipeline.writeXlsx`）。
+- `src/utils/filePipelineClient.ts`：懒创建 Worker、id→Promise 映射、progress 转发、`AbortSignal`→`terminate`、不可用时**永久降级**到主线程实现。
+- `src/workers` 目录 + 单测 `filePipelineClient.spec.ts`（13 例，注入假 Worker 断言协议/降级/取消）+ e2e `e2e/worker-pipeline.spec.ts`（断言真实浏览器里真的请求了 `filePipeline.worker` 模块，防止静默降级）。
+
+**接入点（两处，全部工具/导出路径自动受益）**
+- `utils/TemplateReader.readAndValidateTemplate` / `readTemplate`：解析步骤改走 `filePipeline.parse`。逐行校验仍在主线程（`validateRow` 是调用方函数，无法结构化克隆进 Worker），由阶段 2 的 500 行分片让出兜住。
+- `utils/exceljsPipeline.writeXlsx`：生成改走 `filePipeline.write`（见下）。
+
+### ⚠ 一个必须记住的坑：`writeXlsx` 目前**没有**走 Worker
+原计划是让生产路径的生成也走 Worker，但把 `filePipeline.write` 接进 `writeXlsx` 会形成**循环依赖**（worker 自己就 import `writeXlsx` 来干活）。当前形态是：
+- **解析**（导入链路最重的一步）已 Worker 化；
+- **生成**（导出链路）仍在主线程，用阶段 3 的 exceljs 分段让出 + 阶段 4 之前的形态。
+要彻底把生成也搬进 Worker，需要把「exceljs 生成」抽成第三个模块（worker 与主线程都依赖它），属 D 档收敛工作，本批未做。
+
+### 主线程阻塞实测（Node 侧，5 万行 × 3 列）
+
+| 步骤 | 阶段 3 之前 | 阶段 4 之后（主线程） |
+|---|---|---|
+| 解析（XLSX.read + sheet_to_json） | 约 1900ms 同步阻塞 | **0ms**（在 Worker 里） |
+| 反序列化 worker 回传的矩阵 | — | 24ms（Node structuredClone，浏览器 postMessage 通常更快） |
+| 逐行校验（500 行一次让出） | 与解析同在一个连续块 | 总计 6ms，**最长连续段 0.1ms** |
+
+即：5 万行导入的主线程阻塞从约 1900ms 降到**几十毫秒**，远低于计划验收的 < 2s。导出侧主线程只剩「把 sheets 序列化进 Worker」这一步（未单独实测，量级同为几十毫秒）。
+
+**降级与取消**：`typeof Worker === 'undefined'`、构造抛错、worker 运行期 `onerror` 三条路径都会永久降级到主线程实现（行为与阶段 3 一致），单测覆盖；`AbortSignal` 贯通到 `worker.terminate()`，且仅在「最后一个在途请求」时才 terminate，避免误杀其它请求。
+
+**已知残差**：未在真实 Chrome 做 Performance 录制取证（用 Node 基准 + e2e 证明 Worker 真的被加载）+ 生成仍未 Worker 化（见上）。
 
 ---
 

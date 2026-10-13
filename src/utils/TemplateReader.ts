@@ -2,10 +2,11 @@
  * 模板读取与验证工具 - 通用版本
  * 支持 CSV 和 XLSX 文件的读取和数据验证
  */
-import * as XLSX from 'xlsx'
 import { pushAll } from './arrayUtils'
 import { yieldToUI } from './yieldToUI'
 import type { ProgressCallback } from './progress'
+import type { TemplateMatrix } from './templateMatrix'
+import { filePipeline } from './filePipelineClient'
 
 /**
  * 行循环的让出粒度：每处理这么多行让出一次主线程。
@@ -62,35 +63,19 @@ export async function readAndValidateTemplate(
   const { validateRow, skipEmptyRows = true, onProgress } = options || {}
 
   try {
-    // 1. 读取文件
-    onProgress?.(0, '正在读取文件...')
-    const arrayBuffer = await file.arrayBuffer()
-    onProgress?.(20, '正在解析表格...')
-    const workbook = XLSX.read(arrayBuffer, { type: 'array' })
-
-    // 获取第一个工作表
-    const firstSheetName = workbook.SheetNames[0]
-    if (!firstSheetName) {
-      result.errors.push('文件中未找到有效的工作表。')
+    // 1. 读取并解析文件 —— 这一步（XLSX.read + sheet_to_json）是不可中断的重活，
+    // 阶段 4 起搬进 filePipeline Worker；Worker 不可用时自动退回主线程，行为一致。
+    let matrix: TemplateMatrix
+    try {
+      matrix = await filePipeline.parse(file, onProgress)
+    } catch (error) {
+      result.errors.push(error instanceof Error ? error.message : String(error))
       return result
     }
 
-    const worksheet = workbook.Sheets[firstSheetName]
-    if (!worksheet) {
-      result.errors.push('无法读取工作表内容。')
-      return result
-    }
-
-    // 转换为二维数组
-    const rawData: CellValue[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
-
-    if (rawData.length === 0) {
-      result.errors.push('文件为空或无法读取。')
-      return result
-    }
-
+    const rawData = matrix.rawData
     result.rawData = rawData
-    const fileHeaders: string[] = (rawData[0] || []).map((h) => String(h || '').trim())
+    const fileHeaders = matrix.fileHeaders
 
     // 2. 检查所有必需字段是否都存在（不要求顺序）
     const missingHeaders = expectedHeaders.filter((expected) => {
@@ -192,28 +177,9 @@ export async function readTemplate(
   dataRows: DataRow[]
   rawData: CellValue[][]
 }> {
-  onProgress?.(0, '正在读取文件...')
-  const arrayBuffer = await file.arrayBuffer()
-  onProgress?.(20, '正在解析表格...')
-  const workbook = XLSX.read(arrayBuffer, { type: 'array' })
-
-  const firstSheetName = workbook.SheetNames[0]
-  if (!firstSheetName) {
-    throw new Error('文件中未找到有效的工作表。')
-  }
-
-  const worksheet = workbook.Sheets[firstSheetName]
-  if (!worksheet) {
-    throw new Error('无法读取工作表内容。')
-  }
-
-  const rawData: CellValue[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
-
-  if (rawData.length === 0) {
-    throw new Error('文件为空。')
-  }
-
-  const headers = rawData[0] || []
+  // 解析这一步在 filePipeline Worker 里跑（不可用时自动降级回主线程）
+  const { rawData, fileHeaders } = await filePipeline.parse(file, onProgress)
+  const headers = rawData[0] || fileHeaders
   const dataRows: DataRow[] = []
 
   onProgress?.(30, '正在整理数据...')
