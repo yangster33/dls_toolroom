@@ -1,9 +1,12 @@
 import * as turf from '@turf/turf'
 import toGeoJSON from 'togeojson'
 import JSZip from 'jszip'
+// 仅剩 exportToCSV 在用（json_to_sheet + sheet_to_csv，CSV 路径本次不动）。
+// exportToXLSX 已迁到 exceljs 管线（C4 阶段 3）—— 别顺手把这个 import 删了。
 import * as XLSX from 'xlsx'
 import type { Feature, LineString } from 'geojson'
 import { yieldToUI } from '@/utils/yieldToUI'
+import { collectHeaders, rowsFromObjects, writeXlsx } from '@/utils/exceljsPipeline'
 
 /**
  * 要素循环的让出粒度：每处理这么多要素让出一次主线程。
@@ -1029,19 +1032,47 @@ async function analyzePolygonToPolygon(polygons: PolygonFeature[]): Promise<Anal
 
 /**
  * 导出为 XLSX
+ *
+ * C4 阶段 3 / P2-20：从 xlsx（SheetJS）迁到 `@/utils/exceljsPipeline`（exceljs）。
+ * 迁移方式是「照抄旧算法」而不是重写语义：
+ *   - sheet 名仍是 `result.label`（且顺序仍按 results 的顺序）
+ *   - 列宽**故意不设**（`defaultColWidths: false`）、**故意不加边框** ——
+ *     旧实现走 `json_to_sheet`，而这个函数两者都不做（边框那段是死代码：
+ *     xlsx@0.18.5 会把单元格样式整体丢弃，见 `src/utils/__tests__/exceljsPipeline.spec.ts`）。
+ *     产物一致性由 `src/tools/geo_data/__tests__/exportXlsxParity.spec.ts`
+ *     逐格比对守护，改动前先跑它。
+ *
+ * **行为差异（有意，已记档）**：旧实现在「没有任何 result 被选中」时
+ * `XLSX.writeFile` 会抛 `Workbook is empty`（空 workbook 写不出去），
+ * 导出按钮点了直接弹错误框；新实现会导出一个合法但空的工作簿。
+ *
+ * 之所以是 async：`writeXlsx` 内部 `await import('exceljs')`，块内不能同步返回。
  */
-export function exportToXLSX(results: AnalysisResult[], selectedTypes: string[]): void {
-  const workbook = XLSX.utils.book_new()
+export async function exportToXLSX(
+  results: AnalysisResult[],
+  selectedTypes: string[],
+): Promise<void> {
+  const sheets = results
+    .filter((result) => selectedTypes.includes(result.type))
+    .map((result) => {
+      const headers = collectHeaders(result.data)
+      return {
+        name: result.label,
+        headers,
+        rows: rowsFromObjects(result.data, headers),
+        defaultColWidths: false,
+      }
+    })
 
-  for (const result of results) {
-    if (selectedTypes.includes(result.type)) {
-      const worksheet = XLSX.utils.json_to_sheet(result.data)
-      XLSX.utils.book_append_sheet(workbook, worksheet, result.label)
-    }
-  }
+  const blob = await writeXlsx(sheets)
 
-  const timestamp = new Date().toISOString().slice(0, 10)
-  XLSX.writeFile(workbook, `空间分析报告_${timestamp}.xlsx`)
+  // 下载方式与下面的 exportToCSV 保持一致（旧实现是 XLSX.writeFile，
+  // 它内部也是 <a download>；不引入 file-saver）
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = `空间分析报告_${new Date().toISOString().slice(0, 10)}.xlsx`
+  link.click()
+  URL.revokeObjectURL(link.href)
 }
 
 /**

@@ -11,6 +11,13 @@ import {
 } from '../TemplateExporter'
 import { logger } from '../logger'
 
+/**
+ * exceljs 是**懒加载**（`await import('exceljs')`）的，而本文件大量用例装了 fake timers。
+ * 实测：fake timers 下首次动态 import 不会 settle（Vite 的模块加载链依赖真实计时器），
+ * 因此这里在装计时器之前把 exceljs 预载完，否则 `settle()` 会空转到超时。
+ */
+await import('exceljs')
+
 let anchors: HTMLAnchorElement[] = []
 let createObjectURL: ReturnType<typeof vi.fn>
 let revokeObjectURL: ReturnType<typeof vi.fn>
@@ -151,7 +158,7 @@ describe('generateXlsx', () => {
   })
 })
 
-describe('C4 阶段 2：generateXlsx 真的让出主线程并上报进度', () => {
+describe('C4 阶段 3：生成真的让出主线程并上报进度', () => {
   it('不推进定时器就不会 resolve（证明循环内真的 yield 了）', async () => {
     let settled = false
     const pending = generateXlsx(['名称'], [['甲']]).then((blob) => {
@@ -167,22 +174,25 @@ describe('C4 阶段 2：generateXlsx 真的让出主线程并上报进度', () =
     expect(blob).toBeInstanceOf(Blob)
   })
 
-  it('大表按批 yield：5000 行至少让出 3 次', async () => {
+  it('大表按批让出：5000 行至少 yield 4 次', async () => {
+    // exceljs 的 writeBuffer 在 fake timers 下内部要推进很多步，故此处改用真实计时器
+    vi.useRealTimers()
     const rows = Array.from({ length: 5000 }, (_, i) => [`点${i}`, '116.4'])
     const counter = countYields()
     try {
-      await settle(generateXlsx(['名称', '经度'], rows, 'S'))
+      await generateXlsx(['名称', '经度'], rows, 'S')
     } finally {
       counter.restore()
     }
-    // 起点 1 次 + 边框分片（10001 单元格 / 5000）2 次 + XLSX.write 前 1 次
-    expect(counter.getCount()).toBeGreaterThanOrEqual(3)
+    // 起点 1 + 逐行分片（0/2000/4000）3 + 边框分片（每 200 行）26 + 生成前 1
+    expect(counter.getCount()).toBeGreaterThanOrEqual(4)
   })
 
-  it('onProgress 上报 0→100，1% 粒度、整数、单调不减', async () => {
+  it('onProgress 上报 0→100，整数、单调不减', async () => {
+    vi.useRealTimers()
     const rows = Array.from({ length: 5000 }, (_, i) => [`点${i}`, '116.4'])
     const reports: number[] = []
-    await settle(generateXlsx(['名称', '经度'], rows, 'S', (percent) => reports.push(percent)))
+    await generateXlsx(['名称', '经度'], rows, 'S', (percent) => reports.push(percent))
 
     expect(reports.length).toBeGreaterThan(2)
     expect(reports[0]).toBe(0)
@@ -307,8 +317,10 @@ describe('大数据量导出不触发 RangeError（审计 P2-19 / B1）', () => 
     // 说明：这里的 [headers, ...dataRows] 是「数组字面量展开」，走迭代器协议，
     // 不受调用栈限制，本就不是 P2-19 的崩溃点（改为 concat 仅为语义统一）。
     // XLSX 写出 20 万行成本极高，故仅用 5 千行做链路冒烟。
+    // exceljs 的 writeBuffer 在 fake timers 下内部推进成本很高，改用真实计时器。
+    vi.useRealTimers()
     const rows = Array.from({ length: 5_000 }, (_, i) => [`点${i}`, '116.4', '39.9'])
-    const blob = await settle(generateXlsx(headers, rows, 'S'))
+    const blob = await generateXlsx(headers, rows, 'S')
     expect(blob).toBeInstanceOf(Blob)
   })
 

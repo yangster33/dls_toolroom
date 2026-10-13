@@ -1,7 +1,58 @@
-import * as XLSX from 'xlsx'
 import type { GisFeature } from './GisFileReader'
 import { maxOf } from '@/utils/arrayUtils'
 import { yieldToUI } from '@/utils/yieldToUI'
+import { writeXlsx, type SheetSpec } from '@/utils/exceljsPipeline'
+
+/**
+ * 把一组同类型要素转成 `SheetSpec`（表名 / 表头 / 数据行 / 列宽 / 边框）。
+ *
+ * C4 阶段 3：xlsx 生成已迁到 `@/utils/exceljsPipeline`（exceljs 逐行写入 + 分片让出），
+ * 本文件不再直接依赖 xlsx 库。旧路径是 `aoa_to_sheet(全量二维数组)` + `XLSX.write`：
+ * 两步都是一次性、不可中断的同步块，5 万行能把主线程卡死数秒。
+ *
+ * 列宽的 min 阈值 8 / 30 / 20 是旧实现逐列钉住的（`maxOf(该列所有值的长度, 8|30|20)`），
+ * 直接搬过来 —— 迁移只换生成引擎，不改产物尺寸。
+ *
+ * `border: true` 是为「有内容的单元格加细边框」。旧 xlsx 实现里这段其实是死代码
+ * （xlsx@0.18.5 会把单元格样式整体丢弃，见 `utils/__tests__/exceljsPipeline.spec.ts`
+ * 顶部说明），exceljs 管线是第一次让边框真正落盘。
+ */
+function toSheetSpec(
+  features: GisFeature[],
+  type: 'Point' | 'LineString' | 'Polygon',
+  options: ExportOptions,
+): SheetSpec {
+  const headers = ['名称', '经纬度', '路径']
+  const rows: string[][] = features.map((feature) => [
+    feature.name,
+    formatCoordinates(feature.coordinates, type, options),
+    feature.path,
+  ])
+
+  // 旧实现的列宽是拿**含表头**的二维数组算的（worksheetData = [headers, ...rows]）
+  const worksheetData = [headers, ...rows]
+
+  return {
+    name: getSheetName(type),
+    headers,
+    rows,
+    colWidths: [
+      maxOf(
+        worksheetData.map((row) => String(row[0]).length),
+        8,
+      ),
+      maxOf(
+        worksheetData.map((row) => String(row[1]).length),
+        30,
+      ),
+      maxOf(
+        worksheetData.map((row) => String(row[2]).length),
+        20,
+      ),
+    ],
+    border: true,
+  }
+}
 
 /**
  * 分文件下载之间的让出间隔。
@@ -174,74 +225,14 @@ async function exportToXlsx(
   // 先让出一帧：调用方（点击处理函数）可以先重绘"转换中"状态，再跑重活
   await yieldToUI(0)
 
-  const workbook = XLSX.utils.book_new()
+  // 一个类型一个 sheet（旧实现同样是逐组 append sheet）；空组整组跳过
+  const sheets: SheetSpec[] = []
+  for (const features of groupedFeatures) {
+    if (features.length === 0 || !features[0]) continue
+    sheets.push(toSheetSpec(features, features[0].type, options))
+  }
 
-  groupedFeatures.forEach((features) => {
-    if (features.length === 0 || !features[0]) return
-
-    const type = features[0].type
-    const sheetName = getSheetName(type)
-
-    const headers = ['名称', '经纬度', '路径']
-    const dataRows: string[][] = features.map((feature) => [
-      feature.name,
-      formatCoordinates(feature.coordinates, type, options),
-      feature.path,
-    ])
-
-    const worksheetData = [headers, ...dataRows]
-    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
-
-    const colWidths = [
-      {
-        wch: maxOf(
-          worksheetData.map((row) => String(row[0]).length),
-          8,
-        ),
-      },
-      {
-        wch: maxOf(
-          worksheetData.map((row) => String(row[1]).length),
-          30,
-        ),
-      },
-      {
-        wch: maxOf(
-          worksheetData.map((row) => String(row[2]).length),
-          20,
-        ),
-      },
-    ]
-    worksheet['!cols'] = colWidths
-
-    const borderStyle = {
-      top: { style: 'thin', color: { rgb: '000000' } },
-      bottom: { style: 'thin', color: { rgb: '000000' } },
-      left: { style: 'thin', color: { rgb: '000000' } },
-      right: { style: 'thin', color: { rgb: '000000' } },
-    }
-
-    for (const key in worksheet) {
-      if (key.startsWith('!')) continue
-      const cell = worksheet[key]
-      if (cell.v !== undefined && cell.v !== null && String(cell.v).trim() !== '') {
-        cell.s = cell.s || {}
-        cell.s.border = borderStyle
-      }
-    }
-
-    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
-  })
-
-  const wbout = XLSX.write(workbook, {
-    bookType: 'xlsx',
-    type: 'array',
-    bookSST: false,
-  })
-
-  const blob = new Blob([wbout], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  })
+  const blob = await writeXlsx(sheets)
 
   triggerDownload(blob, 'gis_export', 'xlsx')
 }
@@ -309,69 +300,8 @@ async function exportSingleTypeToXlsx(
   // 先让出一帧：分文件下载时，每份之间页面可交互
   await yieldToUI(0)
 
-  const workbook = XLSX.utils.book_new()
-
-  const sheetName = getSheetName(type)
-
-  const headers = ['名称', '经纬度', '路径']
-  const dataRows: string[][] = features.map((feature) => [
-    feature.name,
-    formatCoordinates(feature.coordinates, type, options),
-    feature.path,
-  ])
-
-  const worksheetData = [headers, ...dataRows]
-  const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
-
-  const colWidths = [
-    {
-      wch: maxOf(
-        worksheetData.map((row) => String(row[0]).length),
-        8,
-      ),
-    },
-    {
-      wch: maxOf(
-        worksheetData.map((row) => String(row[1]).length),
-        30,
-      ),
-    },
-    {
-      wch: maxOf(
-        worksheetData.map((row) => String(row[2]).length),
-        20,
-      ),
-    },
-  ]
-  worksheet['!cols'] = colWidths
-
-  const borderStyle = {
-    top: { style: 'thin', color: { rgb: '000000' } },
-    bottom: { style: 'thin', color: { rgb: '000000' } },
-    left: { style: 'thin', color: { rgb: '000000' } },
-    right: { style: 'thin', color: { rgb: '000000' } },
-  }
-
-  for (const key in worksheet) {
-    if (key.startsWith('!')) continue
-    const cell = worksheet[key]
-    if (cell.v !== undefined && cell.v !== null && String(cell.v).trim() !== '') {
-      cell.s = cell.s || {}
-      cell.s.border = borderStyle
-    }
-  }
-
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
-
-  const wbout = XLSX.write(workbook, {
-    bookType: 'xlsx',
-    type: 'array',
-    bookSST: false,
-  })
-
-  const blob = new Blob([wbout], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  })
+  // 单 sheet（旧实现同样只 append 一个 worksheet）
+  const blob = await writeXlsx([toSheetSpec(features, type, options)])
 
   triggerDownload(blob, filename, 'xlsx')
 }

@@ -646,8 +646,13 @@ const cancelConversion = () => {
   abortController.value?.abort()
 }
 
-// 下载结果
-const downloadResult = (format: 'csv' | 'xlsx' = 'csv') => {
+/**
+ * 下载结果。
+ *
+ * C4 阶段 3 / P2-20：`convertToXlsx` 已改为 async（exceljs 路由内部懒加载 exceljs），
+ * 所以本函数也必须是 async，否则拿不到 Promise<Blob>。
+ */
+const downloadResult = async (format: 'csv' | 'xlsx' = 'csv') => {
   if (!canDownloadResult.value || conversionResultData.value.length === 0) return
 
   try {
@@ -668,7 +673,10 @@ const downloadResult = (format: 'csv' | 'xlsx' = 'csv') => {
         URL.revokeObjectURL(url)
       }, 100)
     } else if (format === 'xlsx') {
-      const xlsxBlob = convertToXlsx(conversionResultData.value, conversionResultHeaders.value)
+      const xlsxBlob = await convertToXlsx(
+        conversionResultData.value,
+        conversionResultHeaders.value,
+      )
       const link = document.createElement('a')
       const url = URL.createObjectURL(xlsxBlob)
       link.href = url

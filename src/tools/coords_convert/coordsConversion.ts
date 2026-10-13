@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx'
+import { rowsFromObjects, writeXlsx } from '@/utils/exceljsPipeline'
 import { convert, type CoordinateSystemType, COORDINATE_SYSTEMS } from '@/utils/coordinateConverter'
 import { parseStrictNumber } from '@/utils/coordinateValue'
 import {
@@ -304,39 +304,19 @@ export function convertToCsv(data: DataRow[], headers: string[]): string {
   return '\uFEFF' + csvRows.join('\n')
 }
 
-export function convertToXlsx(data: DataRow[], headers: string[]): Blob {
+/**
+ * 导出 xlsx（C4 阶段 3 / P2-20：由 xlsx(SheetJS) 迁到 exceljs 管线）。
+ *
+ * `writeXlsx` 内部 `await import('exceljs')`（懒加载），因此本函数必须是 async。
+ *
+ * 产物与旧实现逐格一致（表名 '转换结果'、`!cols` 列宽 `Math.max(表头长度, 10)`、
+ * undefined → ''、无边框），由 `__tests__/coordsConversion.spec.ts` 的内联
+ * 黄金参考 `legacyConvertToXlsx()` 读回比对守护。
+ */
+export async function convertToXlsx(data: DataRow[], headers: string[]): Promise<Blob> {
   if (!data || data.length === 0 || !headers || headers.length === 0) {
     return new Blob([], { type: 'application/octet-stream' })
   }
 
-  const worksheetData: (string | number | boolean | null)[][] = [headers]
-
-  for (const row of data) {
-    const rowData: (string | number | boolean | null)[] = []
-    for (const header of headers) {
-      const value = row[header]
-      rowData.push(value === undefined ? '' : value)
-    }
-    worksheetData.push(rowData)
-  }
-
-  const workbook = XLSX.utils.book_new()
-  const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
-
-  const colWidths = headers.map((header) => ({
-    wch: Math.max(header.length, 10),
-  }))
-  worksheet['!cols'] = colWidths
-
-  XLSX.utils.book_append_sheet(workbook, worksheet, '转换结果')
-
-  const wbout = XLSX.write(workbook, {
-    bookType: 'xlsx',
-    type: 'array',
-    bookSST: false,
-  })
-
-  return new Blob([wbout], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  })
+  return await writeXlsx([{ name: '转换结果', headers, rows: rowsFromObjects(data, headers) }])
 }

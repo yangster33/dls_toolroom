@@ -1,18 +1,14 @@
 /**
  * 模板导出工具 - 通用版本
  * 支持 CSV 和 XLSX 文件的生成和导出
+ *
+ * C4 阶段 3：XLSX 生成已迁到 `./exceljsPipeline`（exceljs 逐行写入 + 分片让出），
+ * 本文件不再直接依赖 xlsx 库。
  */
-import * as XLSX from 'xlsx'
 import { logger } from './logger'
 import { pushAll } from './arrayUtils'
-import { yieldToUI } from './yieldToUI'
 import type { ProgressCallback } from './progress'
-
-/**
- * 边框遍历的让出粒度：每处理这么多单元格让出一次主线程。
- * 5 万行 × 3 列 = 15 万单元格 → 约 30 次让出，开销可忽略。
- */
-const BORDER_YIELD_INTERVAL = 5000
+import { writeXlsx } from './exceljsPipeline'
 
 /**
  * CSV 字段转义
@@ -48,9 +44,14 @@ export function generateCsv(headers: string[], dataRows?: string[][]): string {
 /**
  * 生成 XLSX Blob
  *
- * C4 阶段 2：改为 async —— 边框遍历按批 `await yieldToUI()`，
- * 让进度条能逐格推进、页面在处理大表时仍可交互。
- * `XLSX.write` 本身是不可中断的同步块（彻底根治需阶段 3 的 streaming writer）。
+ * C4 阶段 3：改用 `utils/exceljsPipeline` 的 exceljs 管线。
+ * 旧实现是 `aoa_to_sheet(全量)` + `XLSX.write`：两步都是一次性不可中断的同步块，
+ * 5 万行能把主线程卡死数秒。exceljs 支持逐行 `addRow`，于是写工作表阶段就能分批让出。
+ *
+ * 产物一致性（值/列宽/表名）由 `utils/__tests__/exceljsPipeline.spec.ts` 守住。
+ * 已知偏差：旧实现那段「为有内容的单元格添加边框」其实是**死代码** ——
+ * xlsx@0.18.5 会把单元格样式整体丢弃（见该 spec 顶部说明），所以新实现是
+ * 第一次让边框真正生效。这是有意的行为修正，已在实施记录中留痕。
  *
  * @param headers 表头数组
  * @param dataRows 数据行数组（可选）
@@ -68,70 +69,7 @@ export async function generateXlsx(
     return new Blob([], { type: 'application/octet-stream' })
   }
 
-  onProgress?.(0, '正在整理数据...')
-  await yieldToUI()
-
-  const workbook = XLSX.utils.book_new()
-  const worksheetData = [headers].concat(dataRows || [])
-  const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
-
-  // 设置列宽
-  const colWidths = headers.map((header) => ({
-    wch: Math.max(header.length, 10),
-  }))
-  worksheet['!cols'] = colWidths
-
-  // 为有内容的单元格添加边框
-  const borderStyle = {
-    top: { style: 'thin', color: { rgb: '000000' } },
-    bottom: { style: 'thin', color: { rgb: '000000' } },
-    left: { style: 'thin', color: { rgb: '000000' } },
-    right: { style: 'thin', color: { rgb: '000000' } },
-  }
-
-  // 遍历所有单元格。进度按「已处理单元格 / 估算总单元格」映射到 30~90。
-  const estimatedCells = Math.max(worksheetData.length * headers.length, 1)
-  let processedCells = 0
-  let lastReportedPercent = 30
-
-  for (const key in worksheet) {
-    // 跳过特殊属性（以 ! 开头的）
-    if (key.startsWith('!')) continue
-
-    const cell = worksheet[key]
-    // 如果单元格有值（v 属性），添加边框样式
-    if (cell.v !== undefined && cell.v !== null && String(cell.v).trim() !== '') {
-      cell.s = cell.s || {}
-      cell.s.border = borderStyle
-    }
-
-    processedCells++
-    if (processedCells % BORDER_YIELD_INTERVAL === 0) {
-      await yieldToUI()
-      const percent = Math.min(90, 30 + Math.round((processedCells / estimatedCells) * 60))
-      if (percent !== lastReportedPercent) {
-        lastReportedPercent = percent
-        onProgress?.(percent, '正在设置单元格样式...')
-      }
-    }
-  }
-
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
-
-  // XLSX.write 是单一不可中断的同步块：先上报 + 让出一帧，让 UI 画出"正在生成文件"
-  onProgress?.(95, '正在生成文件...')
-  await yieldToUI()
-
-  const wbout = XLSX.write(workbook, {
-    bookType: 'xlsx',
-    type: 'array',
-    bookSST: false,
-  })
-
-  onProgress?.(100, '生成完成')
-  return new Blob([wbout], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  })
+  return writeXlsx([{ name: sheetName, headers, rows: dataRows ?? [], border: true }], onProgress)
 }
 
 /**

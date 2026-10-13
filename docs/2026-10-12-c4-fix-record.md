@@ -13,8 +13,8 @@
 | 阶段 | 内容 | 状态 | 提交 |
 |---|---|---|---|
 | 1 | 止血：拆伪 yield、修假进度、新增 `yieldToUI` | ✅ | `50ff7d2` |
-| 2 | 表格链路进度化：共用 reader/exporter 加可选 `onProgress` + 分片让出，8 个页面接入 | ✅ | `309e6fe` + 评审整改 |
-| 3 | exceljs streaming writer 替换 `XLSX.write` | ⬜ | — |
+| 2 | 表格链路进度化：共用 reader/exporter 加可选 `onProgress` + 分片让出，8 个页面接入 | ✅ | `309e6fe` + `59940c6`（评审整改） |
+| 3 | exceljs 迁移（非流式 `Workbook` + 逐行 `addRow` 分片让出，见偏离 D-6） | ✅ | 见下 |
 | 4 | Worker 化（根治主线程阻塞） | ⬜ | — |
 
 **范围外**：D1（7 份 `TemplateReader` 收敛成参数化工厂）是台账 D 档独立项，本批不做。
@@ -79,7 +79,44 @@
 
 ---
 
-## 四、阶段 3 · exceljs streaming writer（待实施）
+## 四、阶段 3 · exceljs 迁移（2026-10-12）
+
+**新共享管线**：`src/utils/exceljsPipeline.ts`
+- `writeXlsx(sheets, onProgress?): Promise<Blob>`；`SheetSpec { name, headers, rows?, colWidths?, border?, defaultColWidths? }`
+- 让出粒度：逐行每 2000 行、边框每 200 行；进度 0→99 → 95 → 100
+- 列宽补偿 `EXCELJS_WIDTH_OFFSET = 0.83`（exceljs 写出的列宽比传入值固定小 0.83，实测 8→7.17、12.5→11.67）
+- `collectHeaders` / `rowsFromObjects`（对齐 `json_to_sheet` 的键并集语义）、`safeSheetName`（OOXML 非法字符/31 字上限）
+
+**迁移的 4 处**：`utils/TemplateExporter.generateXlsx`（−90 行）、`coords_convert/coordsConversion.convertToXlsx`、`gis2excel/GisToExcelExporter.exportToXlsx/exportSingleTypeToXlsx`（抽出 `toSheetSpec` 去重）、`geo_data/geoDataService.exportToXLSX`（下载方式统一为 `exportToCSV` 同款 `<a download>`）。四处调用方均已 `await`。
+
+**计划偏离（阶段 3）**
+
+| # | 偏离 | 理由 |
+|---|---|---|
+| D-6 | 计划要求「exceljs streaming writer（逐行 addRow + commit）」 | 实测 exceljs@4.4.0 的浏览器 bundle（`dist/exceljs.min.js`，947 KB）**不含 WorkbookWriter**（只存在于 Node 的 `lib/stream/…`）。改用非流式 `Workbook` + 逐行 `addRow` 分片让出 + `xlsx.writeBuffer()`，与 `useTemplateExport.ts` 已验证的路径一致 |
+| D-7 | 新建共享管线文件，而不是在 4 处各写一遍 exceljs 代码 | P3-4「同一逻辑复制 N 份」的教训；同时让产物一致性断言只需一处 |
+
+**⚠ 迁移带来的有意行为变化：边框第一次真正生效**
+排查中期发现：旧实现的「为有内容的单元格添加边框」是**死代码**——xlsx@0.18.5 会把单元格样式整体丢弃：`<borders count="1">` 里只有一个空 `<border>`，`sheetData` 的单元格不带 `s=`；连官方 `add_style` 与 fill 同样落不了盘（有实测探针留档）。因此迁移前导出的文件**从来没有边框**。新实现按代码原意让边框生效，这是**有意的视觉行为修正**，由 `utils/__tests__/exceljsPipeline.spec.ts` 显式断言「新产物有边框、旧产物没有」。
+
+**已知残差（已显式钉住，非静默）**
+- `geo_data` 某类型 `data: []` 时：旧实现读回 `[]`，新实现读回 `[['']]`（sheet 维度导致的一个零单元格空行；Excel 里都渲染成空表，无列宽无边框）。已写成显式断言。
+- 空结果集：旧实现 `XLSX.writeFile` 抛 `Workbook is empty`（页面弹错），新实现写出合法空工作簿。已记档并断言。
+- `XLSX.write` 的最大连续阻塞换成了 exceljs `writeBuffer`（仍是单一同步块），主线程最长阻塞**降低但未消除**——根治在阶段 4。
+- `gis2excel` 的下载按钮仍未接进度弹窗（该页只有"转换中"的既有进度区）；`utils/index.ts` barrel 里这些函数已静默变 async（当前全仓零引用）。
+
+**测试**（+21，715 → 736 / 52 → 54 files）
+- `utils/__tests__/exceljsPipeline.spec.ts`（新建，10）：黄金参考 `legacyXlsx()` 内联，比对**表名/逐格值/列宽**；列宽 0.83 映射；边框用 exceljs 读回；进度与让出。
+- `utils/__tests__/TemplateExporter.spec.ts`：29（原有 22 适配 async；新增「不推进定时器就不 resolve」「5000 行 ≥4 次让出」「onProgress 0→100」）。
+- `coords_convert/__tests__/coordsConversion.spec.ts` +2 产物比对（9 列×3 行 + 10 列×4 行 fixture；做了 3 次变异验证）。
+- `gis2excel/__tests__/GisToExcelExporter.spec.ts` +4 产物比对（多类型/空分组/超长阈值；阈值 8→14 变异即红）。
+- `geo_data/__tests__/exportXlsxParity.spec.ts`（新建，4）：键不一致的并集顺序、空 data、空结果集、无列宽无边框；3 次变异验证。
+
+**测试基建踩坑（已修复，复跑 3 次全量确认稳定）**：exceljs 是**懒加载**的，而 vitest 的 fake timers 会让首次 `await import('exceljs')` 永不 settle（探针实测：不推定时器、`vi.getTimerCount()` 为 0）。解法：在装 fake timers 的 spec 顶部预载 `await import('exceljs')`（`TemplateExporter.spec.ts`、`coordsConversion.spec.ts`、`GisToExcelExporter.spec.ts`；`exportXlsxParity.spec.ts` 用了静态 import 天然免疫）。另：大表用例改用真实计时器（fake timers 下 writeBuffer 内部推进成本很高）。
+
+**门禁**：type-check 0 / oxlint 0·0 / eslint 0 / prettier 全符合 / vitest **736 passed·54 files**（连跑 3 次）/ `npm run build` 全链路通过 / `npx playwright test` **7 passed**。
+
+---
 
 ## 五、阶段 4 · Worker 化（待实施）
 

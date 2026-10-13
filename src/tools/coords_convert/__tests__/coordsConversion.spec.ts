@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import * as XLSX from 'xlsx'
 import {
   batchConvertCoordinates,
   resolveInputSystem,
@@ -6,6 +7,13 @@ import {
   convertToXlsx,
   type DataRow,
 } from '../coordsConversion'
+
+/**
+ * `convertToXlsx` 走 `utils/exceljsPipeline`，其中 exceljs 是**懒加载**的。
+ * 本文件多个 describe 装了 fake timers，而 fake timers 下首次 `await import('exceljs')`
+ * 不会 settle（Vite 模块加载链依赖真实计时器，已实测）。因此在装计时器之前预载。
+ */
+await import('exceljs')
 
 function row(name: string, lng: string | number, lat: string | number): DataRow {
   return { 名称: name, '经度/X（必填）': lng, '纬度/Y（必填）': lat }
@@ -168,16 +176,294 @@ describe('convertToCsv', () => {
 })
 
 describe('convertToXlsx', () => {
-  it('空数据返回空 Blob', () => {
-    const blob = convertToXlsx([], ['a'])
+  // C4 阶段 3：convertToXlsx 改为 async（exceljs 路由懒加载 exceljs）
+  it('空数据返回空 Blob', async () => {
+    const blob = await convertToXlsx([], ['a'])
     expect(blob.size).toBe(0)
     expect(blob.type).toBe('application/octet-stream')
   })
 
-  it('返回 xlsx Blob', () => {
-    const blob = convertToXlsx([{ 名称: '甲' }], ['名称'])
+  it('返回 xlsx Blob', async () => {
+    const blob = await convertToXlsx([{ 名称: '甲' }], ['名称'])
     expect(blob.type).toContain('spreadsheetml')
     expect(blob.size).toBeGreaterThan(0)
+  })
+})
+
+/**
+ * C4 阶段 3 验收内核：`convertToXlsx` 从 xlsx(SheetJS) 迁到 exceljs 管线后，
+ * **产物必须与旧实现逐格一致**。
+ *
+ * 关键设计 1：黄金参考是内联在本文件的 `legacyConvertToXlsx()` ——
+ * 旧实现已随迁移删除，没有可 import 的旧代码；而"删掉旧实现就删掉比对"
+ * 会让迁移失去回归兜底（与 `utils/__tests__/exceljsPipeline.spec.ts` 同一设计）。
+ *
+ * 关键设计 2：旧实现**从不写边框**（`aoa_to_sheet` 路径上没有 `cell.s` 的赋值），
+ * 新实现也不传 `border`，因此这里只比对 **表名 / 逐格值 / 列宽**。
+ *
+ * 关键设计 3：列宽是这次迁移最容易悄悄变形的东西（exceljs 的宽度补偿是
+ * `wch + 0.83`），所以 fixture 必须**至少 8 列**且表头长度有长有短，
+ * 列宽一旦漂移，`colWidths` 数组就会红。
+ */
+
+interface ReadBackSheet {
+  name: string
+  values: unknown[][]
+  colWidths: number[]
+}
+
+/**
+ * 读回产物：表名 / 逐格值 / 列宽。
+ *
+ * `raw: false` 两侧都用字符串回读（避免 exceljs 与 xlsx 的数字类型标记差异影响比对），
+ * `defval: ''` 把"空单元格"与"空串单元格"都归一成同一个值。
+ */
+const readBack = async (blob: Blob): Promise<ReadBackSheet[]> => {
+  const wb = XLSX.read(await blob.arrayBuffer(), { type: 'array', cellStyles: true })
+  return wb.SheetNames.map((name) => ({
+    name,
+    values: XLSX.utils.sheet_to_json(wb.Sheets[name]!, {
+      header: 1,
+      raw: false,
+      defval: '',
+    }) as unknown[][],
+    colWidths: (wb.Sheets[name]!['!cols'] ?? []).map((c) => c.wch ?? 0),
+  }))
+}
+
+/** 迁移前 `convertToXlsx` 的忠实副本（黄金参考） */
+function legacyConvertToXlsx(data: DataRow[], headers: string[]): Blob {
+  if (!data || data.length === 0 || !headers || headers.length === 0) {
+    return new Blob([], { type: 'application/octet-stream' })
+  }
+
+  const worksheetData: (string | number | boolean | null)[][] = [headers]
+
+  for (const row of data) {
+    const rowData: (string | number | boolean | null)[] = []
+    for (const header of headers) {
+      const value = row[header]
+      rowData.push(value === undefined ? '' : value)
+    }
+    worksheetData.push(rowData)
+  }
+
+  const workbook = XLSX.utils.book_new()
+  const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
+
+  worksheet['!cols'] = headers.map((header) => ({
+    wch: Math.max(header.length, 10),
+  }))
+
+  XLSX.utils.book_append_sheet(workbook, worksheet, '转换结果')
+
+  const wbout = XLSX.write(workbook, {
+    bookType: 'xlsx',
+    type: 'array',
+    bookSST: false,
+  })
+
+  return new Blob([wbout], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
+}
+
+/**
+ * 9 列 fixture：表头长度有长有短（`经度/X（GCJ-02）` = 12 字符 → 列宽 12，
+ * 其余 ≤ 10 落到 10），值域覆盖 整数 / 0 / 负数 / 小数 / 字符串 / 空串 /
+ * null / undefined / 布尔。
+ */
+const WIDE_HEADERS = [
+  '名称',
+  '编号',
+  '经度/X（GCJ-02）',
+  '纬度/Y（GCJ-02）',
+  '高程',
+  '有效',
+  '备注',
+  '更新时间',
+  '序号',
+]
+
+const WIDE_ROWS: DataRow[] = [
+  {
+    名称: '站点甲',
+    编号: 10001,
+    '经度/X（GCJ-02）': 116.397129,
+    '纬度/Y（GCJ-02）': 39.916527,
+    高程: 40.5,
+    有效: true,
+    备注: '正常点位',
+    更新时间: '2026-10-12 08:30:00',
+    序号: 1,
+  },
+  {
+    // 第二行：字符串数值、空串、带逗号/引号的备注
+    名称: '站点乙',
+    编号: 10002,
+    '经度/X（GCJ-02）': '121.473702',
+    '纬度/Y（GCJ-02）': '-31.230416',
+    高程: -12.5,
+    有效: false,
+    备注: '带,逗号与"引号"',
+    更新时间: '',
+    序号: 2,
+  },
+  {
+    // 第三行：0 / null / undefined —— 都不能被静默吞掉
+    名称: '站点丙',
+    编号: 0,
+    '经度/X（GCJ-02）': 0,
+    '纬度/Y（GCJ-02）': 0,
+    高程: null,
+    有效: false,
+    备注: '',
+    // 更新时间 缺键（undefined） → 归一为 ''
+    序号: 3,
+  },
+]
+
+/**
+ * 第二组 fixture（10 列 / 4 行）：换一套维度，避免「列宽只在某一套表头下碰巧一致」。
+ *
+ * 注意：行对象的 key 必须与表头**同名**（`writeXlsx` 与旧实现都是按表头取值的），
+ * 所以这里用 `LONG` / `MISSING` 两个变量同时作表头与 key。
+ * `MISSING` 一整列都缺键 —— 覆盖 `undefined → ''` 的归一化路径。
+ */
+const LONG = '名字特别长的第三列用来拉开宽度差'
+const MISSING = '缺键列'
+const NARROW_HEADERS = ['a', 'b', LONG, MISSING, 'e', 'f', 'g', 'h', 'i', 'j']
+
+const NARROW_ROWS: DataRow[] = [
+  {
+    a: 1,
+    b: 2,
+    [LONG]: 3,
+    e: 5,
+    f: 6,
+    g: 7,
+    h: 8,
+    i: 9,
+    j: 10,
+  },
+  {
+    a: '',
+    b: null,
+    [LONG]: 'text',
+    e: true,
+    f: '0',
+    g: 0,
+    h: '',
+    i: undefined,
+    j: 'x,y',
+  },
+  {
+    a: '甲',
+    b: '乙',
+    [LONG]: '丙',
+    e: '戊',
+    f: '己',
+    g: '庚',
+    h: '辛',
+    i: '壬',
+    j: '癸',
+  },
+  {
+    a: '0.1',
+    b: 0.2,
+    [LONG]: 1e-7,
+    e: 123456789,
+    f: 0,
+    g: '',
+    h: '末',
+    i: '',
+    j: '',
+  },
+]
+
+describe('convertToXlsx · 产物与旧实现逐格一致（C4 阶段 3 验收）', () => {
+  it('9 列 / 数字-字符串-空串-undefined 混合：表名、逐格值、列宽与旧实现一致', async () => {
+    const legacyBlob = legacyConvertToXlsx(WIDE_ROWS, WIDE_HEADERS)
+    const nextBlob = await convertToXlsx(WIDE_ROWS, WIDE_HEADERS)
+
+    const actual = await readBack(nextBlob)
+    expect(actual).toEqual(await readBack(legacyBlob))
+
+    // 显式钉住表名与列宽口径（万一上面的 toEqual 因格式漂移全线失败，这几行能指出方向）
+    expect(actual).toHaveLength(1)
+    expect(actual[0]!.name).toBe('转换结果')
+    expect(actual[0]!.colWidths).toEqual(WIDE_HEADERS.map((h) => Math.max(h.length, 10)))
+
+    // 防「假绿」：把 fixture 真正读到的值写出来，确保比对覆盖的是真实值域
+    expect(actual[0]!.values).toHaveLength(WIDE_ROWS.length + 1)
+    expect(actual[0]!.values[0]).toEqual(WIDE_HEADERS)
+    expect(actual[0]!.values[1]).toEqual([
+      '站点甲',
+      '10001',
+      '116.397129',
+      '39.916527',
+      '40.5',
+      'TRUE',
+      '正常点位',
+      '2026-10-12 08:30:00',
+      '1',
+    ])
+    expect(actual[0]!.values[2]).toEqual([
+      '站点乙',
+      '10002',
+      '121.473702',
+      '-31.230416',
+      '-12.5',
+      'FALSE',
+      '带,逗号与"引号"',
+      '',
+      '2',
+    ])
+    // 第三行：0 / null / 空串 / 缺键都各就各位
+    expect(actual[0]!.values[3]).toEqual(['站点丙', '0', '0', '0', '', 'FALSE', '', '', '3'])
+  })
+
+  it('10 列 / 4 行另一组数据：同样逐格一致（列宽不依赖具体表头）', async () => {
+    const legacyBlob = legacyConvertToXlsx(NARROW_ROWS, NARROW_HEADERS)
+    const nextBlob = await convertToXlsx(NARROW_ROWS, NARROW_HEADERS)
+
+    const actual = await readBack(nextBlob)
+    expect(actual).toEqual(await readBack(legacyBlob))
+
+    expect(actual).toHaveLength(1)
+    expect(actual[0]!.name).toBe('转换结果')
+    expect(actual[0]!.colWidths).toEqual(NARROW_HEADERS.map((h) => Math.max(h.length, 10)))
+    expect(actual[0]!.values).toHaveLength(NARROW_ROWS.length + 1)
+    expect(actual[0]!.values[1]).toEqual(['1', '2', '3', '', '5', '6', '7', '8', '9', '10'])
+    expect(actual[0]!.values[2]).toEqual(['', '', 'text', '', 'TRUE', '0', '0', '', '', 'x,y'])
+    expect(actual[0]!.values[3]).toEqual(['甲', '乙', '丙', '', '戊', '己', '庚', '辛', '壬', '癸'])
+    expect(actual[0]!.values[4]).toEqual([
+      '0.1',
+      '0.2',
+      '0.0000001',
+      '',
+      '123456789',
+      '0',
+      '',
+      '末',
+      '',
+      '',
+    ])
+  })
+
+  it('空数据 / 空表头的早退行为与旧实现一致', async () => {
+    const cases: Array<[DataRow[], string[]]> = [
+      [[], WIDE_HEADERS],
+      [WIDE_ROWS, []],
+      [[], []],
+    ]
+    for (const [data, headers] of cases) {
+      const next = await convertToXlsx(data, headers)
+      const legacy = legacyConvertToXlsx(data, headers)
+      expect(next.type).toBe(legacy.type)
+      expect(next.size).toBe(0)
+    }
+    expect((await convertToXlsx([], WIDE_HEADERS)).type).toBe('application/octet-stream')
   })
 })
 

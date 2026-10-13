@@ -850,14 +850,15 @@ const previewResult = (result: AnalysisResult) => {
 }
 
 // 导出结果
-const exportResult = (format: 'csv' | 'xlsx') => {
+const exportResult = async (format: 'csv' | 'xlsx') => {
   if (!canDownloadResult.value) return
 
   try {
     if (format === 'xlsx') {
-      exportToXLSX(analysisResults.value, selectedAnalysisTypes.value)
+      // exportToXLSX 已迁到 exceljs 管线（C4 阶段 3），内部是动态 import，必须 await
+      await exportToXLSX(analysisResults.value, selectedAnalysisTypes.value)
     } else {
-      exportToCSV(analysisResults.value, selectedAnalysisTypes.value)
+      await exportToCSV(analysisResults.value, selectedAnalysisTypes.value)
     }
   } catch (error) {
     logger.error(`导出${format}失败:`, error)
