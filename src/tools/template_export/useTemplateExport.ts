@@ -7,6 +7,13 @@ import * as XLSX from 'xlsx'
 import * as Papa from 'papaparse'
 import expressions from 'angular-expressions'
 import { logger } from '@/utils/logger'
+// C4 收尾：data 模板下载改走 exceljs 管线；XLSX.read 仍用于解析用户上传的模板
+import {
+  collectHeaders,
+  downloadXlsxBlob,
+  rowsFromObjects,
+  writeXlsx,
+} from '@/utils/exceljsPipeline'
 // exceljs 约 900KB，运行时用动态 import 懒加载；这里只取类型（编译期擦除，不进 bundle）
 import type * as ExcelJS from 'exceljs'
 
@@ -399,10 +406,13 @@ export function useTemplateExport(format: ExportFormat) {
       const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8' })
       saveAs(blob, 'data_template.csv')
     } else {
-      const ws = XLSX.utils.json_to_sheet(templateData)
-      const wb = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(wb, ws, 'Data')
-      XLSX.writeFile(wb, 'data_template.xlsx')
+      // C4 收尾：这处是仓库里最后一处 xlsx **写出**路径，统一走 exceljs 管线。
+      // 与 json_to_sheet 的产物差异由 exceljsPipeline.spec.ts 的逐格比对覆盖。
+      const headers = collectHeaders(templateData)
+      const blob = await writeXlsx([
+        { name: 'Data', headers, rows: rowsFromObjects(templateData, headers) },
+      ])
+      downloadXlsxBlob(blob, 'data_template')
     }
   }
 

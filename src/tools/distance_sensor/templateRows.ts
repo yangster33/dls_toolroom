@@ -14,6 +14,7 @@
  */
 import { yieldToUI } from '@/utils/yieldToUI'
 import type { ProgressCallback } from '@/utils/progress'
+import { throwIfAborted } from '@/utils/abort'
 
 /** 表头为空时的占位 key（保持列序，不会让某列凭空消失） */
 function normalizeHeader(cell: unknown): string {
@@ -33,13 +34,16 @@ const ROW_YIELD_INTERVAL = 500
  * `sheet_to_json(ws, { header: 1 })` 的二维数组 → { columns, rows }
  *
  * C4 阶段 2：改为 async 并支持进度回调；大表逐行整形时按批让出主线程。
+ * C4 收尾：新增 `signal`，已取消时以 AbortError 拒绝（不写入 errors）。
  *
  * @param aoa 二维数组，第 0 行是表头
  * @param onProgress 进度回调（可选，不传则行为不变）
+ * @param signal 取消信号（可选，不传则行为不变）
  */
 export async function aoaToTemplateRows(
   aoa: readonly unknown[][],
   onProgress?: ProgressCallback,
+  signal?: AbortSignal,
 ): Promise<{
   columns: string[]
   rows: Record<string, string | number>[]
@@ -54,6 +58,8 @@ export async function aoaToTemplateRows(
   for (let i = 0; i < total; i++) {
     if (i % ROW_YIELD_INTERVAL === 0) {
       await yieldToUI()
+      // 与让出同频复查取消：否则点了「终止计算」还要跑完剩下几万行
+      throwIfAborted(signal)
     }
     const percent = total > 0 ? Math.round((i / total) * 100) : 100
     onProgress?.(Math.min(99, percent), `正在整理第 ${i + 1} 行...`)

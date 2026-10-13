@@ -570,13 +570,16 @@
     />
 
     <!-- 导入/导出进度弹窗（模板下载、文件解析、结果导出） -->
+    <!-- 取消按钮只在「导入」期间出现：模板下载/结果导出没有可 abort 的控制器，
+         挂一个点了没反应的按钮比没有更糟（审计 D-5 同类问题） -->
     <ProgressModal
       :is-open="pipelineProgress.open"
       :title="pipelineProgress.title"
       :percent="pipelineProgress.percent"
       :message="pipelineProgress.message"
       :remaining-time="pipelineTimer.remainingText.value"
-      :show-cancel="false"
+      :show-cancel="importAbort !== null"
+      @cancel="cancelImport"
     />
   </div>
 </template>
@@ -799,6 +802,15 @@ const pipelineReporter: ProgressCallback = (percent, message) => {
   pipelineTimer.update(percent)
 }
 
+/**
+ * 导入取消（C4 收尾 / P2-20）。
+ *
+ * 本页的解析在页内（`XLSX.read` 是同步块，无法中断），因此 abort 实际能停下的是
+ * 逐行校验阶段；已取消时两个 mode 的 `readAndValidateTemplate` 会在让出间隙
+ * 抛 AbortError。
+ */
+const importAbort = ref<AbortController | null>(null)
+
 const hasValidApiKeys = computed(() =>
   currentConfig.value.apiKeys.some((k) => k.isValid && k.provider),
 )
@@ -902,6 +914,8 @@ const onFileUpload = async (event: Event) => {
   const file = target.files?.[0]
   if (!file) return
 
+  const controller = new AbortController()
+  importAbort.value = controller
   beginPipeline('正在解析文件...')
   try {
     // 先画进度文案并让出一帧：XLSX.read / sheet_to_json 是同步阻塞，
@@ -934,7 +948,11 @@ const onFileUpload = async (event: Event) => {
     }
 
     const validateFn = mode === 'add' ? validateAddTemplate : validateLonLatTemplate
-    const result = await validateFn(rows, pipelineReporter)
+    const result = await validateFn(rows, pipelineReporter, controller.signal)
+
+    // 取消后 reader 可能仍把结果算完并返回：此时整份丢弃，不写校验结果
+    if (controller.signal.aborted) return
+
     validationResult.value = result
     queryResults.value = []
 
@@ -945,6 +963,8 @@ const onFileUpload = async (event: Event) => {
       showErrorDialog('error', '数据校验失败', errorMessage)
     }
   } catch (error) {
+    // 取消不是错误：静默收尾，别弹「文件读取失败」
+    if (controller.signal.aborted) return
     logger.error('文件读取失败:', error)
     validationResult.value = {
       isValid: false,
@@ -953,6 +973,7 @@ const onFileUpload = async (event: Event) => {
     }
     showErrorDialog('error', '文件读取失败', '请确保文件格式正确')
   } finally {
+    importAbort.value = null
     endPipeline()
   }
 }
@@ -1088,6 +1109,19 @@ const clearUploadFile = () => {
   if (fileInputRef.value) {
     fileInputRef.value.value = ''
   }
+}
+
+/**
+ * 取消导入：abort 在途校验，收回进度弹窗，并与「清除上传」保持同一口径
+ * 丢掉本次上传的校验结果（先同步清，reader 回头返回结果时也被
+ * `signal.aborted` 挡住，不会又把数据写回来）。
+ */
+const cancelImport = () => {
+  importAbort.value?.abort()
+  importAbort.value = null
+  endPipeline()
+  pipelineTimer.reset()
+  clearUploadFile()
 }
 
 const clearAll = () => {

@@ -18,6 +18,7 @@
  * （曾让 worker chunk 白胖 ~900KB），因此这里不提供 write API。
  */
 import { parseTemplateMatrix, type TemplateMatrix } from './templateMatrix'
+import { writeXlsxBlob, type SheetSpec } from './exceljsCore'
 import type { ProgressCallback } from './progress'
 import type {
   WorkerRequest,
@@ -31,9 +32,17 @@ export interface FilePipelineClient {
     onProgress?: ProgressCallback,
     signal?: AbortSignal,
   ) => Promise<TemplateMatrix>
+  write: (
+    sheets: readonly SheetSpec[],
+    onProgress?: ProgressCallback,
+    signal?: AbortSignal,
+  ) => Promise<Blob>
   /** 是否已经降级到主线程（供调用方/测试观测） */
   readonly degraded: () => boolean
 }
+
+/** 空闲多久后释放 worker（毫秒）。worker 常驻会白占几十 MB，而重建只是重新 eval 缓存 chunk */
+const IDLE_TEARDOWN_MS = 60_000
 
 /** 平台 Worker 构造器；测试通过注入假 Worker 覆盖它 */
 export type WorkerCtor = new (url: URL, options?: { type: 'module' }) => Worker
@@ -71,6 +80,9 @@ export function createFilePipeline(options: { Worker?: WorkerCtor } = {}): FileP
   let isDegraded = false
   let nextId = 1
   const pending = new Map<number, PendingRequest>()
+  // 空闲一段时间后释放 worker：它常驻会白占几十 MB（里面还躺着 exceljs + xlsx 两份库）。
+  // chunk 已被浏览器缓存，重建只是重新 eval，成本远低于常驻内存。
+  let idleTimer: ReturnType<typeof setTimeout> | null = null
 
   const constructWorker = (): Worker =>
     InjectedWorker
@@ -79,8 +91,16 @@ export function createFilePipeline(options: { Worker?: WorkerCtor } = {}): FileP
         })
       : createDefaultWorker()
 
+  const clearIdleTimer = () => {
+    if (idleTimer !== null) {
+      clearTimeout(idleTimer)
+      idleTimer = null
+    }
+  }
+
   const teardown = () => {
     if (!worker) return
+    clearIdleTimer()
     worker.terminate()
     worker = null
     for (const request of pending.values()) {
@@ -88,6 +108,16 @@ export function createFilePipeline(options: { Worker?: WorkerCtor } = {}): FileP
       request.reject(new DOMException('Worker 被终止', 'AbortError'))
     }
     pending.clear()
+  }
+
+  /** 空闲释放：一段时间内没有在途请求就 terminate（不是降级，下次用时重建） */
+  const scheduleIdleTeardown = () => {
+    clearIdleTimer()
+    if (pending.size > 0 || !worker) return
+    idleTimer = setTimeout(() => {
+      idleTimer = null
+      if (pending.size === 0) teardown()
+    }, IDLE_TEARDOWN_MS)
   }
 
   /**
@@ -109,7 +139,10 @@ export function createFilePipeline(options: { Worker?: WorkerCtor } = {}): FileP
 
   const ensureWorker = (): Worker | null => {
     if (isDegraded) return null
-    if (worker) return worker
+    if (worker) {
+      clearIdleTimer()
+      return worker
+    }
     if (typeof Worker === 'undefined' && !InjectedWorker) {
       isDegraded = true
       return null
@@ -128,6 +161,7 @@ export function createFilePipeline(options: { Worker?: WorkerCtor } = {}): FileP
         pending.delete(response.id)
         request.dispose()
         request.resolve(response as WorkerResult)
+        scheduleIdleTeardown()
       }
       worker.onerror = () => {
         degradeAndRetry()
@@ -153,10 +187,21 @@ export function createFilePipeline(options: { Worker?: WorkerCtor } = {}): FileP
     return { id: 0, type: 'ok', kind: 'parse', ...payload }
   }
 
+  type PipelineSpec =
+    | { kind: 'parse'; payload: { file: File } }
+    | { kind: 'write'; payload: { sheets: readonly SheetSpec[] } }
+
+  /** 主线程等价的 write：worker 与降级路径共用同一份 exceljs 实现，产物天然一致 */
+  const writeOnMainThread = async (
+    sheets: readonly SheetSpec[],
+    onProgress: ProgressCallback | undefined,
+  ): Promise<WorkerResult> => {
+    const blob = await writeXlsxBlob(sheets, onProgress)
+    return { id: 0, type: 'ok', kind: 'write', blob }
+  }
+
   const runInWorker = (
-    spec: Extract<WorkerRequest, { kind: 'parse' }> extends never
-      ? never
-      : { kind: 'parse'; payload: { file: File } },
+    spec: PipelineSpec,
     onProgress: ProgressCallback | undefined,
     signal: AbortSignal | undefined,
   ): Promise<WorkerResult> | undefined => {
@@ -175,7 +220,10 @@ export function createFilePipeline(options: { Worker?: WorkerCtor } = {}): FileP
         resolve,
         reject,
         onProgress,
-        fallback: () => parseOnMainThread(spec.payload.file, onProgress),
+        fallback:
+          spec.kind === 'parse'
+            ? () => parseOnMainThread(spec.payload.file, onProgress)
+            : () => writeOnMainThread(spec.payload.sheets, onProgress),
         dispose: () => dispose(),
       })
       if (signal) {
@@ -186,6 +234,7 @@ export function createFilePipeline(options: { Worker?: WorkerCtor } = {}): FileP
           entry.dispose()
           // 只有一个在途请求时才 terminate：其它请求会被完整执行完
           if (pending.size === 0) teardown()
+          else scheduleIdleTeardown()
           reject(new DOMException('已取消', 'AbortError'))
         }
         signal.addEventListener('abort', onAbort, { once: true })
@@ -228,6 +277,21 @@ export function createFilePipeline(options: { Worker?: WorkerCtor } = {}): FileP
         throw new Error('Worker 返回了非 parse 结果')
       }
       return { rawData: response.rawData, fileHeaders: response.fileHeaders }
+    },
+
+    write: async (sheets, onProgress, signal) => {
+      const response = await runInWorker({ kind: 'write', payload: { sheets } }, onProgress, signal)
+      if (!response) {
+        // 降级路径：主线程直接生成
+        return writeXlsxBlob(sheets, onProgress)
+      }
+      if (response.type === 'error') {
+        throw new Error(response.message)
+      }
+      if (response.kind !== 'write') {
+        throw new Error('Worker 返回了非 write 结果')
+      }
+      return response.blob
     },
 
     degraded: () => isDegraded,

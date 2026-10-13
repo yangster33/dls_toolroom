@@ -3,6 +3,7 @@ import type { CoordinatePoint } from '@/utils/templateHandler'
 import { parseCoordinateValue } from '@/utils/coordinateValue'
 import { yieldToUI } from '@/utils/yieldToUI'
 import type { ProgressCallback } from '@/utils/progress'
+import { throwIfAborted } from '@/utils/abort'
 
 /** 行循环的让出粒度（C4 阶段 2） */
 const ROW_YIELD_INTERVAL = 500
@@ -14,10 +15,14 @@ export type { CoordinatePoint, TemplateValidationResult }
  *
  * C4 阶段 2：改为 async 并支持进度回调。让出放在循环**开头** ——
  * 校验失败的行会 `continue`，放在结尾会被整批跳过。
+ *
+ * @param onProgress 进度回调（可选，不传则行为与改造前一致）
+ * @param signal 取消信号（C4 收尾，可选）：已取消时以 AbortError 拒绝
  */
 export async function readAndValidateTemplate(
   rows: Record<string, string | number>[],
   onProgress?: ProgressCallback,
+  signal?: AbortSignal,
 ): Promise<TemplateValidationResult<CoordinatePoint>> {
   const data: CoordinatePoint[] = []
   const errors: string[] = []
@@ -25,6 +30,8 @@ export async function readAndValidateTemplate(
   for (let i = 0; i < rows.length; i++) {
     if (i % ROW_YIELD_INTERVAL === 0) {
       await yieldToUI()
+      // 与让出同频复查取消：否则点了「终止计算」还要跑完剩下几万行
+      throwIfAborted(signal)
     }
     const percent = rows.length > 0 ? Math.round((i / rows.length) * 100) : 100
     onProgress?.(Math.min(99, percent), `正在校验第 ${i + 1} 行...`)

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import * as XLSX from 'xlsx'
-import ExcelJS from 'exceljs'
 import { createFilePipeline, type WorkerCtor } from '../filePipelineClient'
+import { writeXlsxBlob } from '../exceljsCore'
 import type {
   WorkerRequest,
   WorkerResponse,
@@ -13,23 +13,21 @@ import type {
  *
  * 关键点：**注入假 Worker** 而不是依赖真实 Worker —— vitest 的 jsdom 环境没有原生
  * Worker，而真实 Worker 的时序/协议在这里无法断言。真实 Worker 的打包与连通由
- * `npm run build`（dist 里出现独立 worker chunk）与 `e2e/worker-pipeline.spec.ts`
- * 覆盖。
+ * `npm run build`（dist 里出现独立 worker chunk）与 `e2e/worker-pipeline.spec.ts` 覆盖。
  *
  * exceljs 是懒加载的：fake timers 下首次 `await import()` 不会 settle，
- * 因此在文件顶部预载（本文件多数用例不打 fake timers，但同进程的其它 spec 会）。
+ * 因此在文件顶部预载。
  */
 await import('exceljs')
 
 /** 可控的假 Worker：记录 postMessage，允许测试手动回消息 */
 class FakeWorker {
   static instances: FakeWorker[] = []
+  static throwOnNextPost = false
   onmessage: ((event: MessageEvent<WorkerResponse>) => void) | null = null
   onerror: ((event: ErrorEvent) => void) | null = null
   posted: WorkerRequest[] = []
   terminated = false
-  /** 让下一次 postMessage 抛错（模拟 DataCloneError / worker 已 terminate） */
-  static throwOnNextPost = false
 
   constructor(
     readonly url: URL,
@@ -55,9 +53,14 @@ class FakeWorker {
     this.onmessage?.(new MessageEvent('message', { data: response }))
   }
 
-  /** 回一条 ok（按请求 id） */
+  /** 回一条 parse ok（按请求 id） */
   replyParseOk(id: number, result: WorkerParseResult) {
     this.reply({ id, type: 'ok', kind: 'parse', ...result })
+  }
+
+  /** 回一条 write ok */
+  replyWriteOk(id: number, blob: Blob) {
+    this.reply({ id, type: 'ok', kind: 'write', blob })
   }
 
   fail(message = 'worker crashed') {
@@ -114,19 +117,33 @@ describe('filePipelineClient · 协议', () => {
     expect(await pending).toEqual(MATRIX)
   })
 
-  it('并发 + 乱序回包：id 不串（先回 id=2，再回 id=1）', async () => {
+  it('write：SheetSpec 序列化进 Worker，回包拿到 Blob', async () => {
     const pipeline = createFilePipeline({ Worker: workerCtor() })
-    const first = pipeline.parse(makeCsvFile('a'))
-    const second = pipeline.parse(makeCsvFile('b'))
+    const blob = new Blob(['x'], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    const pending = pipeline.write([{ name: 'S', headers: ['a'], rows: [['1']] }])
+
     const worker = FakeWorker.instances[0]!
+    expect(worker.posted[0]!.kind).toBe('write')
+    worker.replyWriteOk(worker.lastId, blob)
+    expect(await pending).toBe(blob)
+  })
 
-    expect(worker.posted.map((it) => it.id)).toEqual([1, 2])
+  it('write 与 parse 复用同一个 worker，id 连续不串（乱序回包也正确）', async () => {
+    const pipeline = createFilePipeline({ Worker: workerCtor() })
+    const writePromise = pipeline.write([{ name: 'S', headers: ['a'], rows: [['1']] }])
+    const parsePromise = pipeline.parse(makeCsvFile('名称\nA'))
 
-    worker.replyParseOk(2, { rawData: [['second']], fileHeaders: ['second'] })
-    worker.replyParseOk(1, MATRIX)
+    const worker = FakeWorker.instances[0]!
+    expect(worker.posted.map((it) => it.kind)).toEqual(['write', 'parse'])
 
-    expect(await second).toEqual({ rawData: [['second']], fileHeaders: ['second'] })
-    expect(await first).toEqual(MATRIX)
+    const blob = new Blob(['x'])
+    worker.replyParseOk(worker.posted[1]!.id, MATRIX)
+    worker.replyWriteOk(worker.posted[0]!.id, blob)
+
+    expect(await parsePromise).toEqual(MATRIX)
+    expect(await writePromise).toBe(blob)
   })
 
   it('progress 按 id 分流，不 resolve；与 ok 混流也不串', async () => {
@@ -140,12 +157,12 @@ describe('filePipelineClient · 协议', () => {
     worker.reply({ id: 1, type: 'progress', percent: 20, message: '解析中' })
     worker.reply({ id: 2, type: 'progress', percent: 50, message: '另一个' })
     worker.reply({ id: 1, type: 'progress', percent: 30, message: '又一条' })
-    worker.replyParseOk(1, MATRIX) // id=1 完成，id=2 仍在途
+    worker.replyParseOk(1, MATRIX)
     worker.replyParseOk(2, MATRIX)
 
     await first
     await second
-    // 去掉 parse 开头那帧「正在准备解析环境...」(0)
+    // 去掉 parse/write 开头那帧「正在准备...」(0)
     expect(firstReports.filter((p) => p > 0)).toEqual([20, 30])
     expect(secondReports.filter((p) => p > 0)).toEqual([50])
   })
@@ -183,9 +200,8 @@ describe('filePipelineClient · 协议', () => {
     const worker = FakeWorker.instances[0]!
 
     // 若 throw 时没清理条目，pending 里会留下一个永不 resolve 的僵尸，
-    // 于是下面这次 abort 之后 pending.size 不为 0，worker 永远不会被 terminate。
+    // 于是这次 abort 之后 pending.size 不为 0，worker 永远不会被 terminate。
     const controller = new AbortController()
-    // 注意：必须接住 rejection，否则 void 掉的 Promise 会变成 unhandled rejection
     const aborted = pipeline.parse(makeCsvFile('b'), undefined, controller.signal)
     controller.abort()
     await expect(aborted).rejects.toMatchObject({ name: 'AbortError' })
@@ -194,19 +210,46 @@ describe('filePipelineClient · 协议', () => {
 })
 
 describe('filePipelineClient · 降级路径（计划 4.6）', () => {
-  it('环境没有 Worker 实现时退回主线程，产物与直接调用一致', async () => {
+  it('环境没有 Worker 实现时退回主线程，parse 产物与直接调用一致', async () => {
+    const { parseTemplateMatrix } = await import('../templateMatrix')
     const pipeline = createFilePipeline()
     const file = makeCsvFile('名称,经度,纬度\nA,116.4,39.9\nB,121.5,31.2')
     const matrix = await pipeline.parse(file)
 
     expect(pipeline.degraded()).toBe(true)
-    const { parseTemplateMatrix } = await import('../templateMatrix')
     const direct = await parseTemplateMatrix(file)
     expect(matrix.fileHeaders).toEqual(direct.fileHeaders)
     expect(matrix.rawData).toHaveLength(direct.rawData.length)
-    expect(matrix.rawData[matrix.rawData.length - 1]).toEqual(
-      direct.rawData[direct.rawData.length - 1],
-    )
+  })
+
+  it('降级 write 的产物是合法 xlsx（表名/值可读回），且与 exceljsCore 逐格一致', async () => {
+    const sheets = [
+      {
+        name: '点',
+        headers: ['名称', '经度'],
+        rows: [
+          ['A', '116.4'],
+          ['B', '121.5'],
+        ],
+      },
+    ]
+    const pipeline = createFilePipeline()
+    const blob = await pipeline.write(sheets)
+    expect(pipeline.degraded()).toBe(true)
+
+    const readBack = async (target: Blob) =>
+      XLSX.utils.sheet_to_json(
+        XLSX.read(await target.arrayBuffer(), { type: 'array' }).Sheets['点']!,
+        { header: 1, raw: false, defval: '' },
+      )
+
+    expect(await readBack(blob)).toEqual([
+      ['名称', '经度'],
+      ['A', '116.4'],
+      ['B', '121.5'],
+    ])
+    // 降级不该变味：与直接调 core 的产物完全一致
+    expect(await readBack(blob)).toEqual(await readBack(await writeXlsxBlob(sheets)))
   })
 
   it('构造抛错时永久降级，之后仍可用', async () => {
@@ -217,9 +260,7 @@ describe('filePipelineClient · 降级路径（计划 4.6）', () => {
       postMessage() {}
       terminate() {}
     }
-    const pipeline = createFilePipeline({
-      Worker: ThrowingWorker as unknown as WorkerCtor,
-    })
+    const pipeline = createFilePipeline({ Worker: ThrowingWorker as unknown as WorkerCtor })
     const matrix = await pipeline.parse(makeCsvFile('名称\nA'))
     expect(pipeline.degraded()).toBe(true)
     expect(matrix.fileHeaders).toEqual(['名称'])
@@ -230,21 +271,22 @@ describe('filePipelineClient · 降级路径（计划 4.6）', () => {
     const pending = pipeline.parse(makeCsvFile('名称,经度,纬度\nA,116.4,39.9'))
 
     FakeWorker.instances[0]!.fail('CSP worker-src')
-    // 不 reject，而是用主线程实现拿到同样的结果
     const matrix = await pending
     expect(pipeline.degraded()).toBe(true)
     expect(matrix.fileHeaders).toEqual(['名称', '经度', '纬度'])
     expect(matrix.rawData).toHaveLength(2)
   })
 
-  it('运行期 onerror 且多个在途：全部转主线程重算', async () => {
+  it('运行期 onerror 且多个在途：全部转主线程重算（含 write）', async () => {
     const pipeline = createFilePipeline({ Worker: workerCtor() })
     const first = pipeline.parse(makeCsvFile('名称\nA'))
-    const second = pipeline.parse(makeCsvFile('名称\nB'))
+    const second = pipeline.write([{ name: 'S', headers: ['a'], rows: [['1']] }])
     FakeWorker.instances[0]!.fail()
 
     expect((await first).fileHeaders).toEqual(['名称'])
-    expect((await second).fileHeaders).toEqual(['名称'])
+    const blob = await second
+    const wb = XLSX.read(await blob.arrayBuffer(), { type: 'array' })
+    expect(wb.SheetNames).toEqual(['S'])
   })
 })
 
@@ -270,7 +312,7 @@ describe('filePipelineClient · 取消（计划 4.7）', () => {
 
     FakeWorker.instances[0]!.replyParseOk(1, MATRIX)
     expect(await keep).toEqual(MATRIX)
-    expect(FakeWorker.instances).toHaveLength(1) // worker 还活着
+    expect(FakeWorker.instances).toHaveLength(1)
   })
 
   it('正常 settle 后再 abort：不影响已完成的请求', async () => {
@@ -293,8 +335,66 @@ describe('filePipelineClient · 取消（计划 4.7）', () => {
   })
 })
 
-describe('filePipelineClient · 降级产物正确性', () => {
-  it('降级 parse 的大表矩阵与主线程直接解析一致', async () => {
+describe('filePipelineClient · 空闲释放', () => {
+  it('空闲 60s 后 terminate（不是降级：下次请求会重建 worker）', async () => {
+    vi.useFakeTimers()
+    const pipeline = createFilePipeline({ Worker: workerCtor() })
+    const pending = pipeline.parse(makeCsvFile('名称\nA'))
+    const worker = FakeWorker.instances[0]!
+    worker.replyParseOk(1, MATRIX)
+    await pending
+    expect(FakeWorker.instances).toHaveLength(1)
+
+    await vi.advanceTimersByTimeAsync(59_000)
+    expect(worker.terminated).toBe(false)
+
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(worker.terminated).toBe(true)
+    expect(pipeline.degraded()).toBe(false)
+
+    // 重建：再发一次请求会得到新的 worker 实例
+    void pipeline.parse(makeCsvFile('名称\nB'))
+    expect(FakeWorker.instances).toHaveLength(1)
+    vi.useRealTimers()
+  })
+
+  it('空闲倒计时期间来了新请求：旧计时器被取消，worker 不被误杀', async () => {
+    vi.useFakeTimers()
+    const pipeline = createFilePipeline({ Worker: workerCtor() })
+    const first = pipeline.parse(makeCsvFile('名称\nA'))
+    const worker = FakeWorker.instances[0]!
+    worker.replyParseOk(1, MATRIX)
+    await first
+
+    await vi.advanceTimersByTimeAsync(30_000)
+    const second = pipeline.parse(makeCsvFile('名称\nB'))
+    await vi.advanceTimersByTimeAsync(40_000)
+
+    // 第二个请求还在途（未回包），不能因为空闲而 terminate
+    expect(worker.terminated).toBe(false)
+    worker.replyParseOk(2, MATRIX)
+    await second
+    vi.useRealTimers()
+  })
+})
+
+describe('filePipelineClient · 降级路径的进度', () => {
+  it('降级 parse 的进度回调单调、首帧 0（100 由调用方的校验阶段上报）', async () => {
+    const reports: number[] = []
+    const pipeline = createFilePipeline()
+    await pipeline.parse(makeCsvFile('名称,经度,纬度\nA,116.4,39.9'), (percent) =>
+      reports.push(percent),
+    )
+    expect(reports[0]).toBe(0)
+    expect(reports.length).toBeGreaterThan(1)
+    for (let i = 1; i < reports.length; i++) {
+      expect(reports[i]!).toBeGreaterThanOrEqual(reports[i - 1]!)
+    }
+  })
+})
+
+describe('worker 产物与主线程产物一致（证明降级不是“另一种結果”）', () => {
+  it('降级 parse 的矩阵与直接调 parseTemplateMatrix 值相同', async () => {
     const { parseTemplateMatrix } = await import('../templateMatrix')
     const rows = Array.from({ length: 3000 }, (_, i) => `点${i},116.4,39.9`)
     const file = makeCsvFile(['名称,经度,纬度', ...rows].join('\n'))
@@ -305,40 +405,8 @@ describe('filePipelineClient · 降级产物正确性', () => {
 
     expect(viaPipeline.fileHeaders).toEqual(direct.fileHeaders)
     expect(viaPipeline.rawData).toHaveLength(direct.rawData.length)
-  })
-
-  it('降级路径的进度回调收尾到 100', async () => {
-    const reports: number[] = []
-    const pipeline = createFilePipeline()
-    await pipeline.parse(makeCsvFile('名称,经度,纬度\nA,116.4,39.9'), (percent) =>
-      reports.push(percent),
+    expect(viaPipeline.rawData[viaPipeline.rawData.length - 1]).toEqual(
+      direct.rawData[direct.rawData.length - 1],
     )
-    // parse 自己不报到 100（那是调用方校验完成后的事），这里只要求单调且非空
-    expect(reports[0]).toBe(0)
-    expect(reports.length).toBeGreaterThan(1)
-    for (let i = 1; i < reports.length; i++) {
-      expect(reports[i]!).toBeGreaterThanOrEqual(reports[i - 1]!)
-    }
-  })
-})
-
-describe('worker 产物与主线程产物逐格一致（用 exceljs 读回，证明降级不是“另一种結果”）', () => {
-  it('两条路径读回的矩阵值完全相同', async () => {
-    const file = makeCsvFile(['名称,经度,纬度', 'A,116.4,39.9', 'B,121.5,31.2'].join('\n'))
-
-    const { parseTemplateMatrix } = await import('../templateMatrix')
-    const direct = await parseTemplateMatrix(file)
-
-    const wb = new ExcelJS.Workbook()
-    const ws = wb.addWorksheet('S')
-    ws.addRow(direct.fileHeaders)
-    for (const row of direct.rawData.slice(1)) ws.addRow(row as string[])
-    const buffer = await wb.xlsx.writeBuffer()
-
-    const back = XLSX.read(buffer, { type: 'array' })
-    const reread = XLSX.utils.sheet_to_json(back.Sheets['S']!, { header: 1 })
-    expect(reread[0]).toEqual(direct.fileHeaders)
-    expect(reread).toHaveLength(direct.rawData.length)
-    expect(reread[1]).toEqual(direct.rawData[1])
   })
 })

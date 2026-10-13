@@ -1,7 +1,7 @@
 /**
- * 文件解析管线 Worker（C4 阶段 4 / P2-20）
+ * 文件管线 Worker（C4 阶段 4 / P2-20）
  *
- * 只承接「表格解析」这一件事：`File → 二维矩阵`（`XLSX.read` + `sheet_to_json`，
+ * 承接两件事：「表格解析」与「xlsx 生成」：`File → 二维矩阵`（`XLSX.read` + `sheet_to_json`，
  * 导入链路里最重的单一同步块）。
  *
  * 为什么不承接「xlsx 生成」（exceljs）：`writeXlsx` 是主线程与 worker 都会用到的
@@ -16,6 +16,7 @@
  */
 /// <reference lib="webworker" />
 import { parseTemplateMatrix, type CellValue } from '@/utils/templateMatrix'
+import { writeXlsxBlob, type SheetSpec } from '@/utils/exceljsCore'
 import type { ProgressCallback } from '@/utils/progress'
 
 export interface WorkerParseRequest {
@@ -26,16 +27,27 @@ export interface WorkerParseRequest {
   }
 }
 
-export type WorkerRequest = WorkerParseRequest
+export interface WorkerWriteRequest {
+  id: number
+  kind: 'write'
+  payload: {
+    sheets: SheetSpec[]
+  }
+}
+
+export type WorkerRequest = WorkerParseRequest | WorkerWriteRequest
 
 export interface WorkerParseResult {
   rawData: CellValue[][]
   fileHeaders: string[]
 }
 
+export type WorkerWriteResult = { blob: Blob }
+
 export type WorkerResponse =
   | { id: number; type: 'progress'; percent: number; message: string }
   | ({ id: number; type: 'ok'; kind: 'parse' } & WorkerParseResult)
+  | ({ id: number; type: 'ok'; kind: 'write' } & WorkerWriteResult)
   | { id: number; type: 'error'; message: string }
 
 const post = (response: WorkerResponse) => {
@@ -49,8 +61,15 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   try {
-    const { rawData, fileHeaders } = await parseTemplateMatrix(request.payload.file, onProgress)
-    post({ id: request.id, type: 'ok', kind: 'parse', rawData, fileHeaders })
+    if (request.kind === 'parse') {
+      const { rawData, fileHeaders } = await parseTemplateMatrix(request.payload.file, onProgress)
+      post({ id: request.id, type: 'ok', kind: 'parse', rawData, fileHeaders })
+      return
+    }
+
+    // write：exceljs 逐行 addRow + writeBuffer（主线程最长的单一同步块在这）
+    const blob = await writeXlsxBlob(request.payload.sheets, onProgress)
+    post({ id: request.id, type: 'ok', kind: 'write', blob })
   } catch (error) {
     post({
       id: request.id,

@@ -147,15 +147,18 @@ export function validateRow(row: DataRow, _rowIndex: number): string[] {
 /**
  * 读取并验证基站扇区模板
  * @param onProgress 进度回调（C4 阶段 2，可选）
+ * @param signal 取消信号（C4 收尾，可选）：已取消时以 AbortError 拒绝
  */
 export async function readAndValidateBasestationTemplate(
   file: File,
   onProgress?: ProgressCallback,
+  signal?: AbortSignal,
 ): Promise<BasestationReadResult> {
   const result = await readAndValidateTemplate(file, TEMPLATE_HEADERS, {
     validateRow,
     skipEmptyRows: true,
     onProgress,
+    signal,
   })
 
   // 转换数据类型

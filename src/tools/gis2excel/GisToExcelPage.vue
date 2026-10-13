@@ -261,6 +261,19 @@
       :message="errorMessage"
       @close="showError = false"
     />
+
+    <!-- 导出进度弹窗（C4 收尾 / P2-20）。
+         与上方「转换中」的内联进度区（isConverting / progress）相互独立：
+         这个只服务「下载结果」，转换阶段那一套保持原样。
+         导出不可取消（没有可 abort 的控制器），所以不显示取消按钮。 -->
+    <ProgressModal
+      :is-open="pipelineProgress.open"
+      :title="pipelineProgress.title"
+      :percent="pipelineProgress.percent"
+      :message="pipelineProgress.message"
+      :remaining-time="pipelineTimer.remainingText.value"
+      :show-cancel="false"
+    />
   </div>
 </template>
 
@@ -269,6 +282,9 @@ import { ref, computed, reactive, shallowRef } from 'vue'
 import { getToolById } from '../toolData'
 import { readAndValidateGisFile, type GisValidationResult, type GisFeature } from './GisFileReader'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
+import ProgressModal from '@/components/common/ProgressModal.vue'
+import { useProgressTimer } from '@/composables/useProgressTimer'
+import type { ProgressCallback } from '@/utils/progress'
 
 const toolConfig = getToolById('gis2excel')
 import { exportToExcel, exportSeparateFiles } from './GisToExcelExporter'
@@ -282,6 +298,28 @@ const progressText = ref('')
 const isConverting = ref(false)
 /** 导出中的单飞标记：分文件下载现在按组 await yieldToUI，必须防止双击并发跑两个循环 */
 const isExporting = ref(false)
+
+// 导出进度（C4 收尾 / P2-20）：只服务「下载结果」。
+// 上面的 progress / progressText 是转换阶段的内联进度区，两者互不影响。
+const pipelineProgress = reactive({ open: false, title: '正在处理...', percent: 0, message: '' })
+const pipelineTimer = useProgressTimer()
+
+function beginPipeline(title: string) {
+  pipelineProgress.open = true
+  pipelineProgress.title = title
+  pipelineProgress.percent = 0
+  pipelineProgress.message = ''
+  pipelineTimer.start()
+}
+function endPipeline() {
+  pipelineProgress.open = false
+}
+const pipelineReporter: ProgressCallback = (percent, message) => {
+  pipelineProgress.percent = percent
+  pipelineProgress.message = message
+  pipelineTimer.update(percent)
+}
+
 const showAdvancedOptions = ref(false)
 const showError = ref(false)
 
@@ -384,9 +422,11 @@ async function downloadAll(format: 'xlsx' | 'csv') {
   }
 
   isExporting.value = true
+  beginPipeline('正在导出结果...')
   try {
-    await exportToExcel(convertedData.value, format, options)
+    await exportToExcel(convertedData.value, format, options, pipelineReporter)
   } finally {
+    endPipeline()
     isExporting.value = false
   }
 }
@@ -403,9 +443,11 @@ async function downloadSeparate(format: 'xlsx' | 'csv') {
   }
 
   isExporting.value = true
+  beginPipeline('正在导出结果...')
   try {
-    await exportSeparateFiles(convertedData.value, format, options)
+    await exportSeparateFiles(convertedData.value, format, options, pipelineReporter)
   } finally {
+    endPipeline()
     isExporting.value = false
   }
 }

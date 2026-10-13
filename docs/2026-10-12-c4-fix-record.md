@@ -201,7 +201,77 @@
 
 ---
 
-## 六、本批次期间新发现、未修的问题（超出 C4 范围，建议单独立项）
+## 六、C4 收尾（2026-10-12 晚）：评审整改 + 遗留项清零
+
+计划四阶段全部完成后，把过程中记档的遗留项一次清掉：
+
+| # | 事项 | 处理 |
+|---|---|---|
+| 1 | **`parseKMZ` 静默丢弃 `<MultiGeometry>`**（P0-4 同类，KMZ 漏修） | 改用与 `parseKML` **同一套** `flattenGeometry`；新建 `parseKmzGeometry.spec.ts`（6 例），反证：还原成裸 switch 后 2 个 MultiGeometry 用例立刻红 |
+| 2 | `utils/index.ts` 死 barrel（C4 后其转发目标已静默变 async） | 删除（`git rm`），全仓零引用 |
+| 3 | `useTemplateExport` 的 data 模板下载是**最后一处** xlsx 写出路径 | 迁到 exceljs 管线 + `downloadXlsxBlob`，至此仓库 xlsx 只剩读取 |
+ | 4 | **exceljs 生成搬进 Worker**（阶段 4 验收要求导出主线程阻塞也 < 2s，之前只搬了解析） | 拆出 `utils/exceljsCore.ts`（纯实现，worker 与主线程共用），`exceljsPipeline.writeXlsx` 改为走 Pipeline；worker chunk 325KB → 1243KB（exceljs 进来了，这是该目标的预期代价） |
+| 5 | worker 空闲不释放（常驻几十 MB） | 60s 空闲自动 terminate（**不是降级**，下次重建只重 eval 缓存 chunk）；2 条 fake-timer 用例 |
+| 6 | 8 个页面无法取消导入 | `utils/abort.ts`（`createAbortError`/`isAbortError`/`throwIfAborted`）+ 9 个 reader 贯通 `signal` + 6 个页面接 `ProgressModal @cancel`；取消**不弹错误框、不写 errors** |
+| 7 | `gis2excel` 下载无进度 | `exportToExcel`/`exportSeparateFiles` 增加可选 `onProgress`（多 sheet 按组均分，避免第二组从 0% 重来），两页接 `ProgressModal`；CSV 路径不伪造进度 |
+| 8 | 一次真实的踩坑：`it(...)` 后写 `}),` | 在 describe 里是「逗号表达式 + 尾随逗号」，直接语法错误——本项目 spec 一律用 `})`。这次排查花了很久，教训记在这里 |
+
+**最终门禁**：type-check 0 / oxlint 0·0 / eslint 0 / prettier 全符合 / vitest **775 passed·57 files** / `npm run build` 全链路通过 / playwright **dev 8 passed · preview 7 passed**（worker-pipeline 断言 worker 模块响应 200）。
+
+**仍未做（需要你决策/外部条件）**：
+- 部署侧确认 **CSP 允许 `worker-src 'self'`**（阶段 4 引入的新硬需求；没有 CSP 则无影响，有的话被拦会自动降级，但 Worker 就白设了）
+- xlsx 导出无边框的老 bug：把 `toSheetSpec`/`generateXlsx` 的 `border: false` 改 `true` 即可打开，代价是大表总耗时 +50%（1987ms → 2967ms @5万×9）
+- D 档（D1~D4）与 E 档（E1~E4）未动
+- `elevations_batch`/`GeocodeCommon`/`distance_sensor` 三页仍是页内 `XLSX.read`（取消只能停在它之后的校验阶段）；根治要把页内解析也统一走 `filePipeline.parse`（与 D1 一并做更划算）
+
+## 七、本批次期间新发现、未修的问题（超出 C4 范围，建议单独立项）
+
+### 已修（原列在此，现移入第六节）
+- ~~`parseKMZ` 的 `<MultiGeometry>` 静默丢弃~~ ✅
+- ~~xlsx 导出无边框（老 bug）~~ —— 仍是已知问题，见上「仍未做」
+
+### 未修
+- `geoDataService` 的要素持有原始 GeoJSON 对象的强引用（`feature` 字段），大文件下内存放大。
+- `flattenGeometry` 依赖 togeojson，而 togeojson 对「MultiGeometry 里再嵌套 MultiGeometry」只返回最后一个几何（`parseKmzGeometry.spec.ts` 里有一条用例把这个库局限钉住了，等库修好把那条例言的期望值从 1 改成 2 即可）。
+
 
 - **`geoDataService.parseKMZ` 的 `<MultiGeometry>` 静默丢弃**：`parseKMZ` 的要素转换仍是旧的 `switch` + `default: continue`，没有阶段 2 为 `parseKML` 补的 `flattenGeometry`。KML 的 `<MultiGeometry>` 经 togeojson 变成 `GeometryCollection` → 整块被丢弃。与已修的 P0-4 是**同一类静默数据丢失**（KML 已修、KMZ 未修）。建议作为 P0-4 补立项。
 - `geoDataService` 的要素持有原始 GeoJSON 对象的强引用（`feature` 字段），大文件下内存放大；阶段 4 Worker 化时一并评估。
+
+---
+
+## 七、C4 收尾：页面接取消 + gis2excel/shp2excel 下载进度（2026-10-13）
+
+阶段 4 评审 M4 记的是「客户端能力就绪、页面未接取消按钮（`show-cancel=false` 全写死、没人创建 `AbortController`）」。本批把它接上，顺手补上 gis2excel / shp2excel 两页缺失的下载进度。
+
+**新增**
+- `src/utils/abort.ts`：`createAbortError` / `isAbortError` / `throwIfAborted`。判据用 `name` 而非 `instanceof DOMException`（跨 realm 时 instanceof 假阴性）。9 个 reader 都要判「是不是被用户取消了」，不收敛一份就是 P3-4 的又一个副本。
+- `src/utils/__tests__/abort.spec.ts`：8 例。
+
+**取消链路（6 个页面，一律 `importAbort` ref + `cancelImport`）**
+
+| 页面 | reader | abort 实际能停下什么 |
+|---|---|---|
+| table2kml_point | `readAndValidateKmlTemplate(file, onProgress, signal)` | 解析在 Worker（terminate）+ 逐行校验 |
+| table2kml_basestation | `readAndValidateBasestationTemplate(...)` | 同上 |
+| coords_convert | `readAndValidateCoordTemplate(...)` | 同上（与该页批量转换的 `abortController` 是两个控制器） |
+| elevations_batch | `readAndValidateTemplate(rows, onProgress, signal)` | 仅逐行校验（解析在页内同步块，见下） |
+| GeocodeCommon | add / lonlat 两个 `readAndValidateTemplate(...)` | 同上 |
+| distance_sensor | `aoaToTemplateRows(aoa, onProgress, signal)` | 行整形（解析在页内同步块） |
+
+reader 侧：`utils/TemplateReader.readAndValidateTemplate` 的 options 增 `signal?`，透传给 `filePipeline.parse`，并在**让出间隙**复查取消（只在函数开头查一次不够——循环里的 `validateRow` 同样不可中断，点了取消还会跑完剩下几万行）。已取消时以 `AbortError` 抛出，**不会**被包装成「读取文件时发生错误」。降级路径（主线程 parse）没有检查点，因此在 parse 返回后补查一次。
+
+页面侧统一步骤：`beginPipeline` 前 `new AbortController()` 并存入 `importAbort`；reader 返回后先判 `controller.signal.aborted` 再写校验结果；`catch` 里同样先判，取消时**不弹错误对话框、不写 errors**；`finally` 置空 `importAbort` + `endPipeline`。`cancelImport()` = `abort()` + `endPipeline()` + `pipelineTimer.reset()` + 复用该页既有的清除函数（`handleClear` / `clearUpload` / `clearUploadFile` / `clearAll`），**未引入新状态字段**。
+
+**与计划的偏离（D-8）**：`ProgressModal` 的取消按钮不是无条件 `:show-cancel="true"`，而是 `:show-cancel="importAbort !== null"`。理由：这些弹窗同时服务「模板下载 / 结果导出」，那两条路没有可 abort 的控制器，常开取消按钮等于放一个点了没反应的按钮（与 D-5「匹配中禁用模板下载防双弹窗遮挡」是同一类 UX 缺陷）。
+
+**gis2excel / shp2excel 下载进度**
+- `GisToExcelExporter.exportToExcel(groupedFeatures, format, options, onProgress?)` / `exportSeparateFiles(..., onProgress?)`：仅 xlsx 路径透传给 `writeXlsx`（CSV 是同步拼装，无从上报，**不伪造进度**）。
+- 分文件导出的进度按**组均分**后下发（`base + percent / total`）：直接透传会让第二组从 0% 重新开始，进度条倒退。
+- 两页新增 `pipelineProgress` + `useProgressTimer`（与既有的「转换中」内联进度区 `isConverting` / `progress` 相互独立，旧的那套没动）；导出不可取消，故 `:show-cancel="false"`。
+
+**已知残差**
+- elevations_batch / GeocodeCommon / distance_sensor 三页的 `XLSX.read + sheet_to_json` 仍在**页内同步块**，取消只能停在它之后的逐行校验阶段（阶段 4 记录的同一问题，根治要把页内解析也搬进 Worker）。
+- 取消只到「读完并校验完」为止；csv 下载、结果导出都没有取消能力。
+- 未做页面 mount 级单测（仓库无页面单测先例），靠 type-check + eslint + 全量单测 + e2e（kml-upload / worker-pipeline / coordinate-convert）保证。
+

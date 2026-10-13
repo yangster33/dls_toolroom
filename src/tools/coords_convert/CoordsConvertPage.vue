@@ -357,13 +357,17 @@
   </div>
 
   <!-- 导入/导出进度弹窗（C4 阶段 2 / P2-20） -->
+  <!-- 取消按钮只在「导入」期间出现：模板下载/结果导出没有可 abort 的控制器，
+       挂一个点了没反应的按钮比没有更糟（审计 D-5 同类问题）。
+       注意与上方批量转换的内联进度（abortController）区分：那是另一个控制器 -->
   <ProgressModal
     :is-open="pipelineProgress.open"
     :title="pipelineProgress.title"
     :percent="pipelineProgress.percent"
     :message="pipelineProgress.message"
     :remaining-time="pipelineTimer.remainingText.value"
-    :show-cancel="false"
+    :show-cancel="importAbort !== null"
+    @cancel="cancelImport"
   />
 </template>
 
@@ -491,6 +495,17 @@ const pipelineReporter: ProgressCallback = (percent, message) => {
   pipelineTimer.update(percent)
 }
 
+/**
+ * 导入取消（C4 收尾 / P2-20）。
+ *
+ * 与上面批量转换用的 `abortController` 是**两个**控制器：那个管「转换」，
+ * 这个只管「导入模板」，互不影响。
+ *
+ * abort 会 terminate 解析表格的 Worker（不可用时降级主线程的路径则在下一次
+ * 让出间隙抛 AbortError），在途导入以取消收场。
+ */
+const importAbort = ref<AbortController | null>(null)
+
 // 计算属性
 const canUploadFile = computed(() => {
   return inputCoordinateSystem.value !== '' && outputCoordinateSystem.value !== ''
@@ -549,13 +564,19 @@ const onFileUpload = async (event: Event) => {
   // 先清掉旧快照：本次若校验失败，就不该留下上一次上传的系统
   uploadInputSystem.value = ''
 
+  const controller = new AbortController()
+  importAbort.value = controller
   beginPipeline('正在导入模板...')
   try {
     const validateResult: CoordReadResult = await readAndValidateCoordTemplate(
       file,
       inputCoordinateSystem.value,
       pipelineReporter,
+      controller.signal,
     )
+
+    // 取消后 reader 可能仍把结果算完并返回：此时整份丢弃，不写校验结果
+    if (controller.signal.aborted) return
 
     if (validateResult.isValid) {
       validatedDataRows.value = validateResult.dataRows
@@ -571,11 +592,32 @@ const onFileUpload = async (event: Event) => {
       showErrorDialog('error', '文件验证失败', errorMessage)
     }
   } catch (error) {
+    // 取消不是错误：静默收尾，别弹「文件处理失败」
+    if (controller.signal.aborted) return
     const errorMsg = `文件处理失败: ${error instanceof Error ? error.message : String(error)}`
     validationErrors.value.push(errorMsg)
     showErrorDialog('error', '文件处理失败', errorMsg)
   } finally {
+    importAbort.value = null
     endPipeline()
+  }
+}
+
+/**
+ * 取消导入：abort 在途解析/校验，收回进度弹窗，并按上传入口的既有口径
+ * 丢掉本次上传的数据（先同步清，reader 回头返回结果时也被
+ * `signal.aborted` 挡住，不会又把数据写回来）。
+ */
+const cancelImport = () => {
+  importAbort.value?.abort()
+  importAbort.value = null
+  endPipeline()
+  pipelineTimer.reset()
+  validationErrors.value = []
+  validatedDataRows.value = []
+  uploadInputSystem.value = ''
+  if (fileInputRef.value) {
+    fileInputRef.value.value = ''
   }
 }
 

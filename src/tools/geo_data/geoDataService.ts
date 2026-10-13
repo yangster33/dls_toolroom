@@ -474,52 +474,41 @@ export async function parseKMZ(file: File, onProgress?: ProgressCallback): Promi
     let lineCount = 0
     let polygonCount = 0
 
-    // 与 parseKML 同一个历史 Bug（审计缺陷 B）：原本是同步 forEach，
-    // 且要素循环期间没有任何进度上报（卡在 80% 直到结束）。
-    // 改为 for...of + 按批 yield + 80→100 按 1% 粒度上报。
+    // C4 收尾：改用与 parseKML **完全同一套** flattenGeometry。
+    // 旧代码是裸 switch：KML 的 <MultiGeometry> 经 togeojson 变成 GeometryCollection，
+    // 走 default: continue **整块被静默丢弃** —— 与阶段 2 已修的 P0-4 同一类
+    // 「静默数据丢失」，只是 parseKML 修了、parseKMZ 漏了。
+    // 进度与让出语义保持不变（按批 yield + 80→100 按 1% 粒度）。
     const totalFeatures = geojson.features.length
     let lastReportedPercent = 80
 
     for (let index = 0; index < totalFeatures; index++) {
-      // 让出放在循环**开头**：switch 的 default 分支 `continue` 会跳过循环尾部
+      // 让出放在循环**开头**：continue 分支会跳过循环尾部
       if (index % FEATURE_YIELD_INTERVAL === 0) {
         await yieldToUI()
       }
 
       const feature = geojson.features[index]!
-      const geometryType = feature.geometry?.type
-      if (!geometryType) continue
+      if (!feature.geometry) continue
 
       const name = (feature.properties?.name as string) || `要素_${index + 1}`
 
-      let type: 'Point' | 'LineString' | 'Polygon'
-      switch (geometryType) {
-        case 'Point':
-        case 'MultiPoint':
-          type = 'Point'
-          pointCount++
-          break
-        case 'LineString':
-        case 'MultiLineString':
-          type = 'LineString'
-          lineCount++
-          break
-        case 'Polygon':
-        case 'MultiPolygon':
-          type = 'Polygon'
-          polygonCount++
-          break
-        default:
-          continue
-      }
+      const atoms: AtomicGeometry[] = []
+      flattenGeometry(feature.geometry, '', atoms)
 
-      features.push({
-        id: `feature_${index}`,
-        name,
-        type,
-        coordinates: feature.geometry.coordinates as number[] | number[][] | number[][][],
-        properties: feature.properties || {},
-        feature,
+      atoms.forEach((atom, atomIndex) => {
+        if (atom.type === 'Point') pointCount++
+        else if (atom.type === 'LineString') lineCount++
+        else polygonCount++
+
+        features.push({
+          id: atoms.length > 1 ? `feature_${index}_${atomIndex}` : `feature_${index}`,
+          name: atom.suffix ? `${name} (${atom.suffix})` : name,
+          type: atom.type,
+          coordinates: atom.coordinates,
+          properties: feature.properties || {},
+          feature,
+        })
       })
 
       const percent = 80 + ((index + 1) / totalFeatures) * 20

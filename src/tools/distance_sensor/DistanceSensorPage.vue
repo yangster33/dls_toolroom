@@ -454,13 +454,16 @@
   />
 
   <!-- 导入/导出进度弹窗（与匹配进度相互独立） -->
+  <!-- 取消按钮只在「导入」期间出现：模板下载/结果导出没有可 abort 的控制器，
+       挂一个点了没反应的按钮比没有更糟（审计 D-5 同类问题） -->
   <ProgressModal
     :is-open="ioProgress.open"
     :title="ioProgress.title"
     :percent="ioProgress.percent"
     :message="ioProgress.message"
     :remaining-time="ioTimer.remainingText.value"
-    :show-cancel="false"
+    :show-cancel="importAbort !== null"
+    @cancel="cancelImport"
   />
 </template>
 
@@ -552,6 +555,17 @@ const ioReporter: ProgressCallback = (percent, message) => {
   ioTimer.update(percent)
 }
 
+/**
+ * 导入取消（C4 收尾 / P2-20）。
+ *
+ * 与 `abortController`（匹配计算）是两个控制器：那个管「匹配」，
+ * 这个只管「导入」，互不影响。
+ *
+ * 本页解析在页内（`XLSX.read` 是同步块，无法中断），abort 实际能停下的是
+ * 行整形与后续流程；已取消时 `aoaToTemplateRows` 在让出间隙抛 AbortError。
+ */
+const importAbort = ref<AbortController | null>(null)
+
 // 错误对话框状态
 const errorDialogOpen = ref(false)
 const errorDialogType = ref<'error' | 'warning' | 'success' | 'info'>('error')
@@ -633,6 +647,8 @@ const onFileUpload = async (event: Event) => {
   const file = target.files?.[0]
   if (!file) return
 
+  const controller = new AbortController()
+  importAbort.value = controller
   beginIo('正在导入数据...')
   try {
     // 先画进度文案并让出一帧：XLSX.read / sheet_to_json 是同步阻塞，
@@ -663,7 +679,9 @@ const onFileUpload = async (event: Event) => {
       // 不能用默认的对象模式：它不给空单元格建 key，第一条数据的
       // data2 三列为空时会被误判成 3 列（同站址）。（审计 C1 / P1-6）
       const aoa = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][]
-      const parsed = await aoaToTemplateRows(aoa, ioReporter)
+      const parsed = await aoaToTemplateRows(aoa, ioReporter, controller.signal)
+      // 取消后行整形可能刚好跑完：此时整份丢弃，不写校验结果
+      if (controller.signal.aborted) return
       rows = parsed.rows
       columns = parsed.columns
     } else {
@@ -674,6 +692,8 @@ const onFileUpload = async (event: Event) => {
     }
 
     validationResult.value = readAndValidateTemplate(rows, columns)
+    // 取消后校验也已跑完：整份丢弃，不写校验结果、不弹错误
+    if (controller.signal.aborted) return
     matchResult.value = null
 
     // 如果校验失败，弹出错误提示
@@ -686,6 +706,8 @@ const onFileUpload = async (event: Event) => {
       showErrorDialog('error', '数据校验失败', errorMessage)
     }
   } catch (error) {
+    // 取消不是错误：静默收尾，别弹「文件读取失败」
+    if (controller.signal.aborted) return
     logger.error('文件读取失败:', error)
     validationResult.value = {
       isValid: false,
@@ -696,6 +718,7 @@ const onFileUpload = async (event: Event) => {
     }
     showErrorDialog('error', '文件读取失败', '请确保文件格式正确')
   } finally {
+    importAbort.value = null
     endIo()
   }
 }
@@ -705,6 +728,18 @@ const cancelMatch = () => {
   abortController.value?.abort()
   progressMessage.value = '正在终止...'
   progressTimer.reset()
+}
+
+/**
+ * 取消导入（C4 收尾 / P2-20）：abort 在途整形/校验，收回 IO 进度弹窗，
+ * 并按「清除所有数据」的既有口径丢掉本次上传的结果。
+ */
+const cancelImport = () => {
+  importAbort.value?.abort()
+  importAbort.value = null
+  endIo()
+  ioTimer.reset()
+  clearAll()
 }
 
 // 执行距离匹配

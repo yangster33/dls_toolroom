@@ -225,13 +225,16 @@
     />
 
     <!-- 导入/导出进度弹窗（C4 阶段 2 / P2-20） -->
+    <!-- 取消按钮只在「导入」期间出现：模板下载没有可 abort 的控制器，
+         挂一个点了没反应的按钮比没有更糟（审计 D-5 同类问题） -->
     <ProgressModal
       :is-open="pipelineProgress.open"
       :title="pipelineProgress.title"
       :percent="pipelineProgress.percent"
       :message="pipelineProgress.message"
       :remaining-time="pipelineTimer.remainingText.value"
-      :show-cancel="false"
+      :show-cancel="importAbort !== null"
+      @cancel="cancelImport"
     />
   </div>
 </template>
@@ -276,6 +279,13 @@ const pipelineReporter: ProgressCallback = (percent, message) => {
   pipelineTimer.update(percent)
 }
 
+/**
+ * 导入取消（C4 收尾 / P2-20）。
+ * abort 会 terminate 解析表格的 Worker（不可用时降级主线程的路径则在下一次
+ * 让出间隙抛 AbortError），在途导入以取消收场。
+ */
+const importAbort = ref<AbortController | null>(null)
+
 // 触发文件选择
 const triggerFileInput = () => {
   fileInput.value?.click()
@@ -304,9 +314,17 @@ const processFile = async (file: File) => {
   validateResult.value = null
   validationErrors.value = []
 
+  const controller = new AbortController()
+  importAbort.value = controller
   beginPipeline('正在导入模板...')
   try {
-    const result = await readAndValidateBasestationTemplate(file, pipelineReporter)
+    const result = await readAndValidateBasestationTemplate(
+      file,
+      pipelineReporter,
+      controller.signal,
+    )
+    // 取消后 reader 可能仍把结果算完并返回：此时整份丢弃，不写校验结果
+    if (controller.signal.aborted) return
     validateResult.value = result
 
     if (!result.isValid) {
@@ -314,9 +332,12 @@ const processFile = async (file: File) => {
       showErrorDialog.value = true
     }
   } catch (error) {
+    // 取消不是错误：静默收尾，别弹「文件读取失败」
+    if (controller.signal.aborted) return
     validationErrors.value = [error instanceof Error ? error.message : '文件读取失败']
     showErrorDialog.value = true
   } finally {
+    importAbort.value = null
     endPipeline()
   }
 }
@@ -329,6 +350,19 @@ const clearUpload = () => {
   if (fileInput.value) {
     fileInput.value.value = ''
   }
+}
+
+/**
+ * 取消导入：abort 在途解析/校验，收回进度弹窗，并按「清除」的既有口径
+ * 丢掉本次上传的结果（先同步清，reader 回头返回结果时也被
+ * `signal.aborted` 挡住，不会又把数据写回来）。
+ */
+const cancelImport = () => {
+  importAbort.value?.abort()
+  importAbort.value = null
+  endPipeline()
+  pipelineTimer.reset()
+  clearUpload()
 }
 
 // 下载CSV模板

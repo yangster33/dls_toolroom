@@ -7,6 +7,7 @@ import { yieldToUI } from './yieldToUI'
 import type { ProgressCallback } from './progress'
 import type { TemplateMatrix } from './templateMatrix'
 import { filePipeline } from './filePipelineClient'
+import { throwIfAborted } from './abort'
 
 /**
  * 行循环的让出粒度：每处理这么多行让出一次主线程。
@@ -51,6 +52,12 @@ export async function readAndValidateTemplate(
     skipEmptyRows?: boolean
     /** 进度回调（C4 阶段 2）。不传则行为与改造前完全一致 */
     onProgress?: ProgressCallback
+    /**
+     * 取消信号（C4 收尾 / P2-20）。贯通到 `filePipeline.parse`（Worker 路径下
+     * 会 `worker.terminate()`），并在逐行校验的让出间隙复查；已取消时以
+     * AbortError 抛出，**不会**伪装成「读取文件时发生错误」。
+     */
+    signal?: AbortSignal
   },
 ): Promise<TemplateReadResult> {
   const result: TemplateReadResult = {
@@ -60,20 +67,26 @@ export async function readAndValidateTemplate(
     rawData: [],
   }
 
-  const { validateRow, skipEmptyRows = true, onProgress } = options || {}
+  const { validateRow, skipEmptyRows = true, onProgress, signal } = options || {}
 
   try {
     // 1. 读取并解析文件 —— 这一步（XLSX.read + sheet_to_json）是不可中断的重活，
     // 阶段 4 起搬进 filePipeline Worker；Worker 不可用时自动退回主线程，行为一致。
     let matrix: TemplateMatrix
     try {
-      matrix = await filePipeline.parse(file, onProgress)
+      matrix = await filePipeline.parse(file, onProgress, signal)
     } catch (error) {
+      // 取消不是一个「错误」：原样抛给调用方，让它按取消静默收尾
+      throwIfAborted(signal)
       // 保持改造前的消息前缀：外层 catch 也是这个格式，两条路径风格必须一致
       const reason = error instanceof Error ? error.message : String(error)
       result.errors.push('读取文件时发生错误：' + reason)
       return result
     }
+
+    // 降级路径（主线程 parse）没有 signal 检查点：parse 返回后补一次，
+    // 否则「取消后仍把校验结果写回页面」
+    throwIfAborted(signal)
 
     const rawData = matrix.rawData
     result.rawData = rawData
@@ -110,6 +123,8 @@ export async function readAndValidateTemplate(
       // 一份「全是坏行」的文件就会退化成同步阻塞。
       if ((rowIndex - 1) % ROW_YIELD_INTERVAL === 0) {
         await yieldToUI()
+        // 与让出同频复查取消：否则点了「终止计算」还要跑完剩下几万行
+        throwIfAborted(signal)
       }
       if (totalRows > 0) {
         const percent = Math.round(((rowIndex - 1) / totalRows) * 70) + 30
@@ -158,6 +173,8 @@ export async function readAndValidateTemplate(
     result.isValid = result.errors.length === 0
     return result
   } catch (error) {
+    // 取消同样不该被外层的「读取文件时发生错误」吞掉
+    throwIfAborted(signal)
     result.errors.push(
       `读取文件时发生错误：${error instanceof Error ? error.message : String(error)}`,
     )

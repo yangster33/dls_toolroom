@@ -4,6 +4,7 @@
 import { readAndValidateTemplate as readGenericTemplate } from '@/utils/TemplateReader'
 import { parseStrictNumber } from '@/utils/coordinateValue'
 import type { ProgressCallback } from '@/utils/progress'
+import { isAbortError } from '@/utils/abort'
 
 // 批量坐标转换的表头（原地迁移自已删除的 templateExporter.ts）
 export const COORD_CONVERT_HEADERS = ['名称', '经度/X（必填）', '纬度/Y（必填）']
@@ -22,11 +23,13 @@ export interface CoordReadResult {
 /**
  * 读取并验证坐标转换模板
  * @param onProgress 进度回调（C4 阶段 2，可选）
+ * @param signal 取消信号（C4 收尾，可选）：已取消时以 AbortError 拒绝，不写入 errors
  */
 export async function readAndValidateCoordTemplate(
   file: File,
   coordinateSystemType: string,
   onProgress?: ProgressCallback,
+  signal?: AbortSignal,
 ): Promise<CoordReadResult> {
   const result: CoordReadResult = {
     isValid: false,
@@ -49,6 +52,7 @@ export async function readAndValidateCoordTemplate(
     const templateResult = await readGenericTemplate(file, COORD_CONVERT_HEADERS, {
       validateRow: (row) => validateCoordRow(row, isLngLatMode, isXYMode),
       onProgress,
+      signal,
     })
 
     if (!templateResult.isValid) {
@@ -62,6 +66,8 @@ export async function readAndValidateCoordTemplate(
 
     return result
   } catch (error) {
+    // 取消不是「读取失败」：原样抛给页面，让它静默收尾（不弹错误对话框）
+    if (isAbortError(error)) throw error
     result.errors.push(
       `读取文件时发生错误：${error instanceof Error ? error.message : String(error)}`,
     )

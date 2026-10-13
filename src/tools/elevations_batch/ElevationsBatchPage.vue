@@ -13,7 +13,8 @@
       :percent="pipelineProgress.percent"
       :message="pipelineProgress.message"
       :remaining-time="pipelineTimer.remainingText.value"
-      :show-cancel="false"
+      :show-cancel="importAbort !== null"
+      @cancel="cancelImport"
     />
     <h1 class="text-3xl font-bold mb-1">{{ toolConfig?.name || '批量高程查询' }}</h1>
     <p class="text-base-content/70">
@@ -387,6 +388,14 @@ const pipelineReporter: ProgressCallback = (percent, message) => {
   pipelineTimer.update(percent)
 }
 
+/**
+ * 导入取消（C4 收尾 / P2-20）。
+ *
+ * 本页的解析在页内（`XLSX.read` 是同步块，无法中断），因此 abort 实际能停下的是
+ * 逐行校验阶段；已取消时 `readAndValidateTemplate` 在让出间隙抛 AbortError。
+ */
+const importAbort = ref<AbortController | null>(null)
+
 // 错误对话框状态
 const errorDialogOpen = ref(false)
 const errorDialogType = ref<'error' | 'warning' | 'success' | 'info'>('error')
@@ -450,6 +459,8 @@ const onFileUpload = async (event: Event) => {
 
   uploadedFileName.value = file.name
 
+  const controller = new AbortController()
+  importAbort.value = controller
   beginPipeline('正在导入模板...')
   try {
     // 先画进度文案并让出一帧：XLSX.read / sheet_to_json 是同步阻塞，
@@ -481,8 +492,15 @@ const onFileUpload = async (event: Event) => {
       rows = parseCSV(cleanText)
     }
 
-    validationResult.value = await readAndValidateTemplate(rows, pipelineReporter)
+    validationResult.value = await readAndValidateTemplate(
+      rows,
+      pipelineReporter,
+      controller.signal,
+    )
     queryResults.value = []
+
+    // 取消后 reader 可能仍把结果算完并返回：此时整份丢弃，不写校验结果
+    if (controller.signal.aborted) return
 
     if (!validationResult.value.isValid && validationResult.value.errors.length > 0) {
       const errorMessage =
@@ -501,6 +519,8 @@ const onFileUpload = async (event: Event) => {
       )
     }
   } catch (error) {
+    // 取消不是错误：静默收尾，别弹「文件读取失败」
+    if (controller.signal.aborted) return
     logger.error('文件读取失败:', error)
     validationResult.value = {
       isValid: false,
@@ -509,6 +529,7 @@ const onFileUpload = async (event: Event) => {
     }
     showErrorDialog('error', '文件读取失败', '请确保文件格式正确')
   } finally {
+    importAbort.value = null
     endPipeline()
   }
 }
@@ -673,5 +694,23 @@ const clearAll = () => {
   hasPartialFailures.value = false
   progressPercent.value = 0
   progressMessage.value = ''
+}
+
+/**
+ * 取消导入：abort 在途校验，收回进度弹窗，并丢掉本次上传的结果。
+ *
+ * 不复用 `clearAll`：它会把 `fileInputRef` 一起清掉，而取消导入后用户还要
+ * 再选同一个文件（输入框的 value 必须清，ref 不能丢）。
+ */
+const cancelImport = () => {
+  importAbort.value?.abort()
+  importAbort.value = null
+  endPipeline()
+  pipelineTimer.reset()
+  uploadedFileName.value = ''
+  validationResult.value = null
+  if (fileInputRef.value) {
+    fileInputRef.value.value = ''
+  }
 }
 </script>

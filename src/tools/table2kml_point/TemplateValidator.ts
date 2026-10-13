@@ -5,6 +5,7 @@ import { parseColor } from './ColorParser'
 import { parseStrictNumber } from '@/utils/coordinateValue'
 import { TEMPLATE_HEADERS } from './TemplateExporter'
 import type { ProgressCallback } from '@/utils/progress'
+import { isAbortError } from '@/utils/abort'
 
 export interface PointRow {
   name: string
@@ -27,10 +28,12 @@ export interface TableKmlReadResult {
 /**
  * 验证并读取 KML 模板数据
  * @param onProgress 进度回调（C4 阶段 2，可选）
+ * @param signal 取消信号（C4 收尾，可选）：已取消时以 AbortError 拒绝，不写入 errors
  */
 export async function readAndValidateKmlTemplate(
   file: File,
   onProgress?: ProgressCallback,
+  signal?: AbortSignal,
 ): Promise<TableKmlReadResult> {
   const result: TableKmlReadResult = { isValid: false, points: [], errors: [] }
 
@@ -40,6 +43,7 @@ export async function readAndValidateKmlTemplate(
     const templateResult = await readAndValidateTemplate(file, TEMPLATE_HEADERS, {
       validateRow: (row) => validateKmlRow(row as Record<string, unknown>),
       onProgress,
+      signal,
     })
 
     if (!templateResult.isValid) {
@@ -74,6 +78,8 @@ export async function readAndValidateKmlTemplate(
 
     return result
   } catch (error) {
+    // 取消不是「读取失败」：原样抛给页面，让它静默收尾（不弹错误对话框）
+    if (isAbortError(error)) throw error
     result.errors.push(
       `读取文件时发生错误：${error instanceof Error ? error.message : String(error)}`,
     )

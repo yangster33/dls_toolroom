@@ -2,6 +2,7 @@ import type { GisFeature } from './GisFileReader'
 import { maxOf } from '@/utils/arrayUtils'
 import { yieldToUI } from '@/utils/yieldToUI'
 import { writeXlsx, type SheetSpec } from '@/utils/exceljsPipeline'
+import type { ProgressCallback } from '@/utils/progress'
 
 /**
  * 把一组同类型要素转成 `SheetSpec`（表名 / 表头 / 数据行 / 列宽 / 边框）。
@@ -182,23 +183,42 @@ function triggerDownload(content: string | Blob, filename: string, type: 'csv' |
   }, 100)
 }
 
+/**
+ * 导出为单个文件（一个类型一个 sheet）。
+ *
+ * @param onProgress 进度回调（C4 收尾，可选；不传则行为不变）。仅 xlsx 路径有
+ *   进度（exceljs 逐行写入阶段），CSV 是同步拼装、无从上报。
+ */
 export async function exportToExcel(
   groupedFeatures: GisFeature[][],
   format: 'xlsx' | 'csv',
   options: ExportOptions,
+  onProgress?: ProgressCallback,
 ): Promise<void> {
   if (format === 'xlsx') {
-    await exportToXlsx(groupedFeatures, options)
+    await exportToXlsx(groupedFeatures, options, onProgress)
   } else {
-    await exportToCsv(groupedFeatures, options)
+    // CSV 是同步拼装（字符串 join + Blob），没有可上报的阶段；不伪造进度
+    exportToCsv(groupedFeatures, options)
   }
 }
 
+/**
+ * 分文件导出（一组一个文件）。
+ *
+ * @param onProgress 进度回调（C4 收尾，可选；不传则行为不变）。进度按组均分后
+ *   下发，否则第二组会从 0% 重新开始、进度条倒退。CSV 路径无进度。
+ */
 export async function exportSeparateFiles(
   groupedFeatures: GisFeature[][],
   format: 'xlsx' | 'csv',
   options: ExportOptions,
+  onProgress?: ProgressCallback,
 ): Promise<void> {
+  // 分文件下载：一组一份文件。进度按组均分后下发 —— 直接透传会让第二组
+  // 从 0% 重新开始，进度条倒退。
+  const total = Math.max(groupedFeatures.length, 1)
+
   for (const [groupIndex, features] of groupedFeatures.entries()) {
     // 组与组之间让出主线程（第一组除外：它仍发生在点击的同一个任务里，
     // 保留用户手势上下文，Safari 对"跨任务边界才触发的下载"历史上会拦截）。
@@ -213,8 +233,12 @@ export async function exportSeparateFiles(
     const filename = `gis_${typeName}`
 
     if (format === 'xlsx') {
-      await exportSingleTypeToXlsx(features, type, filename, options)
+      const base = Math.round((groupIndex / total) * 100)
+      await exportSingleTypeToXlsx(features, type, filename, options, (percent, message) =>
+        onProgress?.(Math.round(base + percent / total), message),
+      )
     } else {
+      // CSV 是同步拼装，无可上报阶段（同上，不伪造进度）
       exportSingleTypeToCsv(features, type, filename, options)
     }
   }
@@ -223,6 +247,7 @@ export async function exportSeparateFiles(
 async function exportToXlsx(
   groupedFeatures: GisFeature[][],
   options: ExportOptions,
+  onProgress?: ProgressCallback,
 ): Promise<void> {
   // 先让出一帧：调用方（点击处理函数）可以先重绘"转换中"状态，再跑重活
   await yieldToUI(0)
@@ -234,7 +259,7 @@ async function exportToXlsx(
     sheets.push(toSheetSpec(features, features[0].type, options))
   }
 
-  const blob = await writeXlsx(sheets)
+  const blob = await writeXlsx(sheets, onProgress)
 
   triggerDownload(blob, 'gis_export', 'xlsx')
 }
@@ -298,12 +323,13 @@ async function exportSingleTypeToXlsx(
   type: 'Point' | 'LineString' | 'Polygon',
   filename: string,
   options: ExportOptions,
+  onProgress?: ProgressCallback,
 ): Promise<void> {
   // 先让出一帧：分文件下载时，每份之间页面可交互
   await yieldToUI(0)
 
   // 单 sheet（旧实现同样只 append 一个 worksheet）
-  const blob = await writeXlsx([toSheetSpec(features, type, options)])
+  const blob = await writeXlsx([toSheetSpec(features, type, options)], onProgress)
 
   triggerDownload(blob, filename, 'xlsx')
 }
