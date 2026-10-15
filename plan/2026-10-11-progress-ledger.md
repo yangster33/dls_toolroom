@@ -10,8 +10,8 @@
 | 台账更新 | 2026-10-15（D3 死代码清理、D1 reader 收敛、D2 命名模板收敛 完成） |
 | 当前 HEAD | `fa61f26`（本条台账的回填提交；最后一条代码提交 `d606716`） |
 | 工具数 | 26 个路由（预渲染 sitemap） |
-| 测试 | **766 passed / 54 files** |
-| 最近更新 | 2026-10-15 · **D3、D1、D2 完成**；剩余 D4 / E 档 / F 档 |
+| 测试 | **785 passed / 55 files** |
+| 最近更新 | 2026-10-16 · **D3/D1/D2 完成，D4 完成第一个文件（GanttChartPage）**；剩余 KmlViewerPage / GeocodeCommon / E 档 / F 档 |
 
 ---
 
@@ -105,7 +105,7 @@
 | `oxlint` | 0 / 0 | ✅ 0 / 0 |
 | `eslint` | ❌ 133 errors | ✅ **0** |
 | `prettier --check` | ❌ 216 files 不符 | ✅ 全符合 |
-| `vitest` | 524 / 35 files | ✅ **766 / 54 files** |
+| `vitest` | 524 / 35 files | ✅ **785 / 55 files** |
 | `playwright`（生产构建） | 未验证 | ✅ 6 passed / 1 flaky → C4 后 **dev 8 passed · preview 7 passed**（新增 worker 链路用例，断言 worker 模块响应 200） |
 | 产物一致性（C4 新增项） | — | 4 处导出与旧实现**逐格一致**（黄金参考内联在 spec 里，另有变异验证） |
 | 主线程阻塞（C4 新增项） | — | 5 万行导入 **~1900ms → 几十 ms**（Node 基准 + e2e 证真实加载） |
@@ -167,7 +167,7 @@
 | D1 | P3-2 | 7 份 `TemplateReader` → 参数化工厂 | −800 行 | ✅ `cafc56d` + `d606716` |
 | D2 | P3-2 | 5 份文件名模板 / 4 份花括号校验 / 3 份 `sanitizeFilename` → 各 1 份 | −400 行 | ✅ `fce7aec` |
 | D3 | P3-3 | 删 12 个零引用依赖 + 850 行死代码 | 依赖体积 | ✅ `75fda16` |
-| D4 | P3-5 | 拆 `GanttChartPage.vue`(1623) / `KmlViewerPage.vue`(1157) / `GeocodeCommon.vue`(983) | 1 周 | ⬜ |
+| D4 | P3-5 | 拆 `GanttChartPage.vue`(1623) / `KmlViewerPage.vue`(1157) / `GeocodeCommon.vue`(983) | 1 周 | 🟡 `1d73d5a`（仅 GanttChartPage 完成） |
 
 #### D3 执行明细（2026-10-15，提交 `75fda16` + `2485d1f`）
 
@@ -228,6 +228,24 @@
 **行数**：src 242 insertions / 157 deletions（**净 +85**）。本项目标不是行数而是「同一逻辑一份实现」；净增来自补测试与新增共用内核的注释。
 **遗留**：`escapeXml` 仍有 2 份逐字节相同的拷贝（+ `downloadBlob`/`hexToKmlColor`/`toKmlCoordinatesString`），审计建议抽 `utils/kmlShared.ts`，影响 3 个 KML 工具，未纳入 D2。
 
+#### D4 第一批 · GanttChartPage.vue 拆分（2026-10-16，提交 `b2d3978` + `87280cc` + `1d73d5a`）
+
+依据 [`../docs/2026-10-16-d4-fix-record-gantt.md`](../docs/2026-10-16-d4-fix-record-gantt.md)。
+
+| 步骤 | 抽出内容 | 文件 | 效果 |
+|---|---|---|---|
+| 1 导出链路 | SVG/PNG/JPG/JSON 导出 + `collectGanttCSS`/`injectHeaderToSvg`/`cropEmptyDates`；**合并 exportPNG/exportJPG 两份近似实现**；下载统一到新增 `utils/download.ts`（修 Firefox 立即 revoke 的空文件风险） | `ganttSvgExport.ts` 437 行 + 11 条单测 | −461 行 |
+| 2 实例生命周期 | `initGantt`/`reinitGantt`/`refreshGantt`/… + popup 构造（XSS 防线）；`escapeHtml` 移入 `ganttTaskUtils` 并补测 | `useGanttInstance.ts` 334 行 | −292 行 |
+| 3 任务弹窗 | `<dialog>` 表单 + 表单状态与 CRUD；组件不碰 store，经 `@save` 交页面落库 | `TaskEditModal.vue` 174 行 + **仓库首个 .vue 组件挂载测试** 5 条 | −约 166 行 |
+
+**GanttChartPage.vue：1839 → 1026 行**（审计预估 −460，实际 −813）。
+
+**两个差点/已经踩到的坑**：
+- 旧 `pushUndo()` 会重置 `dragUndoRecorded`；该标志移进 composable 后页面侧入栈不再重置 → **后续拖动不再记 undo**。已补 `resetDragUndoFlag()` 由页面的 `pushUndo()` 调用，保住原语义。
+- prettier 解析不了 SFC 注释里的 `</Xxx ...>`（当成顶层闭合标签，报 `Unexpected closing tag "template"`）；SFC 的 `<script setup>` 里 export 的类型**无法被别的模块 import**（TS2614），契约类型要放同目录 `.ts`。
+
+**环境问题（与本批无关，已排除）**：`npm run build` 的 prerender 步骤在本机起不了浏览器（puppeteer-core 与 Edge 155 不兼容）。`git stash` 后在 clean HEAD 复现同样失败；Playwright 能正常启动同一 Edge（e2e 7 passed）。已用 `build-only` + 完整 e2e 验证。**建议单独立项**评估 prerender 改用 Playwright 启动器。
+
 ### E 档 · 需决策（非纯技术）
 
 | # | 编号 | 问题 | 需要什么 | 状态 |
@@ -264,6 +282,9 @@
 11. **改公开签名前先数调用点**——D1 把 reader 的位置参数 `(rows, onProgress, signal)` 改成 options 对象，`tsc` 不报（参数少传只是 undefined），但一处调用点就此**静默丢掉进度**。抓它的是行为断言，不是类型。类型系统能抓「不匹配」，抓不住「语义错配」。
 12. **合并两份相同实现的测试时，逐条列清单**——`elevations_batch` 与 `get_add` 的 spec 有 4 条断言只有一边有（如 1200 行的 intermediate≥2）。照搬一份会丢覆盖，两边都要并进同一份 spec。
 13. **搬运用例后必须核对用例总数，而不是只看绿**——D2 把 21 条用例迁到新 spec 时，文件头 `/**` 漏了 `*/`，迁入的 21 条整段被注释掉，vitest 依然**全绿**（745 passed）。发现靠的是「删一个 spec、加一个 spec，用例数应该从 756 变 766」这个预期差。测试数不降反升或持平的可预期场景下，是最容易漏的。
+14. **改公开签名前先数调用点**——D1 把 reader 的位置参数 `(rows, onProgress, signal)` 改成 options 对象，`tsc` 不报（参数少传只是 undefined），但一处调用点就此**静默丢掉进度**。抓它的是行为断言，不是类型。类型系统能抓「不匹配」，抓不住「语义错配」。
+15. **搬移带闭包状态的逻辑，要连"隐式重置"一起搬**——D4 把 `initGantt` 移进 composable 时，`pushUndo()` 里的 `dragUndoRecorded = false`（这个标志属于被搬走的那段代码）没跟着搬，导致**后续拖动不再记 undo**。跨模块搬代码时，先列出「谁在读/写这段代码里的变量」。
+16. **SFC 的两个陷阱**：(a) `<script setup>` 里 export 的类型**不能被别的模块 import**（TS2614），对外契约要放同目录 `.ts`；(b) prettier 的 Vue 解析器会把**注释里的 `</Xxx …>` 当成顶层闭合标签**（报 `Unexpected closing tag "template"`），文档注释里别写带闭合标签的样例。
 
 ---
 
