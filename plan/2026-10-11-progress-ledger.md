@@ -7,11 +7,11 @@
 | 属性 | 值 |
 |---|---|
 | 审查基线 | `c096944`（2026-10-09 审计） |
-| 台账更新 | 2026-10-12（C4 四阶段 + C4 收尾全部完成） |
-| 当前 HEAD | `5bbf164` |
+| 台账更新 | 2026-10-15（D3 完成：清理零引用依赖与死代码） |
+| 当前 HEAD | `<本次提交后回填>` |
 | 工具数 | 26 个路由（预渲染 sitemap） |
-| 测试 | **775 passed / 57 files** |
-| 最近更新 | 2026-10-12 · **C 档全部完成（C4 四阶段 + 收尾）**；剩余 D 档 / E 档 / F 档 |
+| 测试 | **769 passed / 56 files** |
+| 最近更新 | 2026-10-15 · **D3 完成**；剩余 D1 / D2 / D4 / E 档 / F 档 |
 
 ---
 
@@ -93,7 +93,7 @@
 | `oxlint` | 0 / 0 | ✅ 0 / 0 |
 | `eslint` | ❌ 133 errors | ✅ **0** |
 | `prettier --check` | ❌ 216 files 不符 | ✅ 全符合 |
-| `vitest` | 524 / 35 files | ✅ **775 / 57 files** |
+| `vitest` | 524 / 35 files | ✅ **769 / 56 files** |
 | `playwright`（生产构建） | 未验证 | ✅ 6 passed / 1 flaky → C4 后 **dev 8 passed · preview 7 passed**（新增 worker 链路用例，断言 worker 模块响应 200） |
 | 产物一致性（C4 新增项） | — | 4 处导出与旧实现**逐格一致**（黄金参考内联在 spec 里，另有变异验证） |
 | 主线程阻塞（C4 新增项） | — | 5 万行导入 **~1900ms → 几十 ms**（Node 基准 + e2e 证真实加载） |
@@ -154,8 +154,25 @@
 |---|---|---|---|---|
 | D1 | P3-2 | 7 份 `TemplateReader` → 参数化工厂 | −800 行 | ⬜ |
 | D2 | P3-2 | 5 份文件名模板 / 4 份花括号校验 / 3 份 `sanitizeFilename` → 各 1 份 | −400 行 | ⬜ |
-| D3 | P3-3 | 删 12 个零引用依赖 + 850 行死代码 | 依赖体积 | ⬜ |
+| D3 | P3-3 | 删 12 个零引用依赖 + 850 行死代码 | 依赖体积 | ✅ `待回填` |
 | D4 | P3-5 | 拆 `GanttChartPage.vue`(1623) / `KmlViewerPage.vue`(1157) / `GeocodeCommon.vue`(983) | 1 周 | ⬜ |
+
+#### D3 执行明细（2026-10-15，提交 `<待回填>`）
+
+依据 [`../docs/2026-10-15-d3-fix-record.md`](../docs/2026-10-15-d3-fix-record.md)。
+
+| 动作 | 结果 |
+|---|---|
+| 删 14 个源文件 + 1 个目录 + 1 个 spec | −808 行 |
+| 卸载 13 个依赖（npm removed 196 packages） | `node_modules` 顶层 676 → 557，lock −2170 行 |
+| `geojson` 运行时包卸掉，`@types/geojson` 提为显式 devDependency | 避免把类型 import 变成幽灵依赖（P2-5 同形态） |
+| `main.css` 删指向已删 `base.css` 的死注释 | — |
+
+**两处审计结论被证伪（记档，勿照报告删）**：
+1. `geo_data/togeojson.d.ts` **保留** —— `togeojson@0.16` 无官方类型、`@types/togeojson` 未安装，它是 `geoDataService` 的类型唯一来源。
+2. `geojson` 依赖不是纯死 —— 阶段 2 之后 `geoDataService.ts:7` / `geoAnalysisService.ts:3` 有 `import type { Feature, LineString } from 'geojson'`；类型靠 `@types/geojson`（`@turf/turf` 传递）。
+
+**门禁**：type-check 0 / oxlint 0·0 / eslint 0 / prettier 全符合 / vitest **769·56**（−6，全为被删 spec 用例）/ `npm run build` 全链路通过 / playwright **7 passed · 1 flaky**（flaky 与 B4 基线一致）。首屏 335.1 KB raw / 117.8 KB gzip（B4 基线 360.5 / 129.2）。
 
 ### E 档 · 需决策（非纯技术）
 
@@ -188,6 +205,8 @@
 6. **库的"承诺"要实测**——xlsx 的 `cell.s` 样式写入其实是**完全无效**的（连官方 `add_style` 都不落盘）；exceljs 的浏览器 bundle 根本没有 streaming writer。都只看文档会得出错误结论，写 20 行探针就能证伪。
 7. **跨线程不是"复制一份逻辑"**——Worker 化的正解是把重活抽成主线程/Worker 共用的模块（`templateMatrix` / `exceljsCore`），否则要么循环依赖，要么两实现各自漂移。
 8. **性能目标要用基准数据验证，而不是照计划文字推进**——阶段 3 计划写「用 streaming writer 降低主线程阻塞」，实测 exceljs 反而更慢、browser bundle 也根本没有 streaming writer。据此改方案（关 border + 用产物比对保正确性）比硬按文字做完更有价值。
+9. **「审计说零引用」不等于「现在零引用」**——报告基线是某个 commit，之后的批次会新增 import。D3 删依赖前重新 grep，发现 `geojson` 早已被 `geoDataService` 引类型、`togeojson.d.ts` 仍是类型唯一来源（审计两处都写错了）。**照报告表格照删会当场删坏。**
+10. **`npm uninstall` 会因 audit/fund 网络请求挂死十分钟**——加 `--no-audit --no-fund`（必要时 `--offline`）后 10 秒完成。大卸载前先加参数。
 
 ---
 
