@@ -7,11 +7,11 @@
 | 属性 | 值 |
 |---|---|
 | 审查基线 | `c096944`（2026-10-09 审计） |
-| 台账更新 | 2026-10-15（D3 完成：清理零引用依赖与死代码） |
-| 当前 HEAD | `2485d1f` |
+| 台账更新 | 2026-10-15（D3 清理死代码、D1 收敛 reader 完成） |
+| 当前 HEAD | `待回填` |
 | 工具数 | 26 个路由（预渲染 sitemap） |
-| 测试 | **769 passed / 56 files** |
-| 最近更新 | 2026-10-15 · **D3 完成**；剩余 D1 / D2 / D4 / E 档 / F 档 |
+| 测试 | **756 passed / 54 files** |
+| 最近更新 | 2026-10-15 · **D3、D1 完成**；剩余 D2 / D4 / E 档 / F 档 |
 
 ---
 
@@ -93,7 +93,7 @@
 | `oxlint` | 0 / 0 | ✅ 0 / 0 |
 | `eslint` | ❌ 133 errors | ✅ **0** |
 | `prettier --check` | ❌ 216 files 不符 | ✅ 全符合 |
-| `vitest` | 524 / 35 files | ✅ **769 / 56 files** |
+| `vitest` | 524 / 35 files | ✅ **756 / 54 files** |
 | `playwright`（生产构建） | 未验证 | ✅ 6 passed / 1 flaky → C4 后 **dev 8 passed · preview 7 passed**（新增 worker 链路用例，断言 worker 模块响应 200） |
 | 产物一致性（C4 新增项） | — | 4 处导出与旧实现**逐格一致**（黄金参考内联在 spec 里，另有变异验证） |
 | 主线程阻塞（C4 新增项） | — | 5 万行导入 **~1900ms → 几十 ms**（Node 基准 + e2e 证真实加载） |
@@ -152,7 +152,7 @@
 
 | # | 编号 | 问题 | 规模 | 状态 |
 |---|---|---|---|---|
-| D1 | P3-2 | 7 份 `TemplateReader` → 参数化工厂 | −800 行 | ⬜ |
+| D1 | P3-2 | 7 份 `TemplateReader` → 参数化工厂 | −800 行 | ✅ `cafc56d` + `d606716` |
 | D2 | P3-2 | 5 份文件名模板 / 4 份花括号校验 / 3 份 `sanitizeFilename` → 各 1 份 | −400 行 | ⬜ |
 | D3 | P3-3 | 删 12 个零引用依赖 + 850 行死代码 | 依赖体积 | ✅ `75fda16` |
 | D4 | P3-5 | 拆 `GanttChartPage.vue`(1623) / `KmlViewerPage.vue`(1157) / `GeocodeCommon.vue`(983) | 1 周 | ⬜ |
@@ -173,6 +173,28 @@
 2. `geojson` 依赖不是纯死 —— 阶段 2 之后 `geoDataService.ts:7` / `geoAnalysisService.ts:3` 有 `import type { Feature, LineString } from 'geojson'`；类型靠 `@types/geojson`（`@turf/turf` 传递）。
 
 **门禁**：type-check 0 / oxlint 0·0 / eslint 0 / prettier 全符合 / vitest **769·56**（−6，全为被删 spec 用例）/ `npm run build` 全链路通过 / playwright **7 passed · 1 flaky**（flaky 与 B4 基线一致）。首屏 335.1 KB raw / 117.8 KB gzip（B4 基线 360.5 / 129.2）。
+
+#### D1 执行明细（2026-10-15，提交 `cafc56d` + `d606716`）
+
+依据 [`../docs/2026-10-15-d1-fix-record.md`](../docs/2026-10-15-d1-fix-record.md)。
+
+**审计口径修正**：C4 已把 `coords_convert` / `table2kml_basestation` / `table2kml_point` 三个 reader 改成共用基座的包装，实际待收敛的是 **4 个自建 reader**，其中 `get_add` 与 `elevations_batch` **逐字节相同**。
+
+| 动作 | 结果 |
+|---|---|
+| 新增 `utils/templateRowReader.ts`：`readRows`（每 500 行让出 + 复查取消 + 逐行进度）、`readCoordinatePointRows`（两个相同工具共用）、`resolveAlias` / `resolveCoordinateByAliases` / `toValidationResult` | 188 行 |
+| 删 `get_add/TemplateReader.ts` + `elevations_batch/TemplateReader.ts`（逻辑相同）及各自 spec，20 条回归用例合并进共用 spec | −320 行 |
+| `get_lonlat` 收薄为地址语义；`distance_sensor` 循环改走共用机制并**补上取消支持**（原本同步、校验阶段无法取消） | 102→62、268→279 行 |
+| 删第二套通用层 `utils/templateHandler.ts`（生产零调用的同步工厂）+ 其 spec，类型并入新模块 | −443 行 |
+| **净效果** | src **741 insertions / 1095 deletions（净 −354 行）**；测试 777 → 756（删 39 条只测死代码/重复实现的用例，新增 28 条，净覆盖不减） |
+
+**关键决策**：
+- `RowExtractor` 返回 `{ records?, errors? }`（一行 0..N 条记录）——这是 `distance_sensor`（同站址一行出 2 条、异站址最多 2 条）能复用同一循环的关键。
+- 具体 reader **保留位置参数签名** `(rows, onProgress?, signal?)`：改成 options 对象会让 `GeocodeCommon` 静默丢进度（tsc 不报），由新 spec 的 1200 行进度用例当场抓住。
+- 别名取值有两个语义，**刻意不合并**：名称取「首个非空别名」（空串即报错），经纬度取「第一个能解析成功的别名」（中文列空还会找英文列）。各有专门用例。
+- `distance_sensor` 不传 `onProgress`：行整形进度已到 100%，再上报会让进度条从 0 重来。
+
+**收敛后循环机制仅剩 4 处**（grep `ROW_YIELD_INTERVAL`）：行读取 500 / File 读取 500 / 行整形 500 / exceljs 导出 2000·200 —— 分属链路不同阶段、阈值不同，同一阶段不再有拷贝。
 
 ### E 档 · 需决策（非纯技术）
 
@@ -207,6 +229,8 @@
 8. **性能目标要用基准数据验证，而不是照计划文字推进**——阶段 3 计划写「用 streaming writer 降低主线程阻塞」，实测 exceljs 反而更慢、browser bundle 也根本没有 streaming writer。据此改方案（关 border + 用产物比对保正确性）比硬按文字做完更有价值。
 9. **「审计说零引用」不等于「现在零引用」**——报告基线是某个 commit，之后的批次会新增 import。D3 删依赖前重新 grep，发现 `geojson` 早已被 `geoDataService` 引类型、`togeojson.d.ts` 仍是类型唯一来源（审计两处都写错了）。**照报告表格照删会当场删坏。**
 10. **`npm uninstall` 会因 audit/fund 网络请求挂死十分钟**——加 `--no-audit --no-fund`（必要时 `--offline`）后 10 秒完成。大卸载前先加参数。
+11. **改公开签名前先数调用点**——D1 把 reader 的位置参数 `(rows, onProgress, signal)` 改成 options 对象，`tsc` 不报（参数少传只是 undefined），但一处调用点就此**静默丢掉进度**。抓它的是行为断言，不是类型。类型系统能抓「不匹配」，抓不住「语义错配」。
+12. **合并两份相同实现的测试时，逐条列清单**——`elevations_batch` 与 `get_add` 的 spec 有 4 条断言只有一边有（如 1200 行的 intermediate≥2）。照搬一份会丢覆盖，两边都要并进同一份 spec。
 
 ---
 
