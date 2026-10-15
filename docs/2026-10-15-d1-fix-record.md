@@ -4,7 +4,7 @@
 > **台账**：[`../plan/2026-10-11-progress-ledger.md`](../plan/2026-10-11-progress-ledger.md) **D 档 D1**
 > **前置**：D3 已完成（`75fda16`）。C4 已把 3 个 reader 改成共用基座的包装，剩下 4 个仍是自建。
 > **提交**：`cafc56d`（收敛 reader）+ `d606716`（删第二套通用层）
-> **规模**：src **741 insertions / 1095 deletions（净 −354 行）**，测试 **777 → 756 passed**（删了 19 条只测死代码的用例，净覆盖不减）
+> **规模**：src **741 insertions / 1095 deletions（净 −354 行）**，测试 **775 → 756 passed**（删 41 条只测死代码 / 重复实现的用例，新增 28 条，净覆盖不减）
 
 ---
 
@@ -72,7 +72,7 @@ C4 批次把 3 个 reader 改成了共用基座的包装，实际待收敛的是
 
 审计 P3-5(c) 的「双通用层」：一套帕斯卡命名（`TemplateReader`）+ 一套小写命名（`templateHandler`）。该文件的**同步通用工厂在生产零调用**（只有它自己的 spec 在用），收敛后仅剩 `CoordinatePoint` / `TemplateValidationResult` 两个类型有人 import → 文件删除，类型并入 `templateRowReader.ts`，spec 一起删。
 
-**删除前核对**：它 19 条用例里 3 条是 B5 的严格解析回归，已在 `utils/__tests__/coordinateValue.spec.ts`（17 条）逐条覆盖同一批输入（`116.4abc` / `N39.9` / `Infinity` / `0x1A`），无覆盖损失。
+**删除前核对**：它 21 条用例里 3 条是 B5 的严格解析回归，已在 `utils/__tests__/coordinateValue.spec.ts`（17 条）逐条覆盖同一批输入（`116.4abc` / `N39.9` / `Infinity` / `0x1A`），无覆盖损失。
 
 ---
 
@@ -90,16 +90,16 @@ C4 批次把 3 个 reader 改成了共用基座的包装，实际待收敛的是
 
 ### 测试数变化的解释
 
-`777 → 756`：删掉 20 条（两份重复 reader 的 spec）+ 19 条（`templateHandler` 死代码 spec），新增 28 条到共用 spec。**净覆盖不减**——合并时把两份 spec 的回归用例逐条搬了过来（下表），并为原本零 reader 单测的 `get_lonlat` 补了 4 条。
+`775 → 756`：删掉 20 条（两份重复 reader 的 spec，14 + 6）+ 21 条（`templateHandler` 死代码 spec），新增 28 条到共用 spec。**净覆盖不减**——合并时把两份 spec 的回归用例逐条搬了过来（下表），并为原本零 reader 单测的 `get_lonlat` 补了 4 条。
 
 ### 合并前被删 spec 的用例来源（逐条核对无遗漏）
 
 | 来源 | 用例数 | 去向 |
 |---|---|---|
-| `elevations_batch/__tests__/TemplateReader.spec.ts` | 14 | 空白×5 / 合法×4 / 脏数据×3 / 进度×1 / 让出×1 → 全部迁入 |
+| `elevations_batch/__tests__/TemplateReader.spec.ts` | 14 | 空白×5 / 合法×4 / 脏数据×3 / 进度×1 / 让出×1 → 全部迁入（另补 `NaN` 1 条） |
 | `get_add/__tests__/TemplateReader.spec.ts` | 6 | 其中 1200 行进度用例的独有断言（intermediate≥2、message 与 percent 一一对应）迁入 |
-| `utils/__tests__/templateHandler.spec.ts` | 19 | 死代码用例；严格解析回归已由 `coordinateValue.spec.ts` 覆盖 |
-| **新增** | 28 | `readRows` 契约（进度/让出/行号平移/空行/取消 5 条）、别名原语 2 条、`toValidationResult` 1 条、`get_lonlat` 地址 4 条，以及**反证合并时差点丢掉的 1200 行进度用例** 1 条 |
+| `utils/__tests__/templateHandler.spec.ts` | 21 | 死代码用例；严格解析回归已由 `coordinateValue.spec.ts` 覆盖 |
+| **新增** | 28 | 空白×6 / 合法×5 / 脏数据×4（其中「中文别名为空回退英文列」「错误带行号」是收敛前没有断言的语义）、`readRows` 契约 5 条（进度/让出/行号平移/空行/取消）、别名原语 2 条、`toValidationResult` 1 条、`get_lonlat` 地址 4 条 |
 
 ### 反证与踩坑
 

@@ -116,20 +116,27 @@ geometry: (geomsAndTimes.geoms.length === 1) ? geomsAndTimes.geoms[0] : {
 
 ## 五、明确不做（留在后续阶段）
 
-| 项 | 原因 | 归入 |
-|---|---|---|
-| 空间分析 O(n²) + 逐次 `setTimeout(0)` | 性能问题，与本批正确性无关；需引入空间索引 | 阶段 2 剩余 / 阶段 3 |
-| `push(...arr)` 大数据量崩溃（6 处） | 需构造万行级 fixture | 阶段 2 剩余 |
-| `manualChunks` 顺序、首屏 810 kB | 需逐 chunk 核对产物 | 阶段 2 剩余 |
-| `ref`→`shallowRef`、大文件 Worker 化 | 性能优化 | 阶段 3 |
-| 模板读取器 7 份 → 参数化工厂 | 大重构 | 阶段 3 |
-| 拆 `GanttChartPage.vue` / `KmlViewerPage.vue` | 大重构 | 阶段 3 |
-| `vercel.json` 裸 IP → 环境变量 | 需 Vercel 控制台 | 阶段 4 |
+> **回填（2026-10-15）**：下表「归入」列的条目**现已全部完成**，此处保留原始记录并标注实际去向，
+> 避免后人以为这些仍是待办。当前真实待办以 [`2026-10-11-progress-ledger.md`](./2026-10-11-progress-ledger.md) 的 D2 / D4 / E / F 档为准。
+
+| 项 | 原因 | 归入 | 实际去向（2026-10-15 回填） |
+|---|---|---|---|
+| 空间分析 O(n²) + 逐次 `setTimeout(0)` | 性能问题，与本批正确性无关；需引入空间索引 | 阶段 2 剩余 / 阶段 3 | 让出粒度已由 C4 收窄（`geoDataService` 每条后让出 + 1% 节流）；空间索引未做，见 D4 关联项 |
+| `push(...arr)` 大数据量崩溃（6 处） | 需构造万行级 fixture | 阶段 2 剩余 | ✅ **B1** `460c002`（实修 20 处，`arrayUtils` + 20 万行回归用例） |
+| `manualChunks` 顺序、首屏 810 kB | 需逐 chunk 核对产物 | 阶段 2 剩余 | ✅ **B4** `b98b0cd`（387 → 129 KB gzip） |
+| `ref`→`shallowRef`、大文件 Worker 化 | 性能优化 | 阶段 3 | ✅ **C3** `1f53c9d`（6 处）/ **C4** `50ff7d2`…`5bbf164`（Worker 化四阶段 + 收尾） |
+| 模板读取器 7 份 → 参数化工厂 | 大重构 | 阶段 3 | ✅ **D1** `cafc56d` + `d606716`（见 `docs/2026-10-15-d1-fix-record.md`） |
+| 拆 `GanttChartPage.vue` / `KmlViewerPage.vue` | 大重构 | 阶段 3 | ⬜ 仍是待办：**D4**（连同 `GeocodeCommon.vue`） |
+| `vercel.json` 裸 IP → 环境变量 | 需 Vercel 控制台 | 阶段 4 | ⬜ 仍是待办：**E1** |
+| 4 处裸 `fetch` 无超时/无取消 | 与 P0 批次无关 | 阶段 2 剩余 | ✅ **B2** `c8903b5`（`fetchWithTimeout` + 页面级 abort） |
+| 两处监听器泄漏（`KmlViewerPage` / 甘特图重建） | 需单独验证 | 阶段 2 剩余 | ✅ **B3** `c93a842`（甘特图那处为缓解非根治，见 D4 关联项） |
 
 ---
 
 ## 六、遗留项
 
 1. **阶段 2 其余项未做**：本批只做了三个 P0（静默数据错误）。`P0 汇总` 之外还有 P2 里的性能/健壮性项（`push(...arr)`、`manualChunks`、`shallowRef` 等）待排期。
+   > **回填（2026-10-15）**：这些项已分别由 B1 / B2 / B3 / B4 / C3 / C4 / D1 完成，见 §五 表的「实际去向」列。
 2. **`GeoDataPage.vue` 的分析进度弹窗与类型级错误提示可能同时出现**——小概率 UX 问题，未进一步打磨。
 3. **lefthook 未安装**（提交时提示 `Can't find lefthook in PATH`）——仓库配了 git hook 但本机没装，钩子未生效，需确认是否符合预期。
+   > **回填（2026-10-15）**：D3/D1 共 6 次提交仍每次打印同一提示，确认钩子**从未生效**；已登记为台账 E4 待用户确认。

@@ -2,7 +2,7 @@
 
 > **用途**：单一事实来源，汇总各阶段已修/待办条目及其提交哈希。
 > **维护方式**：每完成一批改动，更新「已完成」表与「待办」表状态。
-> **配套**：各阶段的详细计划与执行记录见 `plan/2026-10-10-*.md`、`docs/2026-10-10-*.md`。
+> **配套**：各阶段的详细计划与执行记录见 `plan/2026-10-10-*.md`、`docs/2026-10-10-*.md`、`docs/2026-10-12-*`（C4）与 `docs/2026-10-15-d3-fix-record.md` / `docs/2026-10-15-d1-fix-record.md`。
 
 | 属性 | 值 |
 |---|---|
@@ -66,14 +66,14 @@
 | `geo_data/__tests__/geoAnalysisService.spec.ts` | 追加 10（原 21 保留） |
 | `geo_data/__tests__/multiGeometrySplit.spec.ts` | 3 |
 | `utils/__tests__/coordinateValue.spec.ts` | 17 |
-| `elevations_batch/__tests__/TemplateReader.spec.ts` | 13 |
-| `get_add/__tests__/TemplateReader.spec.ts` | 5 |
+| `elevations_batch/__tests__/TemplateReader.spec.ts` | 14（D1 已删除，用例迁入 `templateRowReader.spec.ts`） |
+| `get_add/__tests__/TemplateReader.spec.ts` | 6（D1 已删除，同上） |
 | `template_export/__tests__/useTemplateExport.spec.ts` | 27 |
 | A 档新增：`skipRows`/`weatherHistoryChart`/`geocodeStore`/`amapService`(追加)/`safeUrl` | +29 |
 | B3 新增：`kml_viewer/__tests__/KmlViewerPage.spec.ts` | +4 |
 | B2 新增：`fetchWithTimeout`(22) / `weatherHistoryService`(4) / `earthquakeService`+2 / `gdacsService`+2 / `DlsComment`(3) | +33 |
 | B1 新增：`arrayUtils`(14) / `TemplateExporter`追加(3) | +17 |
-| B5 新增：`templateHandler`+3 / `CsvParser`+3 / `TemplateValidator`+2 / `TemplateReader`(基站)+3 | +11 |
+| B5 新增：`templateHandler`+3（D1 已删）/ `CsvParser`+3 / `TemplateValidator`+2 / `TemplateReader`(基站)+3 | +11 |
 | B4 新增：无（构建配置，以首屏体积与 e2e 验收） | — |
 | C1 新增：`distance_sensor/__tests__/TemplateReader.spec.ts` | +13 |
 | C2 新增：`coordsConversion.spec.ts` 追加 | +5 |
@@ -83,7 +83,19 @@
 | C4-3 新增：`utils/__tests__/exceljsPipeline.spec.ts`（产物逐格比对）/ `geo_data/__tests__/exportXlsxParity.spec.ts` / `coordsConversion`+2 / `GisToExcelExporter`+4 | +22 |
 | C4-4 新增：`utils/__tests__/filePipelineClient.spec.ts`（协议/降级/取消/空闲释放） / `e2e/worker-pipeline.spec.ts` | +24 |
 | C4 收尾新增：`geo_data/__tests__/parseKmzGeometry.spec.ts` / `utils/__tests__/abort.spec.ts` | +14 |
-| **合计** | 524 → **775** / 50 → **57 files** |
+| **小计（C4 收尾时，2026-10-12）** | 524 → **775** / 50 → **57 files** |
+
+#### 后续调整（D3 / D1，2026-10-15）：测试数下降但覆盖不减
+
+删掉的全部是「只测死代码 / 只测重复实现」的用例，新增的用例把被删 spec 的回归逐条接走：
+
+| 批次 | 变动 | 用例数 |
+|---|---|---|
+| D3 | 删 `coord_convert/__tests__/coordinateInputStore.spec.ts`（随死 store 一起删） | −6 / −1 file |
+| D1 | 删 `elevations_batch`（14）+ `get_add`（6）两份 reader spec（实现逐字节相同，其回归已逐条合并进新 spec） | −20 / −2 files |
+| D1 | 新增 `utils/__tests__/templateRowReader.spec.ts`（28）：两份旧 spec 的回归**逐条合并** + `readRows` 契约 5 条 + 别名原语 2 + `get_lonlat` 首份 reader 用例 4 + 1200 行进度 1 | +28 / +1 file |
+| D1 | 删 `utils/__tests__/templateHandler.spec.ts`（21 条只测生产零调用的同步工厂；其中 B5 的严格解析回归已由 `coordinateValue.spec.ts` 逐条覆盖同一批输入） | −21 / −1 file |
+| **合计（当前）** | 524 → **775**（C4 收尾）→ **769**（D3）→ **777**（D1 收敛 reader）→ **756**（D1 删死层）/ 50 → **54 files** | 净 −19，无覆盖损失 |
 
 ### 门禁基线演进
 
@@ -186,7 +198,7 @@
 | 删 `get_add/TemplateReader.ts` + `elevations_batch/TemplateReader.ts`（逻辑相同）及各自 spec，20 条回归用例合并进共用 spec | −320 行 |
 | `get_lonlat` 收薄为地址语义；`distance_sensor` 循环改走共用机制并**补上取消支持**（原本同步、校验阶段无法取消） | 102→62、268→279 行 |
 | 删第二套通用层 `utils/templateHandler.ts`（生产零调用的同步工厂）+ 其 spec，类型并入新模块 | −443 行 |
-| **净效果** | src **741 insertions / 1095 deletions（净 −354 行）**；测试 777 → 756（删 39 条只测死代码/重复实现的用例，新增 28 条，净覆盖不减） |
+| **净效果** | src **741 insertions / 1095 deletions（净 −354 行）**；测试 775 → **756**（删 41 条只测死代码 / 重复实现的用例 + 新增 28 条，净 −13，覆盖不减） |
 
 **关键决策**：
 - `RowExtractor` 返回 `{ records?, errors? }`（一行 0..N 条记录）——这是 `distance_sensor`（同站址一行出 2 条、异站址最多 2 条）能复用同一循环的关键。
@@ -203,7 +215,7 @@
 | E1 | P2-16 | `vercel.json` 裸 IP + 明文 HTTP 传输评论 PII | Vercel 控制台 | ⬜ |
 | E2 | P1-8 | README 写"无需后端"，实际 6 处 `/api/*` 调用。**主标语已被工作区那版重写解决**，仍缺「哪些功能依赖后端 + 后端不可用时的降级行为」章节 | 文档更新 | ◐ 部分 |
 | E3 | — | 浏览量双计（`router:85` + `DlsComment:332`） | 决定保留哪一端 | ⬜ |
-| E4 | — | lefthook 未装，git hook 从未生效 | 确认是否故意 | ⬜ |
+| E4 | — | lefthook 未装，git hook 从未生效。**现象复核（2026-10-15）**：D3/D1 共 6 次提交，每次都打印 `Can't find lefthook in PATH`（与 stage2 计划 §六.3 记录一致）——钩子确实从未跑过 | 确认是否故意 | ⬜ |
 
 ### F 档 · C4 期间新发现（2026-10-12）
 
@@ -211,7 +223,7 @@
 |---|---|---|---|---|
 | F1 | — | **部署侧 CSP 需允许 `worker-src 'self'`**（阶段 4 引入的新硬需求）。没有 CSP 则无影响；有的话 Worker 被拦 → 自动降级主线程，功能不坏但 Worker 白设 | 部署侧确认 | ⬜ |
 | F2 | — | xlsx 导出**没有边框**（老 bug：xlsx@0.18.5 会静默丢弃所有单元格样式，连官方 `add_style` 也落不了盘）。改 `toSheetSpec`/`generateXlsx` 的 `border: false` → `true` 即可打开，代价是大表总耗时 **+50%**（5万×9：1987→2967ms） | 产品决策 | ⬜ |
-| F3 | — | `elevations_batch` / `GeocodeCommon` / `distance_sensor` 三页仍是页内 `XLSX.read`，取消只能停在它之后的校验阶段；根治要把页内解析也统一走 `filePipeline.parse`（与 D1 一并做更划算） | 排期 | ⬜ |
+| F3 | — | `elevations_batch` / `GeocodeCommon` / `distance_sensor` 三页仍是**页内** `XLSX.read + sheet_to_json`（不走 `filePipeline.parse`），所以取消只能停在它之后的校验阶段。**D1 已完成 reader 侧收敛，但页内解析是另一个入口**，需把这三页的解析也统一走 `filePipeline.parse` | 排期 | ⬜ |
 | F4 | — | `geoDataService` 的要素强引用原始 GeoJSON 对象（`feature` 字段），大文件内存放大 | 排期 | ⬜ |
 | F5 | — | togeojson 对「MultiGeometry 里再嵌套 MultiGeometry」只返回最后一个几何（库局限，已用一条用例钉住，等库修好把期望 1 改成 2） | 跟上游 | ⬜ |
 
