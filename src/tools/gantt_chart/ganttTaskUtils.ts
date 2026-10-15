@@ -212,3 +212,19 @@ export function escapeHtml(value: unknown): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 }
+/**
+ * 任务编辑弹窗的表单值（D4）。
+ *
+ * 类型定义放在这里而不是 `TaskEditModal.vue`：本项目的 tsconfig 下，
+ * `<script setup>` 里 export 的类型无法被别的模块 import（TS2614），
+ * 因此 SFC 对外契约统一放在同目录的 .ts 里。
+ */
+export type TaskFormValue = {
+  name: string
+  start: string
+  end: string
+  progress: number
+  dependencies: string
+  color: string
+  custom_class: string
+}

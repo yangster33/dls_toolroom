@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  escapeHtml,
   formatLocalDate,
   toGanttDate,
   computeNextTaskId,
@@ -237,5 +238,22 @@ describe('validateImportedTasks', () => {
     const result = validateImportedTasks(file)
     expect(result).toHaveLength(3)
     expect(computeNextTaskId(result)).toBe(4)
+  })
+})
+describe('escapeHtml（D4 从 GanttChartPage 移入）', () => {
+  // frappe-gantt 的 set_title/set_subtitle/set_details 直接赋 innerHTML，
+  // 因此任务名/依赖字段里的 HTML 必须被转义（审计 P0-3）。
+  it('转义 HTML 元字符', () => {
+    expect(escapeHtml('<img src=x onerror=alert(1)>')).toBe('&lt;img src=x onerror=alert(1)&gt;')
+    expect(escapeHtml('"双引号" & \'单引号\'')).toBe('&quot;双引号&quot; &amp; &#39;单引号&#39;')
+  })
+
+  it('null / undefined → 空串（不出现 "null"/"undefined" 字样）', () => {
+    expect(escapeHtml(null)).toBe('')
+    expect(escapeHtml(undefined)).toBe('')
+  })
+
+  it('数字原样转字符串', () => {
+    expect(escapeHtml(0)).toBe('0')
   })
 })

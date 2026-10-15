@@ -364,89 +364,17 @@
     </div>
 
     <!-- 添加/编辑任务弹窗 -->
-    <dialog ref="taskModal" class="modal">
-      <div class="modal-box">
-        <h3 class="text-lg font-bold mb-4">{{ editingTaskId ? '编辑任务' : '添加任务' }}</h3>
-        <form @submit.prevent="saveTask" class="space-y-3">
-          <div class="form-control">
-            <label class="label"><span class="label-text">任务名称</span></label>
-            <input
-              v-model="taskForm.name"
-              class="input input-bordered"
-              required
-              placeholder="输入任务名称"
-            />
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div class="form-control">
-              <label class="label"><span class="label-text">开始日期</span></label>
-              <input v-model="taskForm.start" type="date" class="input input-bordered" required />
-            </div>
-            <div class="form-control">
-              <label class="label"><span class="label-text">结束日期</span></label>
-              <input v-model="taskForm.end" type="date" class="input input-bordered" required />
-            </div>
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div class="form-control">
-              <label class="label"><span class="label-text">进度 (%)</span></label>
-              <input
-                v-model.number="taskForm.progress"
-                type="number"
-                min="0"
-                max="100"
-                class="input input-bordered"
-              />
-              <progress
-                class="progress progress-primary w-full mt-1"
-                :value="taskForm.progress"
-                max="100"
-              ></progress>
-            </div>
-            <div class="form-control">
-              <label class="label"><span class="label-text">依赖任务ID</span></label>
-              <input
-                v-model="taskForm.dependencies"
-                class="input input-bordered"
-                placeholder="用逗号分隔, 如: 1,2"
-              />
-            </div>
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div class="form-control">
-              <label class="label"><span class="label-text">颜色</span></label>
-              <input
-                v-model="taskForm.color"
-                type="color"
-                class="w-full h-10 rounded cursor-pointer border-0"
-              />
-            </div>
-            <div class="form-control">
-              <label class="label"><span class="label-text">自定义CSS类</span></label>
-              <input
-                v-model="taskForm.custom_class"
-                class="input input-bordered"
-                placeholder="可选"
-              />
-            </div>
-          </div>
-          <div class="modal-action">
-            <button type="button" class="btn btn-ghost" @click="closeTaskModal">取消</button>
-            <button type="submit" class="btn btn-primary">
-              {{ editingTaskId ? '保存修改' : '添加' }}
-            </button>
-          </div>
-        </form>
-      </div>
-      <form method="dialog" class="modal-backdrop" @click="closeTaskModal">
-        <button>关闭</button>
-      </form>
-    </dialog>
+    <TaskEditModal
+      ref="taskModal"
+      :editing-task-id="editingTaskId"
+      :default-color="defaultColorForNewTask"
+      @save="onSaveTask"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, useTemplateRef } from 'vue'
 import {
   PhCalendarCheck,
   PhArrowCounterClockwise,
@@ -471,13 +399,20 @@ import { logger } from '@/utils/logger'
 import { formatLocalDate, computeNextTaskId, validateImportedTasks } from './ganttTaskUtils'
 import { exportGanttSvg, exportGanttRaster, exportTasksAsJson } from './ganttSvgExport'
 import { useGanttInstance } from './useGanttInstance'
+import type { TaskFormValue } from './ganttTaskUtils'
+import TaskEditModal from './TaskEditModal.vue'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
 
 const toolConfig = getToolById('gantt_chart')
 const store = useGanttStore()
 
 // ── 引用 ──
-const taskModal = ref<HTMLDialogElement | null>(null)
+/** 任务编辑弹窗（D4 抽成 TaskEditModal.vue，页面只保留句柄） */
+const taskModalRef = useTemplateRef<{
+  openForCreate: () => void
+  openForEdit: (task: GanttTask) => void
+  close: () => void
+}>('taskModal')
 
 // ── 错误对话框状态 ──
 const errorDialogOpen = ref(false)
@@ -543,16 +478,8 @@ const undoStack = ref<GanttTask[][]>([])
 const redoStack = ref<GanttTask[][]>([])
 
 // ── 弹窗表单 ──
+/** 正在编辑的任务 id（空 = 添加模式）。表单本体在 TaskEditModal 里 */
 const editingTaskId = ref<string | null>(null)
-const taskForm = ref({
-  name: '',
-  start: '',
-  end: '',
-  progress: 0,
-  dependencies: '',
-  color: '#3b82f6',
-  custom_class: '',
-})
 
 // ── 工具函数 ──
 const colorPalette = [
@@ -671,56 +598,34 @@ function getNextId(): string {
   return String(next)
 }
 
+/** 添加模式下的默认色（页面按当前任务数给，保持旧行为） */
+const defaultColorForNewTask = computed(() => getDefaultColor(store.tasks.length))
+
 function openAddTaskModal() {
   editingTaskId.value = null
-  const today = new Date()
-  const nextWeek = new Date(today)
-  nextWeek.setDate(nextWeek.getDate() + 7)
-  taskForm.value = {
-    name: '',
-    start: formatDate(today.toISOString()),
-    end: formatDate(nextWeek.toISOString()),
-    progress: 0,
-    dependencies: '',
-    color: getDefaultColor(store.tasks.length),
-    custom_class: '',
-  }
-  taskModal.value?.showModal()
+  taskModalRef.value?.openForCreate()
 }
 
 function openEditTaskModal(taskId: string) {
   const task = store.tasks.find((t) => t.id === taskId)
   if (!task) return
   editingTaskId.value = taskId
-  taskForm.value = {
-    name: task.name,
-    start: formatDate(task.start),
-    end: formatDate(task.end),
-    progress: task.progress || 0,
-    dependencies: formatDependencies(task.dependencies),
-    color: task.color || getDefaultColor(0),
-    custom_class: task.custom_class || '',
-  }
-  taskModal.value?.showModal()
+  taskModalRef.value?.openForEdit(task)
 }
 
-function closeTaskModal() {
-  taskModal.value?.close()
-  editingTaskId.value = null
-}
-
-function saveTask() {
+/** 弹窗 @save：表单值 → 落库（撤销入栈 / 写 store / 刷新） */
+function onSaveTask(form: TaskFormValue) {
   pushUndo()
 
   // 确保开始日期不晚于结束日期
-  const start = taskForm.value.start
-  let end = taskForm.value.end
+  const start = form.start
+  let end = form.end
   if (new Date(end) < new Date(start)) {
     end = start
   }
 
-  const deps = taskForm.value.dependencies
-    ? taskForm.value.dependencies
+  const deps = form.dependencies
+    ? form.dependencies
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean)
@@ -735,31 +640,30 @@ function saveTask() {
     if (existing) {
       store.tasks[idx] = {
         ...existing,
-        name: taskForm.value.name,
+        name: form.name,
         start,
         end,
-        progress: taskForm.value.progress,
+        progress: form.progress,
         dependencies: deps,
-        color: taskForm.value.color,
-        custom_class: taskForm.value.custom_class,
+        color: form.color,
+        custom_class: form.custom_class,
       }
     }
   } else {
     const newTask: GanttTask = {
       id: getNextId(),
-      name: taskForm.value.name,
+      name: form.name,
       start,
       end,
-      progress: taskForm.value.progress,
+      progress: form.progress,
       dependencies: deps,
-      color: taskForm.value.color,
-      custom_class: taskForm.value.custom_class,
+      color: form.color,
+      custom_class: form.custom_class,
     }
     store.tasks.push(newTask)
   }
 
   refreshGantt()
-  closeTaskModal()
 }
 
 function onTaskUpdate(taskId: string) {
