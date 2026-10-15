@@ -3,18 +3,23 @@ import {
   sanitizeFilename,
   validateFilenameTemplate,
   generateFilename,
+  generateNameFromTemplate,
+  renderNameTemplate,
   resolveDuplicates,
-} from '../useTemplateExport'
+} from '../filenameTemplate'
 
 /**
- * useTemplateExport 纯函数的回归测试
+ * 文件名 / 命名模板的回归测试（D2 / 审计 P3-2、P3-4）
  *
- * 背景：这些函数此前只在 `docx_template_export/docxTemplateFunctions.ts` 与
+ * 这些用例原本在 `template_export/__tests__/useTemplateExport.spec.ts`。
+ * 背景：函数此前只在 `docx_template_export/docxTemplateFunctions.ts` 与
  * `xlsx_template_export/xlsxTemplateFunctions.ts` 中有测试，而那两个文件是
  * `template_export/` 合并重构后的**死代码副本**（2026-10-09 阶段 0 已删除）。
- * 删除死代码时把测试一起删了，导致 live 实现失去覆盖。
- * 这里把 live 实现（useTemplateExport.ts）的函数导出并补回测试。
+ *
+ * D2 把三处拷贝收敛到 `utils/filenameTemplate.ts` 后，测试跟着实现搬到此处，
+ * 并为 shp2kml（此前**没有**任何命名模板测试）补上用例。
  */
+
 describe('sanitizeFilename', () => {
   it('替换 Windows 非法字符', () => {
     expect(sanitizeFilename('a/b\\c:d*e?f"g<h>i|j')).toBe('a-b-c-d-e-f-g-h-i-j')
@@ -138,5 +143,73 @@ describe('resolveDuplicates', () => {
 
   it('P1-4：空数组安全', () => {
     expect(resolveDuplicates([], 'appendIndex')).toEqual([])
+  })
+})
+
+/**
+ * shp2kml 的 KML 要素名渲染（此前页面预览与生成器各有一份**逐字节相同**的拷贝，
+ * 且页面那份的花括号校验留着 `[^}]+` 死分支 —— `报告_{}` 能通过校验）。
+ */
+describe('generateNameFromTemplate（shp2kml）', () => {
+  it('无模板时原样返回 name', () => {
+    expect(generateNameFromTemplate({ a: '1' }, '原始名')).toBe('原始名')
+    expect(generateNameFromTemplate({ a: '1' }, '原始名', '')).toBe('原始名')
+  })
+
+  // 页面预览与生成器写出共用同一实现：这里同时锁住两边的行为
+  it('按模板渲染，context = { name, ...properties }', () => {
+    const result = generateNameFromTemplate({ road: '中山路', len: 120 }, '站点', '{road}_{name}')
+    expect(result).toBe('中山路_站点')
+  })
+
+  it('缺失字段替换为空字符串，不写 undefined', () => {
+    expect(generateNameFromTemplate({ a: '1' }, '站点', '{missing}_{a}')).toBe('_1')
+  })
+
+  // KML 要素名**不**清理 Windows 非法字符（那是文件名的规则）：
+  // 属性值要原样进 XML，由 escapeXml 负责转义。
+  it('不清理非法字符（与 generateFilename 的刻意差异）', () => {
+    expect(generateNameFromTemplate({ a: 'b/c' }, '站点', '{a}')).toBe('b/c')
+    expect(generateFilename({ a: 'b/c' }, '{a}', 0)).toBe('b-c')
+  })
+
+  // 注意：context 构造成 `{ name, ...properties }`，因此**属性表里的 name 列会覆盖**
+  // 显式传入的 name —— 这是收敛前两份拷贝的既有语义（页面预览与生成器逐字节相同），
+  // 本次刻意不改。若哪天要「显式 name 优先」，需要同时改预览与生成器并回归。
+  it('属性表里的 name 列会覆盖显式 name（既有语义，勿莫名改动）', () => {
+    expect(generateNameFromTemplate({ name: '属性名' }, '显式名', '{name}')).toBe('属性名')
+    expect(generateNameFromTemplate({ road: '中山路' }, '显式名', '{name}_{road}')).toBe(
+      '显式名_中山路',
+    )
+  })
+})
+
+describe('validateFilenameTemplate · shp2kml 侧的收敛修复', () => {
+  // 收敛前 Shp2KmlPage 用 `[^}]+` 匹配占位符，`{}` 匹配不上，
+  // 于是「存在空的 {} 占位符」分支是死代码，`报告_{}` 能通过校验。
+  it('空占位符 {} 现在会被 shp2kml 的同一份校验拒绝（收敛前被放过）', () => {
+    const r = validateFilenameTemplate('报告_{}')
+    expect(r.valid).toBe(false)
+    expect(r.error).toContain('空')
+  })
+
+  it('未闭合/多余右括号的报错文案收敛后一致', () => {
+    expect(validateFilenameTemplate('报告_{name').error).toContain('未闭合')
+    expect(validateFilenameTemplate('报告_name}').error).toContain('多余')
+  })
+})
+
+describe('renderNameTemplate', () => {
+  it('空模板返回空串；无占位符时原样返回', () => {
+    expect(renderNameTemplate('', { a: 1 })).toBe('')
+    expect(renderNameTemplate('固定名', { a: 1 })).toBe('固定名')
+  })
+
+  it('null / undefined 字段替换为空串', () => {
+    expect(renderNameTemplate('{a}{b}', { a: null, b: undefined })).toBe('')
+  })
+
+  it('数值 0 正常替换（不当成空）', () => {
+    expect(renderNameTemplate('{a}', { a: 0 })).toBe('0')
   })
 })

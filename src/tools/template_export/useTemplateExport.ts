@@ -214,98 +214,17 @@ export function normalizeSkipRows(value: number): number {
   return Math.max(0, n)
 }
 
-/** 导出以便单测（这些纯函数此前只在已删除的 docx/xlsxTemplateFunctions.ts 中有测试，
- *  而那份是重构残留的死代码副本；导出后 live 实现重新获得覆盖） */
-export function sanitizeFilename(name: string): string {
-  return (
-    name
-      .replace(/[\\/:*?"<>|]/g, '-')
-      .replace(/\s+/g, ' ')
-      .trim() || '未命名'
-  )
-}
+// D2：以下四个纯函数的实现已收敛到 `utils/filenameTemplate.ts`
+// （shp2kml 的页面预览与生成器此前各有一份拷贝，见该文件头说明）。
+import {
+  sanitizeFilename,
+  validateFilenameTemplate,
+  generateFilename,
+  resolveDuplicates,
+} from '@/utils/filenameTemplate'
 
-export function validateFilenameTemplate(template: string): { valid: boolean; error?: string } {
-  let depth = 0
-  for (const ch of template) {
-    if (ch === '{') depth++
-    if (ch === '}') depth--
-    if (depth < 0) return { valid: false, error: '多余的 } 右花括号' }
-  }
-  if (depth > 0) return { valid: false, error: '花括号未闭合，缺少 } 右花括号' }
-
-  // 注意用 [^}]* 而不是 [^}]+：`{}` 也必须被判为非法。
-  // 旧实现用 [^}]+，空占位符匹配不上正则，下面的"存在空的 {} 占位符"
-  // 分支是死代码，`报告_{}` 会被放过并生成 `报告_`。
-  const re = /\{([^}]*)\}/g
-  let m: RegExpExecArray | null
-  while ((m = re.exec(template)) !== null) {
-    if (m[1] === '') return { valid: false, error: '存在空的 {} 占位符' }
-    if (!/^[\w]+$/.test(m[1]!)) {
-      return { valid: false, error: `字段名 "{${m[1]!}}" 包含非法字符，只允许字母、数字和下划线` }
-    }
-  }
-
-  return { valid: true }
-}
-
-export function generateFilename(
-  row: Record<string, unknown>,
-  template: string,
-  index: number,
-): string {
-  if (!template) {
-    const keys = Object.keys(row)
-    const firstKey = keys[0]
-    const firstValue = firstKey !== undefined ? row[firstKey] : undefined
-    // 首列存在但为空字符串时，旧实现会走 sanitizeFilename('') → '未命名'，
-    // 导致下面的 `文档_${index+1}` 分支永远不可达（'' != null 为 true）。
-    if (firstValue != null && String(firstValue).trim() !== '') {
-      return sanitizeFilename(String(firstValue))
-    }
-    return `文档_${index + 1}`
-  }
-
-  const name = template.replace(/\{([^}]+)\}/g, (_, key: string) => {
-    const val = row[key]
-    return val != null ? String(val) : ''
-  })
-  return sanitizeFilename(name)
-}
-
-export function resolveDuplicates(
-  names: string[],
-  strategy: 'appendIndex' | 'rowPrefix',
-): string[] {
-  if (strategy === 'rowPrefix') {
-    const pad = String(names.length).length
-    return names.map((name, i) => `${String(i + 1).padStart(pad, '0')}-${name}`)
-  }
-
-  // 必须用「已产出的最终名」集合，而不是「原始名出现次数」。
-  //
-  // 旧实现（审计报告 P1-4）：
-  //   const seen = new Map<string, number>()
-  //   names.map(name => { const count = seen.get(name) || 0; seen.set(name, count+1)
-  //                      return count === 0 ? name : `${name}(${count})` })
-  // 输入 ['a','a','a(1)'] → ['a','a(1)','a(1)']：第三行与第二行撞名，
-  // JSZip 的 zip.file(name) 同名覆盖 → 少一个文件，且 zip 生成时不报错。
-  const used = new Set<string>()
-  return names.map((name) => {
-    if (!used.has(name)) {
-      used.add(name)
-      return name
-    }
-    let n = 1
-    let candidate = `${name}(${n})`
-    while (used.has(candidate)) {
-      n++
-      candidate = `${name}(${n})`
-    }
-    used.add(candidate)
-    return candidate
-  })
-}
+// 重新导出：让既有 import 面与 spec 不变（实现已不在本文件）
+export { sanitizeFilename, validateFilenameTemplate, generateFilename, resolveDuplicates }
 
 function dateStringToSerial(trimmed: string): number | null {
   const chineseDatePattern =

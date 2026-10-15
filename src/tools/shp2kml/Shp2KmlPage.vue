@@ -275,10 +275,10 @@
                 未检测到属性字段。请确保选择了完整的 Shapefile 文件组（.shp + .dbf 一起选中）。
               </div>
               <div
-                v-if="validateNameTemplate(entry.nameTemplate).error"
+                v-if="validateFilenameTemplate(entry.nameTemplate).error"
                 class="text-error text-xs mt-1"
               >
-                {{ validateNameTemplate(entry.nameTemplate).error }}
+                {{ validateFilenameTemplate(entry.nameTemplate).error }}
               </div>
               <!-- 预览 -->
               <div v-if="entry.features.length > 0" class="mt-2 text-sm text-base-content/70">
@@ -345,6 +345,8 @@ import {
 } from './ShpToKmlGenerator'
 import ColorPicker from '@/components/common/ColorPicker.vue'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
+// D2：命名模板校验与渲染已收敛到 `utils/filenameTemplate.ts`（与生成器、模板导出共用同一份）
+import { validateFilenameTemplate, generateNameFromTemplate } from '@/utils/filenameTemplate'
 
 const toolConfig = getToolById('shp2kml')
 
@@ -731,46 +733,6 @@ function updatePolygonStrokeWidth(id: string, width: number) {
   if (entry && entry.type === 'Polygon') {
     ;(entry.style as PolygonStyle).strokeWidth = width
   }
-}
-
-function validateNameTemplate(template: string): { valid: boolean; error?: string } {
-  let depth = 0
-  for (const ch of template) {
-    if (ch === '{') depth++
-    if (ch === '}') depth--
-    if (depth < 0) return { valid: false, error: '多余的 } 右花括号' }
-  }
-  if (depth > 0) return { valid: false, error: '花括号未闭合，缺少 }' }
-  if (depth < 0) return { valid: false, error: '花括号不匹配' }
-
-  const re = /\{([^}]+)\}/g
-  let m: RegExpExecArray | null
-  while ((m = re.exec(template)) !== null) {
-    if (m[1] === '') return { valid: false, error: '存在空的 {} 占位符' }
-    if (!/^[\w]+$/.test(m[1]!)) {
-      return { valid: false, error: `字段名 "{${m[1]!}}" 包含非法字符，只允许字母、数字和下划线` }
-    }
-  }
-
-  return { valid: true }
-}
-
-function generateNameFromTemplate(
-  properties: Record<string, unknown>,
-  name: string,
-  template: string,
-): string {
-  if (!template) return name
-
-  const context = {
-    name,
-    ...properties,
-  }
-
-  return template.replace(/\{([^}]+)\}/g, (_, key: string) => {
-    const val = (context as Record<string, unknown>)[key]
-    return val != null ? String(val) : ''
-  })
 }
 
 function updateFolderName(id: string, name: string) {

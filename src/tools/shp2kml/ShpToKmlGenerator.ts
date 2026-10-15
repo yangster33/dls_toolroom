@@ -6,6 +6,8 @@
 
 import type { GisFeature } from '../gis2excel/GisFileReader'
 import { hexToKmlColor } from '../table2kml_point/ColorParser'
+// D2：模板渲染已收敛到 `utils/filenameTemplate.ts`（本函数与 Shp2KmlPage 的预览用同一份）
+import { generateNameFromTemplate } from '@/utils/filenameTemplate'
 
 // ============================================================
 // 类型定义
@@ -60,24 +62,6 @@ function coordToKml(coordStr: string): string {
       return `${lng},${lat},0`
     })
     .join(' ')
-}
-
-function generateNameFromTemplate(
-  properties: Record<string, unknown>,
-  name: string,
-  template?: string,
-): string {
-  if (!template) return name
-
-  const context = {
-    name,
-    ...properties,
-  }
-
-  return template.replace(/\{([^}]+)\}/g, (_, key: string) => {
-    const val = (context as Record<string, unknown>)[key]
-    return val != null ? String(val) : ''
-  })
 }
 
 // ============================================================
