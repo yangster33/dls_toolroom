@@ -7,7 +7,7 @@ import {
   validateApiKey as validateKey,
 } from '@/utils/amapService'
 import { batchGeocodeQuery } from '@/utils/GeocodeBatchService'
-import type { CoordinatePoint } from '@/utils/templateHandler'
+import type { CoordinatePoint } from '@/utils/templateRowReader'
 
 // ===================== 类型定义 =====================
 

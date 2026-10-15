@@ -617,7 +617,7 @@ import {
   type FullAddress,
 } from '../../tools/get_lonlat/TemplateReader'
 
-import type { CoordinatePoint } from '@/utils/templateHandler'
+import type { CoordinatePoint } from '@/utils/templateRowReader'
 
 import {
   batchQueryAddresses,

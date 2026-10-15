@@ -21,10 +21,23 @@ import { yieldToUI } from './yieldToUI'
 import { throwIfAborted } from './abort'
 import { parseCoordinateValue } from './coordinateValue'
 import type { ProgressCallback } from './progress'
-import type { CoordinatePoint, TemplateValidationResult } from './templateHandler'
 
 /** 一行原始数据（页内解析产物：sheet_to_json 对象模式 / CSV / 二维数组整形的行） */
 export type RawRow = Record<string, string | number>
+
+/** 模板验证结果（`get_add` / `elevations_batch` / `get_lonlat` 共用的返回形状） */
+export interface TemplateValidationResult<T> {
+  isValid: boolean
+  data: T[]
+  errors: string[]
+}
+
+/** 坐标点（名称 + 经纬度） */
+export interface CoordinatePoint {
+  name: string
+  longitude: number
+  latitude: number
+}
 
 /** 一行的处理结果：0..N 条记录 + 0..N 条错误（错误文案需自带行号） */
 export interface RowOutcome<T> {

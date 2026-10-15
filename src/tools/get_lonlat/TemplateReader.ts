@@ -5,7 +5,7 @@
  * 本文件只保留**本工具特有的地址语义**（6 个地址字段、只强制校验「地址」）。
  */
 import { resolveAlias, readRows, toValidationResult, type RawRow } from '@/utils/templateRowReader'
-import type { TemplateValidationResult } from '@/utils/templateHandler'
+import type { TemplateValidationResult } from '@/utils/templateRowReader'
 import type { ProgressCallback } from '@/utils/progress'
 
 /** 经纬度查询的地址行：不含「名称」列（查询的是地址，不是站点名） */

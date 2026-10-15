@@ -317,7 +317,7 @@ import ProgressModal from '@/components/common/ProgressModal.vue'
 import { useProgressTimer } from '@/composables/useProgressTimer'
 import type { ProgressCallback } from '@/utils/progress'
 import { readCoordinatePointRows } from '@/utils/templateRowReader'
-import type { TemplateValidationResult, CoordinatePoint } from '@/utils/templateHandler'
+import type { TemplateValidationResult, CoordinatePoint } from '@/utils/templateRowReader'
 import { elevationService } from '../elevation_query/elevationService'
 
 const toolConfig = getToolById('elevations_batch')
