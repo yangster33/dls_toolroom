@@ -194,3 +194,21 @@ export function validateImportedTasks(raw: unknown): GanttTask[] {
 
   return tasks
 }
+/**
+ * HTML 转义。
+ *
+ * frappe-gantt 的 set_title / set_subtitle / set_details 直接把字符串赋给
+ * innerHTML（已核对 frappe-gantt.es.js:685,687,689），所有插值都必须先转义，
+ * 否则导入 JSON 里的任务名/依赖字段即可执行脚本（审计 P0-3）。
+ *
+ * 从 GanttChartPage 移到此处（D4）：既让 popup 构造逻辑能随 useGanttInstance
+ * 一起搬走，也让转义规则本身可被单测。
+ */
+export function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}

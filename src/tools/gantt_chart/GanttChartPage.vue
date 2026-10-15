@@ -463,7 +463,6 @@ import {
   PhImage,
 } from '@phosphor-icons/vue'
 import Gantt from 'frappe-gantt'
-import type { FrappeGanttPopupContext, FrappeGanttInternalTask } from 'frappe-gantt'
 import './frappe-gantt.css'
 logger.log('Gantt module loaded:', typeof Gantt, Gantt)
 import { getToolById } from '../toolData'
@@ -471,15 +470,14 @@ import { useGanttStore, type GanttTask } from '@/stores/ganttStore'
 import { logger } from '@/utils/logger'
 import { formatLocalDate, computeNextTaskId, validateImportedTasks } from './ganttTaskUtils'
 import { exportGanttSvg, exportGanttRaster, exportTasksAsJson } from './ganttSvgExport'
+import { useGanttInstance } from './useGanttInstance'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
 
 const toolConfig = getToolById('gantt_chart')
 const store = useGanttStore()
 
 // ── 引用 ──
-const ganttContainer = ref<HTMLElement | null>(null)
 const taskModal = ref<HTMLDialogElement | null>(null)
-const isLoading = ref(true)
 
 // ── 错误对话框状态 ──
 const errorDialogOpen = ref(false)
@@ -503,13 +501,12 @@ const showErrorDialog = (
   errorDialogOpen.value = true
 }
 
-// ── Frappe Gantt 实例 ──
-let ganttInstance: Gantt | null = null
+// ── Frappe Gantt 实例（生命周期抽到 useGanttInstance）──
 
 /** 回到今天。包装成方法而非在模板里直接访问 ganttInstance：
  *  ganttInstance 是非响应式的实例句柄，模板直接读它拿不到稳定类型。 */
 function scrollToToday() {
-  ganttInstance?.scroll_current()
+  ganttInstance.value?.scroll_current()
 }
 
 // ── 所有视图模式 ──
@@ -523,10 +520,27 @@ const allViewModes = [
   { name: 'Year', label: '年' },
 ]
 
+const {
+  containerRef: ganttContainer,
+  ganttInstance,
+  isLoading,
+  initGantt,
+  reinitGantt,
+  refreshGantt,
+  switchViewMode,
+  updateGanttOptions,
+  applyWeekendOption,
+  resetDragUndoFlag,
+  disposeGantt,
+} = useGanttInstance(store, allViewModes, {
+  onEditTask: (taskId: string) => openEditTaskModal(taskId),
+  onDeleteTask: (taskId: string) => deleteTask(taskId),
+  onBeforeMutation: () => pushUndo(),
+})
+
 // ── 撤销/重做（不持久化）──
 const undoStack = ref<GanttTask[][]>([])
 const redoStack = ref<GanttTask[][]>([])
-let dragUndoRecorded = false
 
 // ── 弹窗表单 ──
 const editingTaskId = ref<string | null>(null)
@@ -564,20 +578,6 @@ function formatDate(date: string | Date | number): string {
   return formatLocalDate(date)
 }
 
-/**
- * HTML 转义
- * frappe-gantt 的 set_title / set_subtitle / set_details 直接把字符串赋给
- * innerHTML（已核对 frappe-gantt.es.js:685,687,689），所有插值都必须先转义。
- */
-function escapeHtml(value: unknown): string {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
-
 function formatDependencies(deps: string | string[] | undefined): string {
   if (!deps) return ''
   if (Array.isArray(deps)) return deps.join(',')
@@ -587,7 +587,8 @@ function formatDependencies(deps: string | string[] | undefined): string {
 function pushUndo() {
   undoStack.value.push(JSON.parse(JSON.stringify(store.tasks)))
   redoStack.value = []
-  dragUndoRecorded = false
+  // 与旧行为一致：入栈后允许下一次拖动重新记一次 undo
+  resetDragUndoFlag()
   if (undoStack.value.length > 50) undoStack.value.shift()
 }
 
@@ -658,258 +659,6 @@ function onDepsBlur(e: FocusEvent) {
 function onColorChange(e: Event) {
   const el = e.target as HTMLInputElement
   updateTaskColor(el.dataset.taskId!, el.value)
-}
-
-// ── 甘特图操作 ──
-function initGantt() {
-  if (!ganttContainer.value) {
-    logger.error('甘特图容器不存在')
-    isLoading.value = false
-    return
-  }
-
-  const savedMode = store.currentViewMode
-
-  const ganttTasks = store.tasks.map((t) => ({
-    id: t.id,
-    name: t.name,
-    start: t.start,
-    end: t.end,
-    progress: t.progress || 0,
-    dependencies: t.dependencies || [],
-    custom_class: t.custom_class || '',
-    color: t.color,
-    color_progress: t.color_progress,
-  }))
-
-  ganttInstance = new Gantt(ganttContainer.value, ganttTasks, {
-    view_mode: store.currentViewMode,
-    view_modes: allViewModes.map((m) => m.name),
-    view_mode_select: store.options.showViewModeSelect,
-    today_button: store.options.showTodayBtn,
-    scroll_to: 'today',
-    language: 'zh-CN',
-    popup_on: store.options.popupOn,
-    snap_at: store.options.snapAt || undefined,
-    lines: store.options.lines,
-    show_expected_progress: store.options.showExpectedProgress,
-    readonly: false,
-    readonly_dates: false,
-    readonly_progress: false,
-    move_dependencies: true,
-    infinite_padding: true,
-    arrow_curve: 5,
-    bar_height: store.barHeight,
-    bar_corner_radius: 3,
-    container_height: store.containerHeight,
-    padding: 18,
-    popup: (ctx: FrappeGanttPopupContext) => {
-      const t = ctx.task
-      let dateFormat = 'yyyy-MM-dd'
-      if (['Hour', 'Quarter Day', 'Half Day'].includes(store.currentViewMode)) {
-        dateFormat = 'yyyy-MM-dd HH:mm'
-      }
-
-      const fmtDate = (d: string) => {
-        const dt = new Date(d)
-        const pad = (n: number) => String(n).padStart(2, '0')
-        if (dateFormat === 'yyyy-MM-dd HH:mm') {
-          return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`
-        }
-        return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
-      }
-
-      const startStr = fmtDate(t.start)
-      const endStr = fmtDate(t.end)
-      const startMs = new Date(t.start).getTime()
-      const endMs = new Date(t.end).getTime()
-      const days = Math.round((endMs - startMs) / (1000 * 60 * 60 * 24))
-      const deps = t.dependencies
-        ? Array.isArray(t.dependencies)
-          ? t.dependencies.join(', ')
-          : t.dependencies
-        : '无'
-
-      // frappe-gantt 的 set_title / set_subtitle / set_details 均走 innerHTML
-      // （已核对 frappe-gantt.es.js:685,687,689），因此所有插入的动态值必须转义，
-      // 否则导入的 JSON 中的任务名/依赖字段即可执行脚本（审计 P0-3）
-      ctx.set_title(escapeHtml(t.name))
-
-      // color 已在 validateImportedTasks 中做 #hex 白名单，此处再做一次防御
-      const safeColor = /^#[0-9a-fA-F]{3,8}$/.test(String(t.color || '')) ? t.color : '#3b82f6'
-      const safeProgress = Math.min(Math.max(Number(t.progress) || 0, 0), 100)
-
-      const progressBarHtml = `<div class="mt-1" style="background:#e5e7eb;border-radius:4px;height:6px;width:100%;overflow:hidden"><div style="background:${safeColor};height:100%;width:${safeProgress}%;border-radius:4px;transition:width 0.3s"></div></div>`
-
-      ctx.set_subtitle(
-        `<div style="font-size:12px;color:#6b7280;margin-top:4px">进度: ${safeProgress}%</div>${progressBarHtml}`,
-      )
-      ctx.set_details(
-        `<div style="font-size:12px;line-height:1.8">
-          <div><b>开始:</b> ${escapeHtml(startStr)}</div>
-          <div><b>结束:</b> ${escapeHtml(endStr)}</div>
-          <div><b>持续:</b> ${days} 天</div>
-          <div><b>依赖:</b> ${escapeHtml(deps)}</div>
-        </div>`,
-      )
-
-      ctx.add_action('编辑', (task: GanttTask) => {
-        openEditTaskModal(task.id)
-      })
-      ctx.add_action('删除', (task: GanttTask) => {
-        deleteTask(task.id)
-      })
-    },
-    on_click: () => {},
-    on_date_change: (task: FrappeGanttInternalTask, start: Date, end: Date) => {
-      if (!dragUndoRecorded) {
-        pushUndo()
-        dragUndoRecorded = true
-      }
-      const idx = store.tasks.findIndex((t) => t.id === task.id)
-      if (idx !== -1) {
-        store.tasks[idx]!.start = formatDate(start)
-        store.tasks[idx]!.end = formatDate(end)
-      }
-    },
-    on_progress_change: (task: FrappeGanttInternalTask, progress: number) => {
-      pushUndo()
-      const idx = store.tasks.findIndex((t) => t.id === task.id)
-      if (idx !== -1) {
-        store.tasks[idx]!.progress = Math.round(progress)
-      }
-    },
-    on_view_change: (mode: string | { name: string }) => {
-      store.currentViewMode = typeof mode === 'string' ? mode : mode.name
-    },
-  })
-
-  if (savedMode !== store.currentViewMode) {
-    ganttInstance.change_view_mode(savedMode)
-    store.currentViewMode = savedMode
-  }
-
-  isLoading.value = false
-}
-
-function destroyGantt() {
-  if (ganttInstance) {
-    if (ganttContainer.value) {
-      ganttContainer.value.innerHTML = ''
-    }
-    ganttInstance = null
-  }
-}
-
-/**
- * 重建甘特图（带节流）。
- *
- * 背景（审计 B3 / P2-14）：frappe-gantt 构造函数内部用**匿名箭头函数**
- * 注册 document.addEventListener("mouseup", ...)，且库不提供任何解绑
- * API（clear() 只清 DOM，不动 document 上的监听器）。
- * 因此每 new Gantt() 一次就永久多一个 document 监听器，点 N 次缩放
- * = 累积 N 个监听器，各持有一份完整的 Gantt 对象图。
- *
- * 缩放按钮（barHeight ±5 / containerHeight ±60）会以 5px 粒度连续点击，
- * 逐次全量重建既慢又持续泄漏。这里用 trailing 节流把连续 pending 的
- * 重建请求合并为一次：500ms 内的多次调用只执行最后一次。
- *
- * 注意这是**缓解而非根治**——根治需要上游支持解绑或改用其它甘特库。
- */
-const REINIT_THROTTLE_MS = 500
-let reinitTimer: ReturnType<typeof setTimeout> | null = null
-let reinitPending = false
-
-function reinitGantt() {
-  if (reinitTimer !== null) {
-    // 已在节流窗口内，只记录"还有待处理的重建"
-    reinitPending = true
-    return
-  }
-
-  destroyGantt()
-  initGantt()
-
-  reinitTimer = setTimeout(() => {
-    reinitTimer = null
-    if (reinitPending) {
-      reinitPending = false
-      reinitGantt()
-    }
-  }, REINIT_THROTTLE_MS)
-}
-
-function refreshGantt() {
-  if (!ganttInstance) {
-    initGantt()
-    return
-  }
-
-  const gi = ganttInstance
-  if (!gi) return
-  if (gi.gantt_start && gi.gantt_end && store.tasks.length > 0) {
-    const rs = new Date(gi.gantt_start).getTime()
-    const re = new Date(gi.gantt_end).getTime()
-    const outOfRange = store.tasks.some((t) => {
-      return new Date(t.start).getTime() < rs || new Date(t.end).getTime() > re
-    })
-    if (outOfRange) {
-      reinitGantt()
-      return
-    }
-  }
-
-  const ganttTasks = store.tasks.map((t) => ({
-    id: t.id,
-    name: t.name,
-    start: t.start,
-    end: t.end,
-    progress: t.progress || 0,
-    dependencies: t.dependencies || [],
-    custom_class: t.custom_class || '',
-    color: t.color,
-    color_progress: t.color_progress,
-  }))
-
-  ganttInstance.refresh(ganttTasks)
-}
-
-function switchViewMode(modeName: string) {
-  store.currentViewMode = modeName
-  ganttInstance?.change_view_mode(modeName)
-}
-
-function updateGanttOptions() {
-  if (!ganttInstance) return
-  const savedMode = store.currentViewMode
-  ganttInstance.update_options({
-    view_mode_select: store.options.showViewModeSelect,
-    today_button: store.options.showTodayBtn,
-    snap_at: store.options.snapAt || undefined,
-    lines: store.options.lines,
-    show_expected_progress: store.options.showExpectedProgress,
-    popup_on: store.options.popupOn,
-  })
-  if (store.currentViewMode !== savedMode) {
-    ganttInstance.change_view_mode(savedMode)
-    store.currentViewMode = savedMode
-  }
-}
-
-function applyWeekendOption() {
-  if (!ganttInstance) return
-  const savedMode = store.currentViewMode
-  if (store.options.weekendHighlight) {
-    ganttInstance.update_options({
-      holidays: { 'var(--g-weekend-highlight-color)': 'weekend' },
-    })
-  } else {
-    ganttInstance.update_options({ holidays: {} })
-  }
-  if (store.currentViewMode !== savedMode) {
-    ganttInstance.change_view_mode(savedMode)
-    store.currentViewMode = savedMode
-  }
 }
 
 // ── 任务 CRUD ──
@@ -1016,15 +765,15 @@ function saveTask() {
 function onTaskUpdate(taskId: string) {
   pushUndo()
   const task = store.tasks.find((t) => t.id === taskId)
-  if (task && ganttInstance) {
-    ganttInstance.update_task(taskId, { name: task.name })
+  if (task && ganttInstance.value) {
+    ganttInstance.value.update_task(taskId, { name: task.name })
   }
 }
 
 function updateTaskDate(taskId: string, field: 'start' | 'end', value: string) {
   pushUndo()
   const task = store.tasks.find((t) => t.id === taskId)
-  if (!task || !ganttInstance) return
+  if (!task || !ganttInstance.value) return
 
   const updates: Record<string, string> = { [field]: value }
   task[field] = value
@@ -1036,12 +785,12 @@ function updateTaskDate(taskId: string, field: 'start' | 'end', value: string) {
     updates[other] = value
   }
 
-  const internalTask = ganttInstance?.tasks.find((t) => t.id === taskId)
+  const internalTask = ganttInstance.value?.tasks.find((t: { id: string }) => t.id === taskId)
   if (internalTask) {
     delete internalTask._start
     delete internalTask._end
   }
-  ganttInstance.update_task(taskId, updates)
+  ganttInstance.value.update_task(taskId, updates)
 }
 
 function updateTaskProgress(taskId: string, progress: number) {
@@ -1049,8 +798,8 @@ function updateTaskProgress(taskId: string, progress: number) {
   const task = store.tasks.find((t) => t.id === taskId)
   if (task) {
     task.progress = progress
-    if (ganttInstance) {
-      ganttInstance.update_task(taskId, { progress })
+    if (ganttInstance.value) {
+      ganttInstance.value.update_task(taskId, { progress })
     }
   }
 }
@@ -1058,7 +807,7 @@ function updateTaskProgress(taskId: string, progress: number) {
 function updateTaskDeps(taskId: string, depsStr: string) {
   pushUndo()
   const task = store.tasks.find((t) => t.id === taskId)
-  if (!task || !ganttInstance) return
+  if (!task || !ganttInstance.value) return
 
   const depsArray = depsStr
     ? depsStr
@@ -1068,7 +817,7 @@ function updateTaskDeps(taskId: string, depsStr: string) {
     : []
   task.dependencies = depsStr
 
-  const gi = ganttInstance
+  const gi = ganttInstance.value
   if (!gi) return
   gi.update_task(taskId, { dependencies: depsArray })
   gi.layers.arrow.innerHTML = ''
@@ -1080,9 +829,9 @@ function updateTaskDeps(taskId: string, depsStr: string) {
 function updateTaskColor(taskId: string, color: string) {
   pushUndo()
   const task = store.tasks.find((t) => t.id === taskId)
-  if (!task || !ganttInstance) return
+  if (!task || !ganttInstance.value) return
   task.color = color
-  ganttInstance.update_task(taskId, { color })
+  ganttInstance.value.update_task(taskId, { color })
 }
 
 function deleteTask(taskId: string) {
@@ -1304,13 +1053,8 @@ onMounted(() => {
 onUnmounted(() => {
   themeObserver.disconnect()
   window.removeEventListener('keydown', handleKeydown)
-  // 清掉节流定时器，避免卸载后仍触发一次无意义的重建
-  if (reinitTimer !== null) {
-    clearTimeout(reinitTimer)
-    reinitTimer = null
-    reinitPending = false
-  }
-  destroyGantt()
+  // 清掉节流定时器 + 销毁实例（都收在 composable 的 disposeGantt 里）
+  disposeGantt()
 })
 </script>
 
