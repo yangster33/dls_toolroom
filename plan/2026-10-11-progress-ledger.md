@@ -7,11 +7,11 @@
 | 属性 | 值 |
 |---|---|
 | 审查基线 | `c096944`（2026-10-09 审计） |
-| 台账更新 | 2026-10-15（D3 清理死代码、D1 收敛 reader 完成） |
+| 台账更新 | 2026-10-15（D3 死代码清理、D1 reader 收敛、D2 命名模板收敛 完成） |
 | 当前 HEAD | `fa61f26`（本条台账的回填提交；最后一条代码提交 `d606716`） |
 | 工具数 | 26 个路由（预渲染 sitemap） |
-| 测试 | **756 passed / 54 files** |
-| 最近更新 | 2026-10-15 · **D3、D1 完成**；剩余 D2 / D4 / E 档 / F 档 |
+| 测试 | **766 passed / 54 files** |
+| 最近更新 | 2026-10-15 · **D3、D1、D2 完成**；剩余 D4 / E 档 / F 档 |
 
 ---
 
@@ -105,7 +105,7 @@
 | `oxlint` | 0 / 0 | ✅ 0 / 0 |
 | `eslint` | ❌ 133 errors | ✅ **0** |
 | `prettier --check` | ❌ 216 files 不符 | ✅ 全符合 |
-| `vitest` | 524 / 35 files | ✅ **756 / 54 files** |
+| `vitest` | 524 / 35 files | ✅ **766 / 54 files** |
 | `playwright`（生产构建） | 未验证 | ✅ 6 passed / 1 flaky → C4 后 **dev 8 passed · preview 7 passed**（新增 worker 链路用例，断言 worker 模块响应 200） |
 | 产物一致性（C4 新增项） | — | 4 处导出与旧实现**逐格一致**（黄金参考内联在 spec 里，另有变异验证） |
 | 主线程阻塞（C4 新增项） | — | 5 万行导入 **~1900ms → 几十 ms**（Node 基准 + e2e 证真实加载） |
@@ -165,7 +165,7 @@
 | # | 编号 | 问题 | 规模 | 状态 |
 |---|---|---|---|---|
 | D1 | P3-2 | 7 份 `TemplateReader` → 参数化工厂 | −800 行 | ✅ `cafc56d` + `d606716` |
-| D2 | P3-2 | 5 份文件名模板 / 4 份花括号校验 / 3 份 `sanitizeFilename` → 各 1 份 | −400 行 | ⬜ |
+| D2 | P3-2 | 5 份文件名模板 / 4 份花括号校验 / 3 份 `sanitizeFilename` → 各 1 份 | −400 行 | ✅ `fce7aec` |
 | D3 | P3-3 | 删 12 个零引用依赖 + 850 行死代码 | 依赖体积 | ✅ `75fda16` |
 | D4 | P3-5 | 拆 `GanttChartPage.vue`(1623) / `KmlViewerPage.vue`(1157) / `GeocodeCommon.vue`(983) | 1 周 | ⬜ |
 
@@ -208,6 +208,26 @@
 
 **收敛后循环机制仅剩 4 处**（grep `ROW_YIELD_INTERVAL`）：行读取 500 / File 读取 500 / 行整形 500 / exceljs 导出 2000·200 —— 分属链路不同阶段、阈值不同，同一阶段不再有拷贝。
 
+#### D2 执行明细（2026-10-15，提交 `fce7aec`）
+
+依据 [`../docs/2026-10-15-d2-fix-record.md`](../docs/2026-10-15-d2-fix-record.md)。
+
+**审计口径修正**：阶段 0 删掉 docx/xlsx 死副本后，实际只剩**模板渲染 3 份 / 花括号校验 2 份**（`sanitizeFilename` 与 `resolveDuplicates` 已在阶段 0 后唯一）。
+
+| 关注点 | 收敛前 | 收敛后 |
+|---|---|---|
+| 模板渲染 | `ShpToKmlGenerator` + `Shp2KmlPage`（**同一函数两份拷贝**）+ `useTemplateExport` | `utils/filenameTemplate.ts` 一份（`renderNameTemplate` 为共用内核，两个入口按语义分化） |
+| 花括号校验 | `useTemplateExport` + `Shp2KmlPage`（后者 `[^}]+` 使 `{}` 判不了，**死分支**） | 一份，shp2kml 随收敛获得修复 |
+
+**顺带修掉的**：shp2kml 的 `{}` 空占位符校验死分支（阶段 0 只改了 `useTemplateExport` 那份，拷贝这份漏了）＋ 一处不可达的 `depth < 0` 分支。
+**刻意未改**：`generateNameFromTemplate` 的 `{ name, ...properties }` 让属性表的 `name` 列覆盖显式 name（两份旧拷贝一致，已用用例钉住并记档）。
+
+**测试**：756 → **766**。原 `useTemplateExport.spec.ts`（21 条）整文件搬空、迁到 `utils/__tests__/filenameTemplate.spec.ts`（现 31 条），并为此前**零覆盖**的 shp2kml 补 10 条。
+**⚠ 抓到一次假绿**：搬完用例跑出 745（应 766）——新 spec 的 `/**` 注释漏了 `*/`，21 条迁入用例整段被注释掉而 vitest 全绿。**搬运用例后必须核对用例总数**，已记入教训。
+
+**行数**：src 242 insertions / 157 deletions（**净 +85**）。本项目标不是行数而是「同一逻辑一份实现」；净增来自补测试与新增共用内核的注释。
+**遗留**：`escapeXml` 仍有 2 份逐字节相同的拷贝（+ `downloadBlob`/`hexToKmlColor`/`toKmlCoordinatesString`），审计建议抽 `utils/kmlShared.ts`，影响 3 个 KML 工具，未纳入 D2。
+
 ### E 档 · 需决策（非纯技术）
 
 | # | 编号 | 问题 | 需要什么 | 状态 |
@@ -243,6 +263,7 @@
 10. **`npm uninstall` 会因 audit/fund 网络请求挂死十分钟**——加 `--no-audit --no-fund`（必要时 `--offline`）后 10 秒完成。大卸载前先加参数。
 11. **改公开签名前先数调用点**——D1 把 reader 的位置参数 `(rows, onProgress, signal)` 改成 options 对象，`tsc` 不报（参数少传只是 undefined），但一处调用点就此**静默丢掉进度**。抓它的是行为断言，不是类型。类型系统能抓「不匹配」，抓不住「语义错配」。
 12. **合并两份相同实现的测试时，逐条列清单**——`elevations_batch` 与 `get_add` 的 spec 有 4 条断言只有一边有（如 1200 行的 intermediate≥2）。照搬一份会丢覆盖，两边都要并进同一份 spec。
+13. **搬运用例后必须核对用例总数，而不是只看绿**——D2 把 21 条用例迁到新 spec 时，文件头 `/**` 漏了 `*/`，迁入的 21 条整段被注释掉，vitest 依然**全绿**（745 passed）。发现靠的是「删一个 spec、加一个 spec，用例数应该从 756 变 766」这个预期差。测试数不降反升或持平的可预期场景下，是最容易漏的。
 
 ---
 
