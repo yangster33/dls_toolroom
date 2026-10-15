@@ -609,7 +609,7 @@ const toolConfig = getToolById(mode === 'add' ? 'get_add' : 'get_lonlat')
 const ADDRESS_HEADERS = ['名称', '经度', '纬度']
 const LONLAT_HEADERS = ['省', '市', '区/县', '乡/镇', '社区/村', '地址']
 
-import { readAndValidateTemplate as validateAddTemplate } from '../../tools/get_add/TemplateReader'
+import { readCoordinatePointRows as validateAddTemplate } from '@/utils/templateRowReader'
 
 import {
   readAndValidateTemplate as validateLonLatTemplate,
@@ -617,7 +617,7 @@ import {
   type FullAddress,
 } from '../../tools/get_lonlat/TemplateReader'
 
-import type { CoordinatePoint } from '../../tools/get_add/TemplateReader'
+import type { CoordinatePoint } from '@/utils/templateHandler'
 
 import {
   batchQueryAddresses,

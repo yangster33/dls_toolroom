@@ -316,11 +316,8 @@ import ErrorDialog from '@/components/common/ErrorDialog.vue'
 import ProgressModal from '@/components/common/ProgressModal.vue'
 import { useProgressTimer } from '@/composables/useProgressTimer'
 import type { ProgressCallback } from '@/utils/progress'
-import {
-  readAndValidateTemplate,
-  type TemplateValidationResult,
-  type CoordinatePoint,
-} from './TemplateReader'
+import { readCoordinatePointRows } from '@/utils/templateRowReader'
+import type { TemplateValidationResult, CoordinatePoint } from '@/utils/templateHandler'
 import { elevationService } from '../elevation_query/elevationService'
 
 const toolConfig = getToolById('elevations_batch')
@@ -492,7 +489,7 @@ const onFileUpload = async (event: Event) => {
       rows = parseCSV(cleanText)
     }
 
-    validationResult.value = await readAndValidateTemplate(
+    validationResult.value = await readCoordinatePointRows(
       rows,
       pipelineReporter,
       controller.signal,

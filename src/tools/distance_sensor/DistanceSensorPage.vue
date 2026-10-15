@@ -691,7 +691,14 @@ const onFileUpload = async (event: Event) => {
       columns = columnsFromRows(rows)
     }
 
-    validationResult.value = readAndValidateTemplate(rows, columns)
+    // 逐行校验也走可让出的循环（D1 起与其它 reader 一致）。
+    // 不传 onProgress：行整形阶段进度已到 100%，再上报会让进度条从 0 重来。
+    validationResult.value = await readAndValidateTemplate(
+      rows,
+      columns,
+      undefined,
+      controller.signal,
+    )
     // 取消后校验也已跑完：整份丢弃，不写校验结果、不弹错误
     if (controller.signal.aborted) return
     matchResult.value = null

@@ -1,12 +1,14 @@
+/**
+ * 模板读取 - 经纬度查询（地址 → 坐标）专用验证器
+ *
+ * D1 重构：取值/校验/循环已收敛到 `@/utils/templateRowReader`。
+ * 本文件只保留**本工具特有的地址语义**（6 个地址字段、只强制校验「地址」）。
+ */
+import { resolveAlias, readRows, toValidationResult, type RawRow } from '@/utils/templateRowReader'
 import type { TemplateValidationResult } from '@/utils/templateHandler'
-import { yieldToUI } from '@/utils/yieldToUI'
 import type { ProgressCallback } from '@/utils/progress'
-import { throwIfAborted } from '@/utils/abort'
 
-/** 行循环的让出粒度（C4 阶段 2） */
-const ROW_YIELD_INTERVAL = 500
-
-// 定义地址数据类型 - 去掉名称
+/** 经纬度查询的地址行：不含「名称」列（查询的是地址，不是站点名） */
 export interface FullAddress {
   province: string
   city: string
@@ -18,85 +20,50 @@ export interface FullAddress {
 
 export type { TemplateValidationResult }
 
-// 验证单个数据行
-function validateRow(
-  row: Record<string, string | number>,
-  rowIndex: number,
-): { valid: boolean; data?: FullAddress; error?: string } {
-  // 尝试获取地址字段
-  const getField = (aliases: string[]): string => {
-    for (const alias of aliases) {
-      if (row[alias] !== undefined && row[alias] !== null) {
-        return String(row[alias] || '').trim()
-      }
-    }
-    return ''
-  }
-
-  const province = getField(['省', 'province', 'Province'])
-  const city = getField(['市', 'city', 'City'])
-  const district = getField(['区/县', '区县', 'district', 'District'])
-  const township = getField(['乡/镇', '乡镇', 'township', 'Township'])
-  const community = getField(['社区/村', '社区村', 'community', 'Community'])
-  const address = getField(['地址', 'address', 'Address'])
-
-  // 只强制校验地址字段
-  if (!address.trim()) {
-    return { valid: false, error: `第 ${rowIndex + 1} 行：地址不能为空` }
-  }
-
-  return {
-    valid: true,
-    data: {
-      province,
-      city,
-      district,
-      township,
-      community,
-      address,
-    },
-  }
-}
+/** 地址字段的中英文列名别名 */
+const PROVINCE_ALIASES = ['省', 'province', 'Province']
+const CITY_ALIASES = ['市', 'city', 'City']
+const DISTRICT_ALIASES = ['区/县', '区县', 'district', 'District']
+const TOWNSHIP_ALIASES = ['乡/镇', '乡镇', 'township', 'Township']
+const COMMUNITY_ALIASES = ['社区/村', '社区村', 'community', 'Community']
+const ADDRESS_ALIASES = ['地址', 'address', 'Address']
 
 /**
- * 读取并验证模板数据
+ * 读取并验证地址模板
  *
- * C4 阶段 2：改为 async 并支持进度回调。
- * C4 收尾：新增 `signal`，已取消时以 AbortError 拒绝（不写入 errors）。
+ * @param onProgress 进度回调（C4 阶段 2，可选）
+ * @param signal 取消信号（C4 收尾，可选）：已取消时以 AbortError 拒绝，不写入 errors
  */
 export async function readAndValidateTemplate(
-  rows: Record<string, string | number>[],
+  rows: readonly Record<string, string | number>[],
   onProgress?: ProgressCallback,
   signal?: AbortSignal,
 ): Promise<TemplateValidationResult<FullAddress>> {
-  const data: FullAddress[] = []
-  const errors: string[] = []
+  const result = await readRows<FullAddress>(
+    rows,
+    (row: RawRow, rowNumber) => {
+      const address = resolveAlias(row, ADDRESS_ALIASES)
 
-  for (let i = 0; i < rows.length; i++) {
-    if (i % ROW_YIELD_INTERVAL === 0) {
-      await yieldToUI()
-      // 与让出同频复查取消：否则点了「终止计算」还要跑完剩下几万行
-      throwIfAborted(signal)
-    }
-    const percent = rows.length > 0 ? Math.round((i / rows.length) * 100) : 100
-    onProgress?.(Math.min(99, percent), `正在校验第 ${i + 1} 行...`)
+      // 只强制校验「地址」：其余字段留空时高德/MQ 自己解析
+      if (!address) {
+        return { errors: [`第 ${rowNumber} 行：地址不能为空`] }
+      }
 
-    const row = rows[i]
-    if (!row) continue
+      return {
+        records: [
+          {
+            province: resolveAlias(row, PROVINCE_ALIASES),
+            city: resolveAlias(row, CITY_ALIASES),
+            district: resolveAlias(row, DISTRICT_ALIASES),
+            township: resolveAlias(row, TOWNSHIP_ALIASES),
+            community: resolveAlias(row, COMMUNITY_ALIASES),
+            address,
+          },
+        ],
+      }
+    },
+    { onProgress, signal },
+  )
 
-    const validation = validateRow(row, i)
-
-    if (validation.valid && validation.data) {
-      data.push(validation.data)
-    } else if (validation.error) {
-      errors.push(validation.error)
-    }
-  }
-
-  onProgress?.(100, '校验完成')
-  return {
-    isValid: errors.length === 0 && data.length > 0,
-    data,
-    errors,
-  }
+  return toValidationResult(result)
 }

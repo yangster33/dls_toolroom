@@ -104,7 +104,7 @@ describe('aoaToTemplateRows', () => {
 describe('异站址模板：首行 data2 为空（审计 C1 核心用例）', () => {
   it('正确识别为异站址模式，而不是同站址', async () => {
     const { columns, rows } = await roundTripViaXlsx(DIFFERENT_SITE_AOA)
-    const result = readAndValidateTemplate(rows, columns)
+    const result = await readAndValidateTemplate(rows, columns)
 
     expect(result.mode).toBe('different-site')
     expect(result.isValid).toBe(true)
@@ -113,25 +113,25 @@ describe('异站址模板：首行 data2 为空（审计 C1 核心用例）', ()
 
   it('两组数据量正确：目标集 2 条、源集 1 条', async () => {
     const { columns, rows } = await roundTripViaXlsx(DIFFERENT_SITE_AOA)
-    const result = readAndValidateTemplate(rows, columns)
+    const result = await readAndValidateTemplate(rows, columns)
 
     expect(result.data1.map((p) => p.name)).toEqual(['甲地', '乙地'])
     expect(result.data2.map((p) => p.name)).toEqual(['乙源'])
   })
 
-  it('反证：旧的对象模式 sheet_to_json 会让首行只剩 3 个 key → 误判同站址', () => {
+  it('反证：旧的对象模式 sheet_to_json 会让首行只剩 3 个 key → 误判同站址', async () => {
     // 旧实现就是这个：默认对象模式，不给空单元格建 key
     const worksheet = XLSX.utils.aoa_to_sheet(DIFFERENT_SITE_AOA)
     const objectRows = XLSX.utils.sheet_to_json(worksheet) as Record<string, string | number>[]
 
     expect(Object.keys(objectRows[0]!)).toHaveLength(3)
 
-    const old = readAndValidateTemplate(objectRows)
+    const old = await readAndValidateTemplate(objectRows)
     // 旧的误判：当成同站址，于是每行都报「名称不能为空」
     expect(old.mode).toBe('same-site')
     expect(old.errors.length).toBeGreaterThan(0)
   })
-  it('空白被写成空串时，对象模式也会建出 6 个 key（旧代码碰巧不误判）', () => {
+  it('空白被写成空串时，对象模式也会建出 6 个 key（旧代码碰巧不误判）', async () => {
     // 这个用例用于锁住前面的前提：真正的坑是**单元格完全空白**（无 cell 对象）。
     // 若某列被写成空串 ''，`aoa_to_sheet` 会为其建立 cell，对象模式同样有 6 个 key。
     const withEmptyStrings = [
@@ -143,14 +143,14 @@ describe('异站址模板：首行 data2 为空（审计 C1 核心用例）', ()
     const objectRows = XLSX.utils.sheet_to_json(worksheet) as Record<string, string | number>[]
 
     expect(Object.keys(objectRows[0]!)).toHaveLength(6)
-    expect(readAndValidateTemplate(objectRows).mode).toBe('different-site')
+    expect((await readAndValidateTemplate(objectRows)).mode).toBe('different-site')
   })
 })
 
 describe('同站址模板', () => {
   it('3 列仍识别为同站址', async () => {
     const { columns, rows } = await roundTripViaXlsx(SAME_SITE_AOA)
-    const result = readAndValidateTemplate(rows, columns)
+    const result = await readAndValidateTemplate(rows, columns)
 
     expect(result.mode).toBe('same-site')
     expect(result.isValid).toBe(true)
@@ -158,21 +158,21 @@ describe('同站址模板', () => {
     expect(result.data2).toHaveLength(2)
   })
 
-  it('缺 value 时报「名称不能为空」', () => {
-    const result = readAndValidateTemplate([{ 名称: ' ', 经度: '116.4', 纬度: '39.9' }])
+  it('缺 value 时报「名称不能为空」', async () => {
+    const result = await readAndValidateTemplate([{ 名称: ' ', 经度: '116.4', 纬度: '39.9' }])
     expect(result.errors).toEqual(['第2行：名称不能为空'])
   })
 })
 
 describe('列数校验', () => {
-  it('既不是 3 也不是 6 列时报错', () => {
-    const result = readAndValidateTemplate([{ a: '1', b: '2' }], ['a', 'b'])
+  it('既不是 3 也不是 6 列时报错', async () => {
+    const result = await readAndValidateTemplate([{ a: '1', b: '2' }], ['a', 'b'])
     expect(result.isValid).toBe(false)
     expect(result.errors[0]).toContain('模板列数不正确')
   })
 
-  it('空数据报「模板数据为空」', () => {
-    const result = readAndValidateTemplate([])
+  it('空数据报「模板数据为空」', async () => {
+    const result = await readAndValidateTemplate([])
     expect(result.isValid).toBe(false)
     expect(result.errors).toEqual(['模板数据为空'])
   })
