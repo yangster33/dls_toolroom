@@ -19,6 +19,7 @@
 import type { ProgressCallback } from './progress'
 import type { CellValue as ExcelCellValue } from 'exceljs'
 import { yieldToUI } from './yieldToUI'
+import { downloadBlob } from './download'
 
 /** addRow 的让出粒度：exceljs 单行成本高于字符串拼接，粒度取 2000 行 */
 const ROW_YIELD_INTERVAL = 2000
@@ -111,9 +112,12 @@ export function rowsFromObjects(
 /**
  * 触发 xlsx 下载。
  *
- * 仓库里已有 3 份逐字节等价的 `triggerDownload`（`utils/TemplateExporter.ts`、
+ * 实现已收口到 `utils/download.ts`（appendChild + 延迟 revoke 的通用版），
+ * 这里只保留 `.xlsx` 后缀补全这一件 xlsx 专属的事。
+ *
+ * 背景：仓库里原本有 3 份逐字节等价的 `triggerDownload`（`utils/TemplateExporter.ts`、
  * `gis2excel/GisToExcelExporter.ts`、以及旧 `geoDataService.exportToXLSX` 用的
- * `XLSX.writeFile` 内部那份）。这里统一收一份，供本管线与 geo_data 使用。
+ * `XLSX.writeFile` 内部那份）。
  *
  * 关键细节（评审 M2 修复）：`<a>` 必须**appendChild 进文档**（Firefox 历史上要求
  * 节点在文档内才会触发下载），且 `revokeObjectURL` 必须**延迟**执行 ——
@@ -121,18 +125,7 @@ export function rowsFromObjects(
  */
 export function downloadXlsxBlob(blob: Blob, filename: string): void {
   const fullFilename = filename.toLowerCase().endsWith('.xlsx') ? filename : `${filename}.xlsx`
-
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.setAttribute('download', fullFilename)
-  document.body.appendChild(link)
-  link.click()
-
-  setTimeout(() => {
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }, 100)
+  downloadBlob(blob, fullFilename)
 }
 
 /**
