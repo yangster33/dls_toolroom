@@ -17,6 +17,13 @@
     </div>
 
     <div v-else ref="chartContainer" class="w-full h-[500px]"></div>
+
+    <p
+      v-if="!mapLoading && !mapError && mapDataLoaded && currentProvinceData.length === 0"
+      class="text-xs text-base-content/50 mt-2"
+    >
+      暂无省份访问数据，地图暂以默认配色显示。
+    </p>
   </div>
 </template>
 
@@ -70,7 +77,21 @@ interface ProvinceData {
   oneYear: number
 }
 
+/** 只接受结构完整的行，避免后端字段变更把图表数据打成 undefined */
+function isProvinceData(value: unknown): value is ProvinceData {
+  if (value === null || typeof value !== 'object') return false
+  const row = value as Record<string, unknown>
+  return (
+    typeof row.name === 'string' &&
+    typeof row.sevenDays === 'number' &&
+    typeof row.thirtyDays === 'number' &&
+    typeof row.oneYear === 'number'
+  )
+}
+
 const currentProvinceData = ref<ProvinceData[]>([])
+/** 统计接口是否已有结果（用于区分“还没加载”和“确实没有数据”） */
+const mapDataLoaded = ref(false)
 
 function buildMapColors(): string[] {
   const primaryParts = parseOklch(primary.value)
@@ -233,23 +254,34 @@ const sendAnalytics = () => {
   logger.log('Analytics placeholder - province map chart viewed')
 }
 
+/**
+ * 访问统计是「锦上添花」：它失败时地图边界仍然要能画出来。
+ * 因此这里自己吞掉异常（只记日志），绝不向外抛。
+ */
 const fetchMapData = async () => {
-  if (!props.toolId) return
-
+  if (!props.toolId) {
+    mapDataLoaded.value = true
+    return
+  }
   try {
-    const res = await fetch(`/api/map-data?tool_id=${props.toolId}`)
-    const data = await res.json()
-    if (data.code === 0) {
-      currentProvinceData.value = data.data
-    }
-  } catch {
-    // 请求失败保持空数据
+    const res = await fetch(`/api/map-data?tool_id=${encodeURIComponent(props.toolId)}`)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const payload: unknown = await res.json()
+    if (payload === null || typeof payload !== 'object') return
+    const body = payload as { code?: unknown; data?: unknown }
+    if (body.code !== 0 || !Array.isArray(body.data)) return
+    currentProvinceData.value = body.data.filter(isProvinceData)
+  } catch (e) {
+    // 统计接口失败保持空数据：地图照常渲染，只是没有访问量着色
+    logger.warn('加载省份访问数据失败:', e)
+  } finally {
+    mapDataLoaded.value = true
   }
 }
 
 async function loadChinaMap() {
   try {
-    const [, resp] = await Promise.all([fetchMapData(), fetch('/map/china.json')])
+    const resp = await fetch('/map/china.json')
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
     const geoJson = await resp.json()
 
@@ -286,6 +318,11 @@ watch(
 let disposed = false
 
 onMounted(async () => {
+  // 统计接口与地图边界并行：统计慢/失败都不应该把整张地图拖成“加载失败”
+  void fetchMapData().then(() => {
+    if (!disposed) applyChartOption()
+  })
+
   await loadChinaMap()
 
   if (mapError.value || disposed) return

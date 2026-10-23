@@ -153,7 +153,13 @@
         </div>
 
         <div
-          v-if="chartLoading"
+          v-if="availableCharts.length === 0"
+          class="w-full h-[400px] flex flex-col items-center justify-center gap-2 text-base-content/60"
+        >
+          <span class="text-sm">当前查询没有可绘制的图表数据</span>
+        </div>
+        <div
+          v-else-if="chartLoading"
           class="w-full h-[400px] flex flex-col items-center justify-center gap-3"
         >
           <span class="loading loading-spinner loading-lg text-primary"></span>
@@ -254,6 +260,13 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <div
+      v-else-if="events && events.length === 0"
+      class="bg-base-200/40 rounded-lg p-6 text-center text-base-content/60"
+    >
+      当前筛选条件下没有查询到灾害事件，请调整事件类型、警报级别或日期范围后重试。
     </div>
   </div>
 </template>

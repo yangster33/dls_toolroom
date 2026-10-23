@@ -205,7 +205,13 @@
         </div>
 
         <div
-          v-if="chartLoading"
+          v-if="availableCharts.length === 0"
+          class="w-full h-[400px] flex flex-col items-center justify-center gap-2 text-base-content/60"
+        >
+          <span class="text-sm">当前查询没有可绘制的图表数据</span>
+        </div>
+        <div
+          v-else-if="chartLoading"
           class="w-full h-[400px] flex flex-col items-center justify-center gap-3"
         >
           <span class="loading loading-spinner loading-lg text-primary"></span>
