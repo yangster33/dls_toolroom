@@ -1,6 +1,7 @@
 // src/router/index.ts
 import { createRouter, createWebHistory } from 'vue-router'
 import { logger } from '@/utils/logger'
+import { trackPageview } from '@/utils/baiduAnalytics'
 import DlsSidebar from '@/components/layout/DlsSidebar.vue'
 
 // 定义路由配置
@@ -65,6 +66,9 @@ const router = createRouter({
 
 // 统一页面访问追踪
 router.afterEach((to) => {
+  // 百度统计：SPA 路由切换不会自动上报，这里补一次 PV
+  trackPageview(to.fullPath)
+
   const pageName = to.name as string
   const pagePath = to.path
   const toolId = to.params.toolId as string | undefined
