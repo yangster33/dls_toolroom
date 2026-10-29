@@ -244,7 +244,9 @@
 - 旧 `pushUndo()` 会重置 `dragUndoRecorded`；该标志移进 composable 后页面侧入栈不再重置 → **后续拖动不再记 undo**。已补 `resetDragUndoFlag()` 由页面的 `pushUndo()` 调用，保住原语义。
 - prettier 解析不了 SFC 注释里的 `</Xxx ...>`（当成顶层闭合标签，报 `Unexpected closing tag "template"`）；SFC 的 `<script setup>` 里 export 的类型**无法被别的模块 import**（TS2614），契约类型要放同目录 `.ts`。
 
-**环境问题（与本批无关，已排除）**：`npm run build` 的 prerender 步骤在本机起不了浏览器（puppeteer-core 与 Edge 155 不兼容）。`git stash` 后在 clean HEAD 复现同样失败；Playwright 能正常启动同一 Edge（e2e 7 passed）。已用 `build-only` + 完整 e2e 验证。**建议单独立项**评估 prerender 改用 Playwright 启动器。
+**环境问题（与本批无关，已排除）**：`npm run build` 的 prerender 步骤在本机起不了浏览器（puppeteer-core 与 Edge 155 不兼容）。`git stash` 后在 clean HEAD 复现同样失败；Playwright 能正常启动同一 Edge（e2e 7 passed）。已用 `build-only` + 完整 e2e 验证。
+
+> **已修复（2026-10-16）**：`scripts/prerender.mjs` 本地分支改用 Playwright 启动器（优先系统 Edge，退回自带 chromium，本地默认无头），CI/Vercel 仍走 puppeteer-core + `@sparticuz/chromium`。`npm run build` 本机 EXIT=0、26 路由全绿。原因为脚本硬编码浏览器路径（本机无 Chrome 只有 Edge）且兜底的 `@sparticuz/chromium` 是 Linux 专用二进制，Windows 上等于没有兜底。
 
 ### E 档 · 需决策（非纯技术）
 

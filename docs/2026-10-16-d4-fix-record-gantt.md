@@ -102,7 +102,7 @@ prettier 的 Vue 解析器直接报 `Unexpected closing tag "template"`（179:1�
 | `npx prettier --check --experimental-cli .` | ✅ 全符合 |
 | `npm run build-only` | ✅ 通过 |
 | `CI=true npx playwright test` | ✅ **7 passed / 1 flaky**（与基线同一项 `tools.spec.ts` 卡片跳转） |
-| `npm run build`（含 prerender） | ❌ **本地环境问题，与本批无关**，见下 |
+| `npm run build`（含 prerender） | ❌ **本地环境问题，与本批无关**（已于 2026-10-16 修复，见下） |
 
 ### `npm run build` 的 prerender 步骤在本地跑不起来（已排除是本次改动）
 
@@ -119,6 +119,13 @@ prettier 的 Vue 解析器直接报 `Unexpected closing tag "template"`（179:1�
 **结论与处置**：这是本机浏览器环境问题（puppeteer 与 Edge 155 的兼容），不是代码回归；
 本批改用 `build-only` + 完整 e2e 验证产物与运行时行为。**未改 prerender 脚本**（改构建链路
 超出 D4 范围，且牵涉 Vercel 侧配置），建议单独立项评估「prerender 也改用 Playwright 启动器」。
+
+> **后续处置（2026-10-16，已完成）**：已按上述建议把 `scripts/prerender.mjs` 的**本地**分支
+> 换成 Playwright 启动器（优先系统 Edge，退回自带 chromium，本地默认无头，`PRERENDER_HEADFUL=1`
+> 可切有头排查）；CI/Vercel 分支保持 puppeteer-core + `@sparticuz/chromium` 不变。
+> 顺带删掉了硬编码浏览器路径列表——本机根本没装 Chrome，只有 Edge，而原兜底的
+> `@sparticuz/chromium` 只提供 Linux 二进制（`chromium.br`/`al2023.tar.br`），Windows 上并不构成兜底。
+> 复测：`npm run build` EXIT=0，26 路由预渲染全绿；`npm run prerender` 连跑 3 次全绿。
 
 ---
 

@@ -1,9 +1,8 @@
 // scripts/prerender.mjs
-// 用 Puppeteer + @sparticuz/chromium 预渲染 SPA 路由到 dist/ 下
-// @sparticuz/chromium 自带系统依赖，兼容 Vercel / AWS Lambda build 环境
+// 预渲染 SPA 路由到 dist/ 下：
+//   - 本地：Playwright（@playwright/test，devDependency）启动浏览器；
+//   - CI / Vercel：Puppeteer + @sparticuz/chromium（自带 Linux 二进制与系统依赖）。
 
-import puppeteer from 'puppeteer-core'
-import chromium from '@sparticuz/chromium'
 import { createServer } from 'node:http'
 import { readFile, writeFile, mkdir, stat } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
@@ -16,9 +15,12 @@ const DIST = join(ROOT, 'dist')
 const PORT = Number(process.env.PRERENDER_PORT ?? 5174)
 const BASE_URL = `http://localhost:${PORT}`
 const SITE_URL = (process.env.VITE_SITE_URL ?? 'https://dlslab.cn').replace(/\/$/, '')
-// 本地开发环境用系统 chrome；Vercel/CI 用 @sparticuz/chromium
+// 本地默认无头；PRERENDER_HEADFUL=1 可切回有头模式排查问题
 const IS_CI = !!process.env.CI || !!process.env.VERCEL
-const HEADLESS = IS_CI
+const HEADFUL = !IS_CI && !!process.env.PRERENDER_HEADFUL
+const ROUTE_TIMEOUT = 30000
+const LAUNCH_TIMEOUT = 30000
+const USER_AGENT = 'dls-prerender/1.0 (+https://dlslab.cn)'
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -113,17 +115,15 @@ function routeToFilePath(route) {
   return join(DIST, clean, 'index.html')
 }
 
-async function prerenderRoute(page, route) {
+async function prerenderRoute(session, route) {
   const url = `${BASE_URL}${route}`
   console.log(`  → ${route}`)
-  await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 })
+  await session.goto(url)
   // 等待 @unhead/vue 写入 head
-  await page
-    .waitForFunction(() => document.title && document.title.length > 0, { timeout: 5000 })
-    .catch(() => {})
+  await session.waitForTitle()
   await new Promise((r) => setTimeout(r, 300))
 
-  const html = await page.content()
+  const html = await session.content()
   const outPath = routeToFilePath(route)
   await mkdir(dirname(outPath), { recursive: true })
   await writeFile(outPath, html, 'utf-8')
@@ -158,50 +158,87 @@ async function writeRobots() {
 }
 
 async function launchBrowser() {
-  if (IS_CI) {
-    // Vercel / CI 环境：用 @sparticuz/chromium 自带的二进制
-    const executablePath = await chromium.executablePath()
-    return puppeteer.launch({
-      args: chromium.args,
-      executablePath,
-      headless: HEADLESS,
-    })
-  }
-  // 本地开发：按优先级找一个可用的 chrome
-  const localCandidates = [
-    // Windows
-    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-    process.env.LOCALAPPDATA &&
-      `${process.env.LOCALAPPDATA}\\Google\\Chrome\\Application\\chrome.exe`,
-    // Edge 也能用（Windows 自带）
-    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-    // macOS
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
-    // Linux
-    '/usr/bin/google-chrome',
-    '/usr/bin/google-chrome-stable',
-    '/usr/bin/chromium',
-    '/usr/bin/chromium-browser',
-  ].filter(Boolean)
-  for (const p of localCandidates) {
-    if (existsSync(p)) {
-      return puppeteer.launch({
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        executablePath: p,
-        headless: HEADLESS,
-      })
-    }
-  }
-  // 最后 fallback：@sparticuz/chromium（本地也能跑，但首次会解压）
+  return IS_CI ? launchCiBrowser() : launchLocalBrowser()
+}
+
+// Vercel / CI：@sparticuz/chromium 自带 Linux 二进制与系统依赖。
+// 它没有 Windows/macOS 构建，所以这条路只在 CI 里走，本地请用下面的 Playwright。
+async function launchCiBrowser() {
+  const [{ default: puppeteer }, { default: chromium }] = await Promise.all([
+    import('puppeteer-core'),
+    import('@sparticuz/chromium'),
+  ])
   const executablePath = await chromium.executablePath()
-  return puppeteer.launch({
+  const browser = await puppeteer.launch({
     args: chromium.args,
     executablePath,
-    headless: HEADLESS,
+    headless: true,
+    timeout: LAUNCH_TIMEOUT,
   })
+  const page = await browser.newPage()
+  await page.setUserAgent(USER_AGENT)
+  return {
+    goto: (url) => page.goto(url, { waitUntil: 'networkidle0', timeout: ROUTE_TIMEOUT }),
+    waitForTitle: () =>
+      page
+        .waitForFunction(() => document.title && document.title.length > 0, { timeout: 5000 })
+        .catch(() => {}),
+    content: () => page.content(),
+    close: () => browser.close(),
+  }
+}
+
+// 本地：用 Playwright 启动，与 playwright.config.ts 保持一致（优先系统 Edge，
+// 退回自带 chromium）。不再硬编码浏览器安装路径——那套候选列表在本机
+// （只有 Edge、没装 Chrome）会漏掉，且原先的兜底 @sparticuz/chromium 在
+// Windows 上根本无法运行，等于没有兜底。
+async function launchLocalBrowser() {
+  const { chromium: pwChromium } = await import('@playwright/test')
+  const attempts = [
+    { channel: 'msedge', label: '系统 Edge (msedge)' },
+    { channel: undefined, label: 'Playwright 自带 chromium' },
+  ]
+
+  const failures = []
+  for (const attempt of attempts) {
+    let browser
+    try {
+      browser = await pwChromium.launch({
+        channel: attempt.channel,
+        headless: !HEADFUL,
+        timeout: LAUNCH_TIMEOUT,
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      })
+    } catch (err) {
+      failures.push(`${attempt.label}: ${err instanceof Error ? err.message : String(err)}`)
+      continue
+    }
+
+    console.log(`  (本地浏览器: ${attempt.label}${HEADFUL ? '，有头模式' : ''})`)
+    const context = await browser.newContext({ userAgent: USER_AGENT })
+    const page = await context.newPage()
+    return {
+      goto: (url) => page.goto(url, { waitUntil: 'networkidle', timeout: ROUTE_TIMEOUT }),
+      waitForTitle: () =>
+        page
+          .waitForFunction(() => document.title && document.title.length > 0, undefined, {
+            timeout: 5000,
+          })
+          .catch(() => {}),
+      content: () => page.content(),
+      close: async () => {
+        await context.close()
+        await browser.close()
+      },
+    }
+  }
+
+  throw new Error(
+    `本地浏览器启动失败（已尝试 ${attempts.length} 种）：\n` +
+      failures.map((f) => `  - ${f}`).join('\n') +
+      '\n提示：npx playwright install chromium 可补齐自带 chromium；' +
+      'PRERENDER_HEADFUL=1 可切有头模式排查。',
+  )
 }
 
 async function main() {
@@ -217,21 +254,19 @@ async function main() {
   console.log(`预渲染 ${routes.length} 个路由… (环境: ${IS_CI ? 'CI/Vercel' : 'local'})`)
 
   const server = await startStaticServer()
-  const browser = await launchBrowser()
-  const page = await browser.newPage()
-  await page.setUserAgent('dls-prerender/1.0 (+https://dlslab.cn)')
+  const session = await launchBrowser()
 
   const failed = []
   for (const route of routes) {
     try {
-      await prerenderRoute(page, route)
+      await prerenderRoute(session, route)
     } catch (err) {
       console.error(`    ✗ ${route}: ${err instanceof Error ? err.message : String(err)}`)
       failed.push({ route, error: String(err) })
     }
   }
 
-  await browser.close()
+  await session.close()
   await server.close()
 
   if (failed.length) {
