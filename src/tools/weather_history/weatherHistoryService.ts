@@ -1,3 +1,4 @@
+import { toProxyUrl } from '@/utils/apiProxy'
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout'
 
 export interface WeatherVariable {
@@ -80,7 +81,7 @@ export async function fetchWeatherHistory(
   })
 
   try {
-    const url = `https://archive-api.open-meteo.com/v1/archive?${params.toString()}`
+    const url = toProxyUrl(`https://archive-api.open-meteo.com/v1/archive?${params.toString()}`)
     const response = await fetchWithTimeout(url, { signal })
 
     if (!response.ok) {

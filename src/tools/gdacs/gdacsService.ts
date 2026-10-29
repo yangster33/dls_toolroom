@@ -1,3 +1,4 @@
+import { toProxyUrl } from '@/utils/apiProxy'
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout'
 
 export interface GdacsEvent {
@@ -171,7 +172,9 @@ export async function fetchGdacsData(
     params.set('pagenumber', formData.pageNumber.toString())
     params.set('pagesize', formData.pageSize.toString())
 
-    const url = `https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH?${params.toString()}`
+    const url = toProxyUrl(
+      `https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH?${params.toString()}`,
+    )
     const response = await fetchWithTimeout(url, { signal })
 
     if (!response.ok) {

@@ -13,6 +13,8 @@
  * 现在：分批请求 + 超时 + 逐点标记 error，高程用 NaN 表示"未知"而不是 0。
  */
 
+import { toProxyUrl } from '@/utils/apiProxy'
+
 export interface ElevationResult {
   longitude: number
   latitude: number
@@ -36,7 +38,11 @@ const MAX_BATCH_SIZE = 100
 const REQUEST_TIMEOUT_MS = 15_000
 
 export class ElevationService {
-  private baseUrl = 'https://api.open-meteo.com/v1/elevation'
+  private readonly upstreamUrl = 'https://api.open-meteo.com/v1/elevation'
+
+  private get baseUrl(): string {
+    return toProxyUrl(this.upstreamUrl)
+  }
 
   async getElevation(longitude: number, latitude: number): Promise<ElevationResult> {
     const params = new URLSearchParams({

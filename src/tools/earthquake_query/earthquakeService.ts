@@ -1,3 +1,4 @@
+import { toProxyUrl } from '@/utils/apiProxy'
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout'
 
 export interface EarthquakeFeature {
@@ -107,7 +108,7 @@ export async function fetchEarthquakeData(
   params.set('limit', '2000')
 
   try {
-    const url = `https://earthquake.usgs.gov/fdsnws/event/1/query?${params.toString()}`
+    const url = toProxyUrl(`https://earthquake.usgs.gov/fdsnws/event/1/query?${params.toString()}`)
     const response = await fetchWithTimeout(url, { signal })
 
     if (!response.ok) {
