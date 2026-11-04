@@ -4,25 +4,50 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="/my-logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0ea5e9" />
+    <meta name="theme-color" content="#16588C" />
+    <script>
+      // 首屏前应用主题，避免白图/蓝图切换时闪烁
+      ;(function () {
+        try {
+          var legacy = {
+            light: 'baitu',
+            winter: 'baitu',
+            corporate: 'baitu',
+            business: 'baitu',
+            dark: 'lantu',
+            night: 'lantu',
+            dracula: 'lantu',
+            forest: 'lantu',
+          }
+          var saved = localStorage.getItem('dls_toolroom_theme')
+          if (saved && legacy[saved]) saved = legacy[saved]
+          if (saved !== 'baitu' && saved !== 'lantu') {
+            saved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'lantu' : 'baitu'
+          }
+          document.documentElement.setAttribute('data-theme', saved)
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'baitu')
+        }
+      })()
+    </script>
     <title>大龙山工具间</title>
     <meta
       name="description"
-      content="大龙山工具间 — 一站式地理空间数据处理与转换工具集，22+ 在线工具：坐标转换、距离测算、地址解析、GIS 文件互转、高程查询、地震/天气查询等，浏览器直接使用，免安装。"
+      content="大龙山工具间 — 通信工程科研、规划与设计工具集：坐标转换、距离测算、地址解析、KML/SHP 互转、高程与气象查询、模板批量导出、甘特图排期等，浏览器直接使用，数据不出本机。"
     />
-    <meta name="keywords" content="地理空间工具,坐标转换,GIS,KML,SHP,在线工具,大龙山工具间" />
+    <meta name="keywords" content="通信工程,规划设计,坐标转换,KML,SHP,GIS,在线工具,大龙山工具间" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="大龙山工具间" />
     <meta property="og:title" content="大龙山工具间" />
     <meta
       property="og:description"
-      content="一站式地理空间数据处理与转换工具集，22+ 在线工具，浏览器直接使用。"
+      content="通信工程科研、规划与设计工具集，浏览器直接使用，数据不出本机。"
     />
     <meta property="og:url" content="https://dlslab.cn/" />
     <meta property="og:image" content="https://dlslab.cn/my-logo.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="大龙山工具间" />
-    <meta name="twitter:description" content="一站式地理空间数据处理与转换工具集，22+ 在线工具。" />
+    <meta name="twitter:description" content="通信工程科研、规划与设计工具集，浏览器直接使用。" />
     <link rel="canonical" href="https://dlslab.cn/" />
     <script type="application/ld+json">
       {
@@ -30,7 +55,7 @@
         "@type": "WebSite",
         "name": "大龙山工具间",
         "url": "https://dlslab.cn",
-        "description": "一站式地理空间数据处理与转换工具集，22+ 在线工具：坐标转换、距离测算、地址解析、GIS 文件互转、高程查询、地震/天气查询等。",
+        "description": "通信工程科研、规划与设计工具集：坐标转换、距离测算、地址解析、KML/SHP 互转、高程与气象查询、模板批量导出、甘特图排期等。",
         "publisher": {
           "@type": "Organization",
           "name": "大龙山工具间",
@@ -45,7 +70,7 @@
         "name": "大龙山工具间",
         "url": "https://dlslab.cn",
         "logo": "https://dlslab.cn/my-logo.png",
-        "slogan": "一站式地理空间数据处理与转换工具集"
+        "slogan": "通信工程科研、规划与设计工具集"
       }
     </script>
   </head>

@@ -1,23 +1,102 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
+
+/* 只保留两套自有主题：白图 / 蓝图。不再暴露 daisyUI 官方主题，
+   否则站点气质会随用户切换而整体漂移。 */
 @plugin 'daisyui' {
-  themes: light, dark, corporate, business, night, dracula, winter, forest;
+  themes: false;
+  logs: false;
+}
+
+/* ---------- 白图：施工白图纸 ---------- */
+@plugin 'daisyui/theme' {
+  name: 'baitu';
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-base-100: oklch(0.9656 0.0041 121.56);
+  --color-base-200: oklch(0.9341 0.007 124.45);
+  --color-base-300: oklch(0.8481 0.0105 145.48);
+  --color-base-content: oklch(0.2229 0.0049 173.93);
+
+  --color-primary: oklch(0.4478 0.1064 247.48);
+  --color-primary-content: oklch(1 0 0);
+  --color-secondary: oklch(0.5092 0.0466 231.25);
+  --color-secondary-content: oklch(1 0 0);
+  --color-accent: oklch(0.7952 0.1617 86.05);
+  --color-accent-content: oklch(0.2178 0 0);
+  --color-neutral: oklch(0.303 0.0317 248.91);
+  --color-neutral-content: oklch(0.9374 0.0076 241.67);
+
+  --color-info: oklch(0.4478 0.1064 247.48);
+  --color-info-content: oklch(1 0 0);
+  --color-success: oklch(0.4794 0.078 161.08);
+  --color-success-content: oklch(1 0 0);
+  --color-warning: oklch(0.6179 0.1257 69.9);
+  --color-warning-content: oklch(1 0 0);
+  --color-error: oklch(0.5209 0.1579 29.21);
+  --color-error-content: oklch(1 0 0);
+
+  --radius-selector: 0.125rem;
+  --radius-field: 0.125rem;
+  --radius-box: 0.125rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* ---------- 蓝图：晒图纸 ---------- */
+@plugin 'daisyui/theme' {
+  name: 'lantu';
+  default: false;
+  prefersdark: false;
+  color-scheme: dark;
+
+  --color-base-100: oklch(0.1978 0.0278 255.86);
+  --color-base-200: oklch(0.2311 0.0322 252.93);
+  --color-base-300: oklch(0.303 0.0317 248.91);
+  --color-base-content: oklch(0.9171 0.0136 240.96);
+
+  --color-primary: oklch(0.7021 0.0907 235.88);
+  --color-primary-content: oklch(0.1772 0.0266 246.63);
+  --color-secondary: oklch(0.6519 0.0387 243.27);
+  --color-secondary-content: oklch(0.1772 0.0266 246.63);
+  --color-accent: oklch(0.787 0.1407 87.26);
+  --color-accent-content: oklch(0.1733 0.0122 91.8);
+  --color-neutral: oklch(0.2783 0.033 247.38);
+  --color-neutral-content: oklch(0.88 0.0155 241.79);
+
+  --color-info: oklch(0.7021 0.0907 235.88);
+  --color-info-content: oklch(0.1772 0.0266 246.63);
+  --color-success: oklch(0.6748 0.0978 157.53);
+  --color-success-content: oklch(0.1772 0.0266 246.63);
+  --color-warning: oklch(0.7457 0.1227 75.76);
+  --color-warning-content: oklch(0.1733 0.0122 91.8);
+  --color-error: oklch(0.6505 0.1416 27.42);
+  --color-error-content: oklch(0.1733 0.0122 91.8);
+
+  --radius-selector: 0.125rem;
+  --radius-field: 0.125rem;
+  --radius-box: 0.125rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
 }
 
 @theme {
-  --animate-slide-up: slide-up 0.4s ease-out both;
-  --animate-fade-in: fade-in 0.3s ease-out both;
-}
+  --font-sans:
+    'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'Source Han Sans SC', system-ui, sans-serif;
+  --font-mono:
+    'JetBrains Mono', ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  /* 工程制图汉字规范字体：长仿宋。仅用于 ≤ 3 处标题/图签，不用于正文 */
+  --font-drawing: 'FangSong', 'FangSong_GB2312', STFangsong, 'Songti SC', serif;
 
-@keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  --animate-fade-in: fade-in 0.18s ease-out both;
 }
 
 @keyframes fade-in {
@@ -27,6 +106,235 @@
   to {
     opacity: 1;
   }
+}
+
+@keyframes value-flash {
+  from {
+    background-color: color-mix(in oklab, var(--color-accent) 40%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-base-100);
+    color: var(--color-base-content);
+    line-height: 1.75;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    line-height: 1.3;
+    letter-spacing: 0;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-primary) 24%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ---------- 图纸语言 ---------- */
+
+/* 图纸网格底：32px 细格 + 160px 粗格 */
+.paper-grid {
+  background-color: var(--color-base-100);
+  background-image:
+    linear-gradient(
+      to right,
+      color-mix(in oklab, var(--color-base-300) 45%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--color-base-300) 45%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to right,
+      color-mix(in oklab, var(--color-base-300) 80%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--color-base-300) 80%, transparent) 1px,
+      transparent 1px
+    );
+  background-size:
+    32px 32px,
+    32px 32px,
+    160px 160px,
+    160px 160px;
+}
+
+/* 图框：外层实线图框，四角刻度表示图幅边界 */
+.sheet-frame {
+  position: relative;
+  border: 1px solid var(--color-base-300);
+  background-color: var(--color-base-100);
+}
+
+.sheet-corner {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  pointer-events: none;
+}
+
+.sheet-corner-tl {
+  top: 8px;
+  left: 8px;
+  border-top-width: 1px;
+  border-left-width: 1px;
+}
+.sheet-corner-tr {
+  top: 8px;
+  right: 8px;
+  border-top-width: 1px;
+  border-right-width: 1px;
+}
+.sheet-corner-bl {
+  bottom: 8px;
+  left: 8px;
+  border-bottom-width: 1px;
+  border-left-width: 1px;
+}
+.sheet-corner-br {
+  bottom: 8px;
+  right: 8px;
+  border-bottom-width: 1px;
+  border-right-width: 1px;
+}
+
+/* 图签（右下角栏） */
+.sheet-title-block {
+  border-top: 1px solid var(--color-base-300);
+  background-color: var(--color-base-200);
+}
+
+.sheet-cell {
+  padding: 0.5rem 0.75rem;
+  border-left: 1px solid var(--color-base-300);
+}
+
+.sheet-cell:first-child {
+  border-left: 0;
+}
+
+.sheet-label {
+  font-size: 10px;
+  line-height: 1.4;
+  letter-spacing: 0.06em;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+}
+
+.sheet-value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-base-content);
+}
+
+.sheet-title {
+  font-family: var(--font-drawing);
+  font-size: 1.125rem;
+  line-height: 1.3;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+/* 工具页外壳：吃掉各工具页共用的半透明卡片样式，统一成图框内的工作区 */
+.tool-page-area > div {
+  background-color: var(--color-base-100);
+  backdrop-filter: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.tool-page-area > div > h1 {
+  font-family: var(--font-drawing);
+  font-size: 1.5rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--color-base-content);
+}
+
+/* 工具页内部的章节标题统一降一档，避免和页名抢层级 */
+.tool-page-area > div h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--color-base-content);
+}
+
+.tool-page-area > div h3 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--color-base-content);
+}
+
+/* 说明条文按中文阅读行长收敛 */
+.docs-content .prose {
+  max-width: 62ch;
+}
+
+/* 数据读数：所有坐标/高程/编号统一等宽 + 表格数字 */
+.readout {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.value-flash {
+  animation: value-flash 0.6s ease-out both;
+}
+
+/* 目录/图例行 */
+.ledger-row {
+  display: grid;
+  align-items: center;
+  border-bottom: 1px solid var(--color-base-300);
+  transition: background-color 0.15s ease;
+}
+
+.ledger-row:hover {
+  background-color: var(--color-base-200);
+}
+
+.ledger-row:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
 }
 
 :root,

@@ -1,128 +1,92 @@
 <!-- src/components/layout/DlsSidebar.vue -->
 <template>
-  <FlowingBackground :enabled="flowingBackgroundStore.enabled" />
+  <div class="site-top">
+    <FiberColorStrip />
+    <DlsHeader />
+  </div>
+
   <div class="drawer lg:drawer-open">
     <input id="my-drawer-4" type="checkbox" class="drawer-toggle" />
     <div class="drawer-content">
-      <DlsHeader />
-      <div class="p-4">
+      <div class="page-body">
         <router-view v-slot="{ Component, route }">
-          <transition name="page" mode="out-in">
-            <component :is="Component" :key="route.path" />
-          </transition>
+          <component :is="Component" :key="route.path" />
         </router-view>
       </div>
     </div>
 
-    <div class="drawer-side is-drawer-close:overflow-visible">
-      <label for="my-drawer-4" aria-label="close sidebar" class="drawer-overlay"></label>
-      <div
-        class="flex min-h-full flex-col items-start bg-base-200 is-drawer-close:w-14 is-drawer-open:w-48"
-      >
-        <div class="w-full p-3 is-drawer-close:hidden relative">
-          <div class="relative">
-            <PhMagnifyingGlass
-              class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-base-content/60"
-            />
+    <div class="drawer-side">
+      <label for="my-drawer-4" aria-label="关闭目录" class="drawer-overlay"></label>
+      <div class="sidebar">
+        <div class="sidebar-search-wrap">
+          <div class="sidebar-search">
+            <PhMagnifyingGlass class="sidebar-search-icon" />
             <input
               v-model="searchQuery"
-              type="text"
-              placeholder="搜索工具..."
-              class="w-full pl-9 pr-3 py-2 text-sm border border-base-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-base-100 text-base-content"
+              type="search"
+              placeholder="搜索工具"
+              aria-label="搜索工具"
+              class="sidebar-search-input"
               @keyup.escape="clearSearch"
             />
             <button
               v-if="searchQuery"
-              class="absolute right-2 top-1/2 -translate-y-1/2 text-base-content/60 hover:text-base-content"
+              type="button"
+              class="sidebar-search-clear"
+              aria-label="清除搜索"
               @click="clearSearch"
             >
-              <PhX class="size-4" />
+              <PhX class="size-3.5" />
             </button>
           </div>
 
-          <div
-            v-if="searchQuery && filteredTools.length > 0"
-            class="absolute top-full left-3 right-3 mt-2 z-50"
-          >
-            <ul
-              class="max-h-64 overflow-y-auto bg-base-100 rounded-lg shadow-lg border border-base-200 w-full"
-            >
-              <li
-                v-for="tool in filteredTools"
-                :key="tool.id"
-                class="px-3 py-2 hover:bg-base-200 cursor-pointer border-b border-base-200 last:border-b-0"
-              >
-                <router-link
-                  :to="`/tools/${tool.id}`"
-                  class="flex items-center gap-2"
-                  @click="clearSearch"
-                >
-                  <component :is="tool.icon" class="size-4 text-primary" />
-                  <div class="flex-1 min-w-0">
-                    <div class="text-sm font-medium text-base-content truncate">
-                      {{ tool.name }}
-                    </div>
-                    <div class="text-xs text-base-content/60 truncate">{{ tool.description }}</div>
-                  </div>
+          <div v-if="searchQuery" class="sidebar-results">
+            <ul v-if="filteredTools.length" class="sidebar-results-list">
+              <li v-for="tool in filteredTools" :key="tool.id">
+                <router-link :to="`/tools/${tool.id}`" class="sidebar-result" @click="clearSearch">
+                  <component :is="tool.icon" class="size-4 shrink-0 text-primary" />
+                  <span class="sidebar-result-name">{{ tool.name }}</span>
                 </router-link>
               </li>
             </ul>
-          </div>
-
-          <div
-            v-if="searchQuery && filteredTools.length === 0"
-            class="absolute top-full left-3 right-3 mt-2 z-50"
-          >
-            <div
-              class="text-sm text-base-content/60 text-center py-4 bg-base-100 rounded-lg border border-base-200 shadow-lg"
-            >
-              未找到匹配的工具
-            </div>
+            <div v-else class="sidebar-empty">未找到匹配的工具</div>
           </div>
         </div>
 
-        <ul class="menu w-full grow">
-          <li>
-            <router-link
-              to="/"
-              class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
-              data-tip="首页"
-            >
-              <PhHouse class="my-1.5 inline-block size-4" />
-              <span class="is-drawer-close:hidden">&nbsp;&nbsp;首页</span>
-            </router-link>
-          </li>
-          <li>
-            <router-link
-              to="/tools"
-              class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
-              data-tip="工具集"
-            >
-              <PhToolbox class="my-1.5 inline-block size-4" />
-              <span class="is-drawer-close:hidden">&nbsp;&nbsp;工具集</span>
-            </router-link>
-          </li>
-          <li>
-            <router-link
-              to="/about"
-              class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
-              data-tip="关于"
-            >
-              <PhInfo class="my-1.5 inline-block size-4" />
-              <span class="is-drawer-close:hidden">&nbsp;&nbsp;关于</span>
-            </router-link>
-          </li>
-          <li>
-            <router-link
-              to="/donate"
-              class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
-              data-tip="支持我"
-            >
-              <PhHeart class="my-1.5 inline-block size-4 text-red-500" />
-              <span class="is-drawer-close:hidden">&nbsp;&nbsp;支持我</span>
-            </router-link>
-          </li>
-        </ul>
+        <nav class="sidebar-nav">
+          <p class="sidebar-heading">目录</p>
+          <router-link
+            v-for="item in mainNav"
+            :key="item.path"
+            :to="item.path"
+            class="nav-item"
+            :class="{ 'nav-item-active': isMainActive(item.path) }"
+            :title="item.label"
+          >
+            <component :is="item.icon" class="nav-icon" />
+            <span>{{ item.label }}</span>
+          </router-link>
+        </nav>
+
+        <nav class="sidebar-nav">
+          <p class="sidebar-heading">按专业</p>
+          <router-link
+            v-for="item in professions"
+            :key="item.key"
+            :to="{ path: '/tools', query: { prof: item.key } }"
+            class="nav-item"
+            :class="{ 'nav-item-active': isProfessionActive(item.key) }"
+            :title="item.label"
+          >
+            <span class="nav-badge">{{ item.short }}</span>
+            <span>{{ item.label }}</span>
+          </router-link>
+        </nav>
+
+        <div class="sidebar-foot">
+          <p>{{ toolCount }} 个工具 · {{ professions.length }} 个专业</p>
+          <p class="sidebar-foot-sub">通信工程科研 / 规划 / 设计</p>
+        </div>
       </div>
     </div>
   </div>
@@ -131,26 +95,39 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import DlsHeader from './DlsHeader.vue'
 import DlsFooter from './DlsFooter.vue'
-import FlowingBackground from './FlowingBackground.vue'
-import { useFlowingBackgroundStore } from '@/stores/flowingBackgroundStore'
+import FiberColorStrip from './FiberColorStrip.vue'
 import { PhHouse, PhToolbox, PhInfo, PhHeart, PhMagnifyingGlass, PhX } from '@phosphor-icons/vue'
 import { toolConfigs } from '@/tools/toolData'
+import { professions } from '@/tools/toolTaxonomy'
 
-const flowingBackgroundStore = useFlowingBackgroundStore()
+const route = useRoute()
 const searchQuery = ref('')
+const toolCount = toolConfigs.length
+
+const isMainActive = (path: string) =>
+  path === '/' ? route.path === '/' : route.path === path || route.path.startsWith(`${path}/`)
+
+const isProfessionActive = (key: string) => route.path === '/tools' && route.query.prof === key
+
+const mainNav = [
+  { path: '/', label: '首页', icon: PhHouse },
+  { path: '/tools', label: '工具索引', icon: PhToolbox },
+  { path: '/about', label: '关于', icon: PhInfo },
+  { path: '/donate', label: '支持我', icon: PhHeart },
+]
 
 const filteredTools = computed(() => {
-  if (!searchQuery.value.trim()) return []
-  const query = searchQuery.value.toLowerCase()
-  return toolConfigs.filter((tool) => {
-    return (
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query) return []
+  return toolConfigs.filter(
+    (tool) =>
       tool.name.toLowerCase().includes(query) ||
       tool.description.toLowerCase().includes(query) ||
-      tool.tags.some((tag) => tag.toLowerCase().includes(query))
-    )
-  })
+      tool.tags.some((tag) => tag.toLowerCase().includes(query)),
+  )
 })
 
 const clearSearch = () => {
@@ -159,24 +136,203 @@ const clearSearch = () => {
 </script>
 
 <style scoped>
-.page-enter-active,
-.page-leave-active {
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+.site-top {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background-color: var(--color-base-100);
 }
 
-.page-enter-from {
-  opacity: 0;
-  transform: translateX(30px) scale(0.95);
+.drawer {
+  min-height: calc(100dvh - 62px);
 }
 
-.page-leave-to {
-  opacity: 0;
-  transform: translateX(-30px) scale(0.95);
+@media (min-width: 1024px) {
+  .drawer-side {
+    top: 62px;
+    height: calc(100dvh - 62px);
+  }
 }
 
-.page-enter-to,
-.page-leave-from {
-  opacity: 1;
-  transform: translateX(0) scale(1);
+@media (max-width: 1023px) {
+  .drawer-side {
+    z-index: 60;
+  }
+}
+
+.page-body {
+  padding: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .page-body {
+    padding: 1.5rem;
+  }
+}
+
+.sidebar {
+  display: flex;
+  width: 13rem;
+  min-height: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  background-color: var(--color-base-200);
+  border-right: 1px solid var(--color-base-300);
+}
+
+.sidebar-search-wrap {
+  position: relative;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--color-base-300);
+}
+
+.sidebar-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-base-300);
+  background-color: var(--color-base-100);
+}
+
+.sidebar-search-icon {
+  position: absolute;
+  left: 0.5rem;
+  width: 14px;
+  height: 14px;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  pointer-events: none;
+}
+
+.sidebar-search-input {
+  width: 100%;
+  padding: 0.375rem 1.75rem 0.375rem 1.75rem;
+  font-size: 12px;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--color-base-content);
+}
+
+.sidebar-search-input::placeholder {
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+}
+
+.sidebar-search-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.sidebar-search-clear {
+  position: absolute;
+  right: 0.375rem;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+}
+
+.sidebar-search-clear:hover {
+  color: var(--color-base-content);
+}
+
+.sidebar-results {
+  position: absolute;
+  top: calc(100% - 0.25rem);
+  left: 0.75rem;
+  right: 0.75rem;
+  z-index: 60;
+  background-color: var(--color-base-100);
+  border: 1px solid var(--color-base-300);
+}
+
+.sidebar-results-list {
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+.sidebar-result {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  font-size: 12px;
+  border-bottom: 1px solid var(--color-base-200);
+}
+
+.sidebar-result:hover {
+  background-color: var(--color-base-200);
+}
+
+.sidebar-result-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-empty {
+  padding: 0.75rem;
+  font-size: 12px;
+  text-align: center;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+}
+
+.sidebar-nav {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-base-300);
+}
+
+.sidebar-heading {
+  padding: 0.25rem 0.75rem 0.375rem;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 13px;
+  color: color-mix(in oklab, var(--color-base-content) 80%, transparent);
+  border-left: 2px solid transparent;
+}
+
+.nav-item:hover {
+  background-color: var(--color-base-100);
+  color: var(--color-base-content);
+}
+
+.nav-item.nav-item-active {
+  border-left-color: var(--color-primary);
+  background-color: var(--color-base-100);
+  color: var(--color-primary);
+}
+
+.nav-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  font-size: 10px;
+  line-height: 1;
+  color: color-mix(in oklab, var(--color-base-content) 70%, transparent);
+  border: 1px solid var(--color-base-300);
+}
+
+.sidebar-foot {
+  margin-top: auto;
+  padding: 0.75rem;
+  font-size: 10px;
+  line-height: 1.6;
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+}
+
+.sidebar-foot-sub {
+  margin-top: 0.125rem;
 }
 </style>

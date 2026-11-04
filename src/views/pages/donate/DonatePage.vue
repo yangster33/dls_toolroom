@@ -1,77 +1,55 @@
 <template>
-  <div class="min-h-screen backdrop-blur-sm py-12">
-    <div class="container mx-auto px-4 max-w-2xl">
-      <!-- 标题区域 -->
-      <div class="text-center mb-8">
-        <div
-          class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-r from-primary to-secondary mb-4"
-        >
-          <PhHeart class="w-10 h-10 text-white" />
-        </div>
-        <h1 class="text-3xl font-bold text-base-content mb-2">感谢支持</h1>
-        <p class="text-base-content/70">您的支持是我前进的动力 💪</p>
-      </div>
+  <div class="donate">
+    <header class="donate-head">
+      <h1 class="donate-title">支持我</h1>
+      <p class="donate-lead">
+        这个工具间是我利用业余时间维护的个人项目。如果它替你省下了加班时间，欢迎请我喝杯咖啡。
+      </p>
+    </header>
 
-      <!-- 收款码区域 -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- 支付宝 -->
-        <div class="aura aura-holo w-full">
-          <div
-            class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg p-6 text-white"
-          >
-            <div class="flex items-center mb-4">
-              <PhCreditCard class="w-6 h-6 mr-2" />
-              <span class="text-lg font-semibold">支付宝</span>
-            </div>
-            <div class="bg-white rounded-xl p-4 mb-4">
-              <div class="flex justify-center">
-                <canvas ref="alipayCanvas" class="w-48 h-48"></canvas>
-              </div>
-            </div>
-            <p class="text-center text-sm opacity-90">扫码支持</p>
-          </div>
+    <div class="donate-grid">
+      <section class="donate-panel">
+        <header class="donate-panel-head">
+          <PhCreditCard class="donate-icon" />
+          <span>支付宝</span>
+        </header>
+        <div class="donate-qr">
+          <canvas ref="alipayCanvas" class="size-48"></canvas>
         </div>
+        <p class="donate-caption readout">扫码支持</p>
+      </section>
 
-        <!-- 微信 -->
-        <div class="aura aura-holo w-full">
-          <div
-            class="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg p-6 text-white"
-          >
-            <div class="flex items-center mb-4">
-              <PhGlobe class="w-6 h-6 mr-2" />
-              <span class="text-lg font-semibold">微信</span>
-            </div>
-            <div class="bg-white rounded-xl p-4 mb-4">
-              <div class="flex justify-center">
-                <canvas ref="wechatCanvas" class="w-48 h-48"></canvas>
-              </div>
-            </div>
-            <p class="text-center text-sm opacity-90">扫码支持</p>
-          </div>
+      <section class="donate-panel">
+        <header class="donate-panel-head">
+          <PhGlobe class="donate-icon" />
+          <span>微信</span>
+        </header>
+        <div class="donate-qr">
+          <canvas ref="wechatCanvas" class="size-48"></canvas>
         </div>
-      </div>
-
-      <!-- 底部说明 -->
-      <div class="text-center mt-8 text-base-content/60 text-sm">
-        <p>每一份支持都将用于改善工具间的功能和体验</p>
-        <p class="mt-1">感谢您的慷慨解囊！ 🙏</p>
-      </div>
+        <p class="donate-caption readout">扫码支持</p>
+      </section>
     </div>
+
+    <footer class="donate-foot">
+      <p>每一份支持都会用于工具维护与服务器开销。</p>
+      <p>工具本身永远免费，结果请以人工复核为准。</p>
+    </footer>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { PhHeart, PhCreditCard, PhGlobe } from '@phosphor-icons/vue'
+import { PhCreditCard, PhGlobe } from '@phosphor-icons/vue'
 import QRCode from 'qrcode'
 import { logger } from '@/utils/logger'
 import { useSeo } from '@/composables/useSeo'
 
 useSeo({
   title: '支持作者',
-  description: '如果大龙山工具间对您的工作有帮助，欢迎扫码支持作者，您的支持是我前进的动力。',
+  description: '如果大龙山工具间对您的工作有帮助，欢迎扫码支持作者。工具本身永远免费。',
   path: '/donate',
-  keywords: ['支持作者', '赞助', '打赏', '大龙山工具间'],
+  keywords: ['支持作者', '赞助', '大龙山工具间'],
 })
 
 const alipayCanvas = ref<HTMLCanvasElement | null>(null)
@@ -103,3 +81,102 @@ onMounted(async () => {
   await generateQRCode(wechatCode, wechatCanvas.value)
 })
 </script>
+
+<style scoped>
+.donate {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.donate-head {
+  padding: 1.5rem 1.5rem 1.25rem;
+  border: 1px solid var(--color-base-300);
+  border-bottom: 0;
+}
+
+.donate-title {
+  font-family: var(--font-drawing);
+  font-size: 1.75rem;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+}
+
+.donate-lead {
+  margin-top: 0.5rem;
+  max-width: 46ch;
+  font-size: 13px;
+  color: color-mix(in oklab, var(--color-base-content) 70%, transparent);
+}
+
+.donate-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid var(--color-base-300);
+}
+
+.donate-panel {
+  padding: 1.25rem;
+  border-left: 1px solid var(--color-base-300);
+}
+
+.donate-panel:first-child {
+  border-left: 0;
+}
+
+.donate-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 13px;
+  border-bottom: 1px solid var(--color-base-300);
+}
+
+.donate-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--color-primary);
+}
+
+.donate-qr {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  background-color: #ffffff;
+  border: 1px solid var(--color-base-300);
+}
+
+.donate-caption {
+  margin-top: 0.625rem;
+  font-size: 11px;
+  text-align: center;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+}
+
+.donate-foot {
+  padding: 1rem 1.5rem;
+  font-size: 12px;
+  line-height: 1.8;
+  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  border: 1px solid var(--color-base-300);
+  border-top: 0;
+  background-color: var(--color-base-200);
+}
+
+@media (max-width: 640px) {
+  .donate-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .donate-panel {
+    border-left: 0;
+    border-top: 1px solid var(--color-base-300);
+  }
+
+  .donate-panel:first-child {
+    border-top: 0;
+  }
+}
+</style>

@@ -1,29 +1,35 @@
 /**
  * ThemeProvider.ts
- * 负责管理 daisyUI 主题的切换、持久化和初始化
+ * 负责管理 daisyUI 主题的切换、持久化和初始化。
+ *
+ * 站点只保留两套自有主题：
+ *   baitu —— 白图（施工白图纸），默认
+ *   lantu —— 蓝图（晒图纸）
+ * 不再暴露 daisyUI 官方主题，避免站点气质随用户切换整体漂移。
  */
 
 import { logger } from '@/utils/logger'
 
-// 从 tailwind.config.js 中提取的主题列表
-const AVAILABLE_THEMES = [
-  'light',
-  'dark',
-  'corporate',
-  'business',
-  'night',
-  'dracula',
-  'winter',
-  'forest',
-] as const
+const AVAILABLE_THEMES = ['baitu', 'lantu'] as const
 
-// 定义类型，确保类型安全
 export type Theme = (typeof AVAILABLE_THEMES)[number]
 
 const THEME_STORAGE_KEY = 'dls_toolroom_theme'
 
+/** 旧版本保存的是 daisyUI 官方主题名，读取时映射到就近的自有主题 */
+const LEGACY_THEME_MAP: Record<string, Theme> = {
+  light: 'baitu',
+  winter: 'baitu',
+  corporate: 'baitu',
+  business: 'baitu',
+  dark: 'lantu',
+  night: 'lantu',
+  dracula: 'lantu',
+  forest: 'lantu',
+}
+
 class ThemeProvider {
-  private currentTheme: Theme = 'light'
+  private currentTheme: Theme = 'baitu'
   private isInitialized = false
 
   constructor() {
@@ -51,28 +57,15 @@ class ThemeProvider {
   /**
    * 切换主题
    */
-  public setTheme(theme?: Theme): void {
-    let nextTheme: Theme
-
-    if (theme) {
-      if (!this.isValidTheme(theme)) {
-        logger.warn(`[ThemeProvider] 无效的主题: ${theme}`)
-        return
-      }
-      nextTheme = theme
-    } else {
-      const currentIndex = AVAILABLE_THEMES.indexOf(this.currentTheme)
-      if (currentIndex === -1) {
-        nextTheme = 'light'
-      } else {
-        const nextIndex = (currentIndex + 1) % AVAILABLE_THEMES.length
-        nextTheme = AVAILABLE_THEMES[nextIndex]!
-      }
+  public setTheme(theme: Theme): void {
+    if (!this.isValidTheme(theme)) {
+      logger.warn(`[ThemeProvider] 无效的主题: ${theme}`)
+      return
     }
 
-    this.currentTheme = nextTheme
-    this.saveTheme(nextTheme)
-    this.applyTheme(nextTheme)
+    this.currentTheme = theme
+    this.saveTheme(theme)
+    this.applyTheme(theme)
   }
 
   /**
@@ -112,22 +105,28 @@ class ThemeProvider {
     if (typeof window === 'undefined') return null
 
     const saved = localStorage.getItem(THEME_STORAGE_KEY)
-    if (saved && this.isValidTheme(saved)) {
-      return saved as Theme
+    if (!saved) return null
+    if (this.isValidTheme(saved)) return saved
+
+    const legacy = LEGACY_THEME_MAP[saved]
+    if (legacy) {
+      this.saveTheme(legacy)
+      return legacy
     }
     return null
   }
 
   /**
-   * 检测系统偏好 (深色/浅色)
+   * 检测系统偏好 (深色/浅色)。
+   * 公开站首访默认白图：只有用户系统明确偏好深色时才给蓝图。
    */
   private getSystemPreference(): Theme {
-    if (typeof window === 'undefined') return 'light'
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    if (typeof window === 'undefined') return 'baitu'
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'lantu' : 'baitu'
   }
 
   private isValidTheme(theme: string): theme is Theme {
-    return AVAILABLE_THEMES.includes(theme as Theme)
+    return (AVAILABLE_THEMES as readonly string[]).includes(theme)
   }
 }
 

@@ -307,11 +307,8 @@ onUnmounted(() => {
 
 .windows-frame {
   box-shadow:
-    0 1px 1px rgba(0, 0, 0, 0.15),
-    0 10px 0 -5px #fff,
-    0 10px 1px -4px rgba(0, 0, 0, 0.15),
-    0 20px 0 -10px #fff,
-    0 20px 1px -9px rgba(0, 0, 0, 0.15);
+    0 1px 2px rgb(0 0 0 / 0.25),
+    0 12px 32px rgb(0 0 0 / 0.28);
 }
 
 .windows-title-bar {
@@ -334,7 +331,7 @@ onUnmounted(() => {
 }
 
 .content-area {
-  background: oklch(var(--b1));
+  background: var(--color-base-100);
 }
 
 .animate-spin {

@@ -3,6 +3,7 @@
     :nav-items="toolNav.navItems"
     :tool-page="toolNav.toolPage"
     :tool-page-props="toolNav.toolPageProps"
+    title="关于"
   />
 </template>
 

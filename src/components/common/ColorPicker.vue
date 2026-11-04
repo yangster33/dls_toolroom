@@ -154,22 +154,13 @@ onUnmounted(() => {
 
 /* --- 下拉容器：双层防御确保不透明 --- */
 .color-picker-dd {
-  /* daisyUI 变量优先，无则退到 Tailwind Proxy 变量，再无则退到 #fff */
-  background: oklch(var(--b1, 1 0 0));
-  background: var(--color-base-100, oklch(var(--b1, 1 0 0)));
-  /* 硬兜底——绝不会透明 */
-  background-color: #ffffff;
-  color: #1f2937;
-  border: 1px solid oklch(var(--b3, 0.9 0 0));
+  /* 主题变量优先，取不到时退到浅色兜底 */
+  background-color: var(--color-base-100, #ffffff);
+  color: var(--color-base-content, #1f2937);
+  border: 1px solid var(--color-base-300, #d1d5db);
   box-shadow:
     0 4px 16px rgb(0 0 0 / 0.15),
     0 0 0 1px rgb(0 0 0 / 0.05);
-}
-@media (prefers-color-scheme: dark) {
-  .color-picker-dd {
-    background-color: #2a303c; /* daisyUI dark base-100 等价色 */
-    color: #e5e7eb;
-  }
 }
 
 /* --- Sketch 主容器 --- */
@@ -213,8 +204,8 @@ onUnmounted(() => {
 }
 
 .color-picker-dd .vc-sketch-field input:focus {
-  border-color: oklch(var(--p, 0.55 0.2 270)) !important;
-  box-shadow: 0 0 0 2px oklch(var(--p, 0.55 0.2 270) / 0.25) !important;
+  border-color: var(--color-primary, #2563eb) !important;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-primary, #2563eb) 25%, transparent) !important;
 }
 
 /* --- 标签文字 --- */

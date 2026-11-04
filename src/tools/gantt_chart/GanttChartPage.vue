@@ -983,27 +983,27 @@ onUnmounted(() => {
   border-radius: 8px;
 }
 
-/* daisyUI 暗色模式适配 */
-[data-theme*='dark'] .gantt-container-wrapper .gantt .grid-header {
-  fill: oklch(var(--b2));
-  color: oklch(var(--bc));
+/* 蓝图主题适配 */
+[data-theme='lantu'] .gantt-container-wrapper .gantt .grid-header {
+  fill: var(--color-base-200);
+  color: var(--color-base-content);
 }
 
-[data-theme*='dark'] .gantt-container-wrapper .gantt .grid-row {
-  fill: oklch(var(--b1));
-  color: oklch(var(--bc));
+[data-theme='lantu'] .gantt-container-wrapper .gantt .grid-row {
+  fill: var(--color-base-100);
+  color: var(--color-base-content);
 }
 
-[data-theme*='dark'] .gantt-container-wrapper .gantt .row-line {
-  stroke: oklch(var(--b3));
+[data-theme='lantu'] .gantt-container-wrapper .gantt .row-line {
+  stroke: var(--color-base-300);
 }
 
-[data-theme*='dark'] .gantt-container-wrapper .gantt .tick {
-  stroke: oklch(var(--b3));
+[data-theme='lantu'] .gantt-container-wrapper .gantt .tick {
+  stroke: var(--color-base-300);
 }
 
-[data-theme*='dark'] .gantt-container-wrapper .gantt .today-highlight {
-  fill: oklch(var(--p) / 0.1);
+[data-theme='lantu'] .gantt-container-wrapper .gantt .today-highlight {
+  fill: color-mix(in oklab, var(--color-primary) 10%, transparent);
 }
 
 /* 进度条拖拽手柄 */
@@ -1014,7 +1014,7 @@ onUnmounted(() => {
 
 /* popup 按钮样式 */
 .gantt-container-wrapper .popup-wrapper .action-buttons a {
-  color: oklch(var(--p)) !important;
+  color: var(--color-primary) !important;
   text-decoration: none;
   margin-right: 8px;
   cursor: pointer;

@@ -1,152 +1,378 @@
 <template>
-  <div class="min-h-screen">
-    <div class="container mx-auto px-4 py-12 relative z-10">
-      <div class="text-center mb-12">
-        <div
-          class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-6 animate-fade-in"
-        >
-          <PhToolbox class="w-10 h-10 text-primary" />
-        </div>
-        <h1 class="text-4xl font-bold text-base-content mb-4">大龙山工具间</h1>
-        <p class="text-lg text-base-content/70 max-w-md mx-auto">
-          一站式地理空间数据处理与转换工具集，助力您的工作效率提升
+  <div class="home">
+    <!-- 图名页：链接示意 + 光缆色谱 -->
+    <section class="masthead paper-grid">
+      <div class="masthead-copy">
+        <h1 class="masthead-title">大龙山工具间</h1>
+        <p class="masthead-lead">通信工程科研、规划与设计工具集</p>
+        <p class="masthead-meta readout">
+          {{ toolCount }} 个工具 · {{ professionStats.length }} 个专业 · 数据不出浏览器
         </p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
-        <div
-          v-for="(tool, i) in featuredTools"
-          :key="tool.id"
-          class="card-group group cursor-pointer"
-          :style="staggerStyle(i)"
-          @click="navigateToTool(tool.id)"
+      <figure class="masthead-figure">
+        <svg
+          class="route"
+          viewBox="0 0 460 150"
+          role="img"
+          aria-label="链路示意：站址到汇聚到核心，链路以 12 色光缆表示"
         >
-          <div
-            class="card card-hover bg-base-100/80 backdrop-blur-sm border border-base-200/50 h-full"
-          >
-            <div class="card-body text-center flex flex-col justify-center h-full">
-              <div class="icon-wrapper mb-4">
-                <component
-                  :is="tool.icon"
-                  class="w-12 h-12 mx-auto text-primary transition-transform duration-300 group-hover:scale-110"
-                />
-              </div>
-              <h3 class="card-title font-semibold">{{ tool.name }}</h3>
-              <p class="text-sm text-base-content/60 mt-2 flex-grow">{{ tool.description }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="text-center mt-12">
-        <button class="btn btn-primary btn-lg group" @click="navigateToTools">
-          <PhArrowRight
-            class="w-5 h-5 mr-2 transition-transform duration-300 group-hover:translate-x-1"
+          <rect
+            x="57"
+            y="59"
+            width="346"
+            height="15"
+            fill="none"
+            stroke="currentColor"
+            stroke-opacity="0.22"
           />
-          浏览全部工具
-        </button>
-      </div>
+          <rect
+            v-for="(fiber, i) in fiberColors"
+            :key="fiber.index"
+            x="58"
+            :y="60 + i * 1.16"
+            width="344"
+            height="1.06"
+            :fill="fiber.hex"
+          />
 
-      <div class="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-        <div class="text-center">
-          <div class="text-3xl font-bold text-primary mb-2">{{ countTool }}</div>
-          <div class="text-base-content/60">工具数量</div>
-        </div>
-        <div class="text-center">
-          <div class="text-3xl font-bold text-primary mb-2">{{ countTag }}</div>
-          <div class="text-base-content/60">标签数量</div>
-        </div>
-        <div class="text-center">
-          <div class="text-3xl font-bold text-primary mb-2">{{ countCategory }}</div>
-          <div class="text-base-content/60">工具分类</div>
-        </div>
+          <rect x="50" y="60" width="14" height="13" class="route-node" />
+          <rect x="223" y="58" width="18" height="17" class="route-node route-node-strong" />
+          <rect x="394" y="56" width="22" height="21" class="route-node route-node-core" />
+
+          <text x="57" y="44" class="route-label route-label-sm">24 芯</text>
+          <text x="232" y="42" class="route-label route-label-sm">48 芯</text>
+
+          <text x="57" y="104" class="route-label">站址</text>
+          <text x="232" y="104" class="route-label">汇聚</text>
+          <text x="405" y="104" class="route-label">核心</text>
+        </svg>
+        <figcaption class="masthead-caption">
+          链路示意 · 光缆按 12 色纤序绘制（悬停顶部色条可查）
+        </figcaption>
+      </figure>
+    </section>
+
+    <!-- 常用 -->
+    <section class="block">
+      <header class="block-head">
+        <h2 class="block-title">常用</h2>
+        <router-link class="block-link" to="/tools">全部 {{ toolCount }} 个工具</router-link>
+      </header>
+
+      <div class="ledger">
+        <router-link
+          v-for="item in featured"
+          :key="item.id"
+          :to="`/tools/${item.id}`"
+          class="ledger-row ledger-row-tool"
+        >
+          <span class="ledger-no readout">{{ item.no }}</span>
+          <span class="ledger-name">{{ item.name }}</span>
+          <span class="ledger-desc">{{ item.description }}</span>
+          <span class="ledger-prof">{{ item.profession }}</span>
+          <span class="ledger-out readout">{{ item.output }}</span>
+        </router-link>
       </div>
-    </div>
+    </section>
+
+    <!-- 按专业 -->
+    <section class="block">
+      <header class="block-head">
+        <h2 class="block-title">按专业</h2>
+        <span class="block-note">电源、管道暂无工具，规划中</span>
+      </header>
+
+      <div class="profession-row">
+        <router-link
+          v-for="item in professionStats"
+          :key="item.key"
+          :to="{ path: '/tools', query: { prof: item.key } }"
+          class="profession-item"
+        >
+          <span class="profession-short">{{ item.short }}</span>
+          <span class="profession-label">{{ item.label }}</span>
+          <span class="profession-count readout">{{ item.count }}</span>
+        </router-link>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { PhToolbox, PhArrowRight } from '@phosphor-icons/vue'
-import { toolConfigs } from '@/tools/toolData'
-import { useRouter } from 'vue-router'
-import { useCountUp } from '@/composables/useCountUp'
+import { toolConfigs, getToolById } from '@/tools/toolData'
+import { professions, getProfession, getToolMeta } from '@/tools/toolTaxonomy'
+import { fiberColors } from '@/data/fiberColors'
 import { useSeo, useSiteSchema } from '@/composables/useSeo'
 
 useSeo({
   title: '大龙山工具间',
   description:
-    '一站式地理空间数据处理与转换工具集，22+ 在线工具：坐标转换、距离测算、地址解析、GIS 文件互转、高程查询、地震/天气查询等，浏览器直接使用，免安装。',
+    '通信工程科研、规划与设计工具集：坐标转换、距离测算、地址解析、KML/SHP 互转、高程与气象查询、模板批量导出、甘特图排期等，浏览器直接使用，数据不出本机。',
   path: '/',
-  keywords: ['地理空间工具', '坐标转换', 'GIS', 'KML', 'SHP', '在线工具', '大龙山工具间'],
+  keywords: ['通信工程', '规划设计', '坐标转换', 'GIS', 'KML', 'SHP', '在线工具', '大龙山工具间'],
 })
 useSiteSchema()
 
-const router = useRouter()
-
 const toolCount = toolConfigs.length
 
-const allTags = new Set(toolConfigs.flatMap((tool) => tool.tags))
-const tagCount = allTags.size
+const featuredIds = ['coord_convert', 'coords_convert', 'kml_viewer', 'gantt_chart']
 
-const toolCategories = [
-  { name: '坐标转换', tags: ['坐标', '转换'] },
-  { name: 'GIS处理', tags: ['GIS', 'SHP', 'KML'] },
-  { name: '文档处理', tags: ['模板', '导出', 'Excel', 'Word'] },
-  { name: '空间分析', tags: ['空间分析', '距离', '测算'] },
-  { name: '可视化', tags: ['地图', '查看', '甘特图'] },
-]
+const featured = featuredIds
+  .map((id) => {
+    const tool = getToolById(id)
+    if (!tool) return null
+    const meta = getToolMeta(id)
+    return {
+      id,
+      no: String(toolConfigs.findIndex((item) => item.id === id) + 1).padStart(2, '0'),
+      name: tool.name,
+      description: tool.description,
+      profession: getProfession(meta.profession).label,
+      output: meta.output,
+    }
+  })
+  .filter((item): item is NonNullable<typeof item> => item !== null)
 
-const categoryCount = toolCategories.length
-
-const countTool = useCountUp(toolCount, 1000)
-const countTag = useCountUp(tagCount, 1200)
-const countCategory = useCountUp(categoryCount, 800)
-
-const staggerStyle = (i: number) => ({
-  animation: 'slide-up 0.4s ease-out both',
-  animationDelay: `${i * 80}ms`,
-})
-
-// Fisher-Yates 随机打乱后取前 4 个，每次进入首页展示不同的推荐工具
-function shuffleTools<T>(tools: T[]): T[] {
-  const result = [...tools]
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    const tmp = result[i]!
-    result[i] = result[j]!
-    result[j] = tmp
-  }
-  return result
-}
-
-const featuredTools = shuffleTools(toolConfigs).slice(0, 4)
-
-const navigateToTool = (toolId: string) => {
-  router.push(`/tools/${toolId}`)
-}
-
-const navigateToTools = () => {
-  router.push('/tools')
-}
+const professionStats = professions.map((item) => ({
+  ...item,
+  count: toolConfigs.filter((tool) => getToolMeta(tool.id).profession === item.key).length,
+}))
 </script>
 
 <style scoped>
-.card-group {
-  perspective: 1000px;
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-.card-hover {
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
+/* ---------- 图名页 ---------- */
+.masthead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 2rem;
+  align-items: center;
+  padding: 2.5rem;
+  border: 1px solid var(--color-base-300);
 }
 
-.card-group:hover .card-hover {
-  transform: translateY(-6px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+.masthead-title {
+  font-family: var(--font-drawing);
+  font-size: 2.75rem;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  line-height: 1.15;
 }
 
-.icon-wrapper {
-  overflow: visible;
+.masthead-lead {
+  margin-top: 0.75rem;
+  font-size: 1rem;
+  color: color-mix(in oklab, var(--color-base-content) 75%, transparent);
+}
+
+.masthead-meta {
+  margin-top: 1.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-base-300);
+  font-size: 11px;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+}
+
+.masthead-figure {
+  min-width: 0;
+}
+
+.route {
+  width: 100%;
+  height: auto;
+  color: var(--color-base-content);
+}
+
+.route-node {
+  fill: var(--color-base-100);
+  stroke: var(--color-base-content);
+  stroke-opacity: 0.55;
+  stroke-width: 1;
+}
+
+.route-node-strong {
+  stroke: var(--color-primary);
+  stroke-opacity: 1;
+}
+
+.route-node-core {
+  fill: var(--color-primary);
+  stroke: var(--color-primary);
+}
+
+.route-label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  fill: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+}
+
+.route-label-sm {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  fill: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+}
+
+.masthead-caption {
+  margin-top: 0.5rem;
+  font-size: 11px;
+  text-align: right;
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+}
+
+/* ---------- 区块 ---------- */
+.block {
+  border: 1px solid var(--color-base-300);
+  background-color: var(--color-base-100);
+}
+
+.block-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid var(--color-base-300);
+  background-color: var(--color-base-200);
+}
+
+.block-title {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.block-link,
+.block-note {
+  font-size: 11px;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+}
+
+.block-link:hover {
+  color: var(--color-primary);
+}
+
+.ledger {
+  display: flex;
+  flex-direction: column;
+}
+
+.ledger-row-tool {
+  grid-template-columns: 3rem minmax(7rem, 11rem) minmax(0, 1fr) 4rem 6rem;
+  gap: 1rem;
+  padding: 0.625rem 0.875rem;
+  color: var(--color-base-content);
+}
+
+.ledger-no {
+  font-size: 11px;
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+}
+
+.ledger-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ledger-desc {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+}
+
+.ledger-prof {
+  font-size: 11px;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+}
+
+.ledger-out {
+  font-size: 11px;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+}
+
+/* ---------- 专业 ---------- */
+.profession-row {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.profession-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-left: 1px solid var(--color-base-300);
+}
+
+.profession-item:first-child {
+  border-left: 0;
+}
+
+.profession-item:hover {
+  background-color: var(--color-base-200);
+}
+
+.profession-short {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  font-size: 11px;
+  border: 1px solid var(--color-base-300);
+  color: color-mix(in oklab, var(--color-base-content) 70%, transparent);
+}
+
+.profession-label {
+  font-size: 12px;
+}
+
+.profession-count {
+  margin-left: auto;
+  font-size: 11px;
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+}
+
+@media (max-width: 900px) {
+  .masthead {
+    grid-template-columns: 1fr;
+    padding: 1.5rem;
+  }
+
+  .masthead-title {
+    font-size: 2rem;
+  }
+
+  .route {
+    max-width: 520px;
+  }
+
+  .masthead-caption {
+    text-align: left;
+  }
+
+  .ledger-row-tool {
+    grid-template-columns: 2.25rem minmax(0, 1fr) 4rem;
+  }
+
+  .ledger-desc,
+  .ledger-out {
+    display: none;
+  }
+
+  .profession-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .profession-item:nth-child(3n + 1) {
+    border-left: 0;
+  }
 }
 </style>

@@ -5,7 +5,7 @@ import type { ToolConfig } from '@/tools/toolData'
 const SITE_NAME = '大龙山工具间'
 const SITE_URL = (import.meta.env.VITE_SITE_URL ?? 'https://dlslab.cn').replace(/\/$/, '')
 const SITE_DESCRIPTION =
-  '大龙山工具间 — 一站式地理空间数据处理与转换工具集，提供坐标转换、距离测算、地址解析、GIS 文件互转、高程查询、地震/天气查询等在线工具。'
+  '大龙山工具间 — 通信工程科研、规划与设计工具集，提供坐标转换、距离测算、地址解析、KML/SHP 互转、高程与气象查询、模板批量导出、甘特图排期等在线工具。'
 interface SeoOptions {
   title: string
   description?: string
@@ -49,7 +49,7 @@ export function useToolSeo(tool: ToolConfig) {
     title: tool.name,
     description: `${tool.description} — ${tool.tags.join('、')}相关在线工具，免安装、浏览器直接使用。`,
     path: `/tools/${tool.id}`,
-    keywords: [...tool.tags, tool.name, '在线工具', '地理空间'],
+    keywords: [...tool.tags, tool.name, '在线工具', '通信工程'],
   })
 
   useHead({

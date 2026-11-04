@@ -2,25 +2,24 @@
   <div class="tool-detail-view h-full">
     <div v-if="tool" class="tool-content">
       <DlsMainLayout
+        v-if="toolComponent"
         :nav-items="toolNav.navItems"
         :tool-page="toolNav.toolPage"
         :tool-page-props="toolNav.toolPageProps"
-        v-if="toolComponent"
+        :title="tool.name"
+        :tool-id="toolId"
+        :flush="toolId === 'kml_viewer'"
       />
-      <div v-else class="flex items-center justify-center h-full">
-        <div class="text-center">
-          <h2 class="text-2xl font-bold mb-4">工具组件加载失败</h2>
-          <p class="text-gray-500 mb-4">工具 {{ tool.name }} 的组件未找到</p>
-          <button @click="goBack" class="btn btn-primary">返回工具列表</button>
-        </div>
+      <div v-else class="empty-state">
+        <h2 class="empty-state-title">工具组件加载失败</h2>
+        <p class="empty-state-text">工具 {{ tool.name }} 的组件未找到</p>
+        <button class="btn btn-primary" @click="goBack">返回工具索引</button>
       </div>
     </div>
-    <div v-else class="flex items-center justify-center h-full">
-      <div class="text-center">
-        <h2 class="text-2xl font-bold mb-4">工具未找到</h2>
-        <p class="text-gray-500 mb-4">找不到 ID 为 {{ toolId }} 的工具</p>
-        <button @click="goBack" class="btn btn-primary">返回工具列表</button>
-      </div>
+    <div v-else class="empty-state">
+      <h2 class="empty-state-title">工具未找到</h2>
+      <p class="empty-state-text">找不到 ID 为 {{ toolId }} 的工具</p>
+      <button class="btn btn-primary" @click="goBack">返回工具索引</button>
     </div>
     <ErrorDialog
       :is-open="showToast"
@@ -166,5 +165,25 @@ const toolNav = computed(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 40vh;
+  text-align: center;
+}
+
+.empty-state-title {
+  font-family: var(--font-drawing);
+  font-size: 1.5rem;
+}
+
+.empty-state-text {
+  font-size: 13px;
+  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
 }
 </style>
