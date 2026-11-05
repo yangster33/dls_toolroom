@@ -88,6 +88,7 @@ refreshGantt），便于单测与复用。 */
 <script setup lang="ts">
 import { reactive, computed, useTemplateRef } from 'vue'
 import { formatLocalDate, type TaskFormValue } from './ganttTaskUtils'
+import { defaultTaskColor } from '@/data/taskPalette'
 
 // 契约类型定义在同目录的 ganttTaskUtils.ts（见那里的说明：本 tsconfig 下
 // 无法从 .vue 的 <script setup> 里 import 类型，故 SFC 对外契约放 .ts）
@@ -111,7 +112,7 @@ const taskForm = reactive<TaskFormValue>({
   end: '',
   progress: 0,
   dependencies: '',
-  color: '#3b82f6',
+  color: defaultTaskColor,
   custom_class: '',
 })
 
@@ -129,7 +130,7 @@ function openForCreate(): void {
     end: formatLocalDate(nextWeek.toISOString()),
     progress: 0,
     dependencies: '',
-    color: props.defaultColor ?? '#3b82f6',
+    color: props.defaultColor ?? defaultTaskColor,
     custom_class: '',
   })
   dialogRef.value?.showModal()
@@ -154,7 +155,7 @@ function openForEdit(task: {
     dependencies: Array.isArray(task.dependencies)
       ? (task.dependencies as unknown as string[]).join(',')
       : task.dependencies || '',
-    color: task.color || props.defaultColor || '#3b82f6',
+    color: task.color || props.defaultColor || defaultTaskColor,
     custom_class: task.custom_class || '',
   })
   dialogRef.value?.showModal()

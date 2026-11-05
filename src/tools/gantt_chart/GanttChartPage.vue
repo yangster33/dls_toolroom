@@ -481,19 +481,10 @@ const redoStack = ref<GanttTask[][]>([])
 /** 正在编辑的任务 id（空 = 添加模式）。表单本体在 TaskEditModal 里 */
 const editingTaskId = ref<string | null>(null)
 
+import { taskColorPalette } from '@/data/taskPalette'
+
 // ── 工具函数 ──
-const colorPalette = [
-  '#3b82f6',
-  '#10b981',
-  '#f59e0b',
-  '#ef4444',
-  '#8b5cf6',
-  '#ec4899',
-  '#06b6d4',
-  '#f97316',
-  '#84cc16',
-  '#6366f1',
-]
+const colorPalette = [...taskColorPalette]
 
 function getDefaultColor(index: number): string {
   return colorPalette[index % colorPalette.length]!
@@ -826,7 +817,7 @@ function loadDemoData() {
       end: d(-2),
       progress: 100,
       dependencies: '',
-      color: '#10b981',
+      color: colorPalette[6]!,
       custom_class: '',
     },
     {
@@ -836,7 +827,7 @@ function loadDemoData() {
       end: d(3),
       progress: 80,
       dependencies: '1',
-      color: '#3b82f6',
+      color: colorPalette[0]!,
       custom_class: '',
     },
     {
@@ -846,7 +837,7 @@ function loadDemoData() {
       end: d(14),
       progress: 30,
       dependencies: '2',
-      color: '#f59e0b',
+      color: colorPalette[2]!,
       custom_class: '',
     },
     {
@@ -856,7 +847,7 @@ function loadDemoData() {
       end: d(12),
       progress: 45,
       dependencies: '2',
-      color: '#8b5cf6',
+      color: colorPalette[4]!,
       custom_class: '',
     },
     {
@@ -866,7 +857,7 @@ function loadDemoData() {
       end: d(20),
       progress: 0,
       dependencies: '3,4',
-      color: '#ef4444',
+      color: colorPalette[3]!,
       custom_class: '',
     },
     {
@@ -876,7 +867,7 @@ function loadDemoData() {
       end: d(23),
       progress: 0,
       dependencies: '5',
-      color: '#ec4899',
+      color: colorPalette[5]!,
       custom_class: '',
     },
   ]
@@ -897,22 +888,17 @@ function handleKeydown(e: KeyboardEvent) {
 
 // ── 主题监听 ──
 function applyTheme() {
-  const html = document.documentElement
-  const isDark = html.getAttribute('data-theme')?.includes('dark') || false
-  if (ganttContainer.value) {
-    const wrapper = ganttContainer.value.querySelector('.gantt') as HTMLElement
-    if (wrapper) {
-      if (isDark) {
-        wrapper.style.setProperty('--gv-bar-background', '#4f46e5')
-        wrapper.style.setProperty('--gv-bar-border', '#6366f1')
-        wrapper.style.setProperty('--gv-weekend-highlight-color', 'rgba(255,255,255,0.05)')
-      } else {
-        wrapper.style.removeProperty('--gv-bar-background')
-        wrapper.style.removeProperty('--gv-bar-border')
-        wrapper.style.removeProperty('--gv-weekend-highlight-color')
-      }
-    }
-  }
+  if (!ganttContainer.value) return
+  const wrapper = ganttContainer.value.querySelector('.gantt') as HTMLElement
+  if (!wrapper) return
+
+  // 两套图纸主题都跟随当前主色，不再按 dark/light 硬编码
+  wrapper.style.setProperty('--gv-bar-background', 'var(--color-primary)')
+  wrapper.style.setProperty('--gv-bar-border', 'var(--color-primary)')
+  wrapper.style.setProperty(
+    '--gv-weekend-highlight-color',
+    'color-mix(in oklab, var(--color-base-content) 5%, transparent)',
+  )
 }
 
 const themeObserver = new MutationObserver(() => {
@@ -972,6 +958,11 @@ onUnmounted(() => {
 /* 防止滚动链接导致横向滚动条乱跳 */
 .gantt-container-wrapper .gantt-container {
   overscroll-behavior: contain;
+  background-color: var(--color-base-100);
+}
+
+.gantt-container-wrapper .gantt {
+  background-color: var(--color-base-100);
 }
 
 /* 弹窗样式美化 */
@@ -984,25 +975,25 @@ onUnmounted(() => {
 }
 
 /* 蓝图主题适配 */
-[data-theme='lantu'] .gantt-container-wrapper .gantt .grid-header {
+.gantt-container-wrapper .gantt .grid-header {
   fill: var(--color-base-200);
   color: var(--color-base-content);
 }
 
-[data-theme='lantu'] .gantt-container-wrapper .gantt .grid-row {
+.gantt-container-wrapper .gantt .grid-row {
   fill: var(--color-base-100);
   color: var(--color-base-content);
 }
 
-[data-theme='lantu'] .gantt-container-wrapper .gantt .row-line {
+.gantt-container-wrapper .gantt .row-line {
   stroke: var(--color-base-300);
 }
 
-[data-theme='lantu'] .gantt-container-wrapper .gantt .tick {
+.gantt-container-wrapper .gantt .tick {
   stroke: var(--color-base-300);
 }
 
-[data-theme='lantu'] .gantt-container-wrapper .gantt .today-highlight {
+.gantt-container-wrapper .gantt .today-highlight {
   fill: color-mix(in oklab, var(--color-primary) 10%, transparent);
 }
 

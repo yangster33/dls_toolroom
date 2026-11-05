@@ -1,41 +1,43 @@
 <template>
   <Teleport to="body">
     <div class="modal" :class="{ 'modal-open': isOpen }">
-      <div class="modal-box max-w-2xl">
-        <div class="flex items-center gap-4">
+      <div class="modal-box error-modal">
+        <div class="error-head">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            class="h-12 w-12"
+            class="error-icon"
             :class="iconClass"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
           >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="iconPath" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" :d="iconPath" />
           </svg>
-          <div>
-            <h3 class="text-xl font-bold" :class="titleClass">{{ title }}</h3>
-            <p class="text-gray-500 mt-1">{{ message }}</p>
+          <div class="error-head-text">
+            <p class="sheet-label">提示</p>
+            <h3 class="error-title" :class="titleClass">{{ title }}</h3>
           </div>
         </div>
 
-        <div v-if="details && (details.url || details.errorMessage)" class="mt-4 space-y-3">
-          <div v-if="details.errorMessage" class="p-3 bg-red-50 rounded-lg">
-            <span class="text-sm font-medium text-error">错误信息:</span>
-            <p class="text-sm text-gray-600 mt-1">{{ details.errorMessage }}</p>
+        <p class="error-text">{{ message }}</p>
+
+        <div v-if="details && (details.url || details.errorMessage)" class="error-details">
+          <div v-if="details.errorMessage" class="error-block error-block-error">
+            <span class="error-label">错误信息</span>
+            <p class="error-value">{{ details.errorMessage }}</p>
           </div>
 
-          <div v-if="details.url" class="p-3 bg-blue-50 rounded-lg">
-            <span class="text-sm font-medium text-blue-600">请求URL（敏感参数已脱敏）:</span>
-            <p class="text-xs text-gray-600 mt-1 break-all font-mono">{{ details.url }}</p>
+          <div v-if="details.url" class="error-block error-block-info">
+            <span class="error-label">请求 URL（敏感参数已脱敏）</span>
+            <p class="error-value readout">{{ details.url }}</p>
           </div>
         </div>
 
-        <div class="modal-action mt-4">
-          <button @click="handleClose" class="btn" :class="confirmButtonClass">
+        <div class="modal-action">
+          <button type="button" class="btn" :class="confirmButtonClass" @click="handleClose">
             {{ confirmButtonText }}
           </button>
-          <button v-if="showCancel" @click="handleCancel" class="btn btn-outline">
+          <button v-if="showCancel" type="button" class="btn btn-outline" @click="handleCancel">
             {{ cancelButtonText }}
           </button>
         </div>
@@ -145,3 +147,76 @@ const handleCancel = () => {
   emit('cancel')
 }
 </script>
+
+<style scoped>
+.error-modal {
+  max-width: 36rem;
+  padding: 1.25rem;
+}
+
+.error-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.error-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.error-head-text {
+  min-width: 0;
+}
+
+.error-title {
+  margin-top: 0.125rem;
+  font-family: var(--font-drawing);
+  font-size: 1.25rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+.error-text {
+  margin-top: 0.75rem;
+  font-size: 13px;
+  color: color-mix(in oklab, var(--color-base-content) 70%, transparent);
+}
+
+.error-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.error-block {
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--color-base-300);
+}
+
+.error-block-error {
+  background-color: color-mix(in oklab, var(--color-error) 8%, transparent);
+  border-color: color-mix(in oklab, var(--color-error) 30%, transparent);
+}
+
+.error-block-info {
+  background-color: color-mix(in oklab, var(--color-primary) 6%, transparent);
+  border-color: color-mix(in oklab, var(--color-primary) 28%, transparent);
+}
+
+.error-label {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+}
+
+.error-value {
+  margin-top: 0.25rem;
+  font-size: 12px;
+  line-height: 1.6;
+  word-break: break-all;
+  color: var(--color-base-content);
+}
+</style>

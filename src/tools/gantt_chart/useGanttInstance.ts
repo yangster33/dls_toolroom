@@ -22,6 +22,7 @@ import type { GanttTask } from '@/stores/ganttStore'
 import type { useGanttStore } from '@/stores/ganttStore'
 import { logger } from '@/utils/logger'
 import { escapeHtml, formatLocalDate } from './ganttTaskUtils'
+import { defaultTaskColor } from '@/data/taskPalette'
 
 /** 页面侧需要注入的回调 */
 export interface GanttInstanceHooks {
@@ -143,13 +144,15 @@ export function useGanttInstance(
         ctx.set_title(escapeHtml(t.name))
 
         // color 已在 validateImportedTasks 中做 #hex 白名单，此处再做一次防御
-        const safeColor = /^#[0-9a-fA-F]{3,8}$/.test(String(t.color || '')) ? t.color : '#3b82f6'
+        const safeColor = /^#[0-9a-fA-F]{3,8}$/.test(String(t.color || ''))
+          ? t.color
+          : defaultTaskColor
         const safeProgress = Math.min(Math.max(Number(t.progress) || 0, 0), 100)
 
-        const progressBarHtml = `<div class="mt-1" style="background:#e5e7eb;border-radius:4px;height:6px;width:100%;overflow:hidden"><div style="background:${safeColor};height:100%;width:${safeProgress}%;border-radius:4px;transition:width 0.3s"></div></div>`
+        const progressBarHtml = `<div class="mt-1" style="background:color-mix(in oklab, var(--color-base-content) 12%, transparent);border-radius:2px;height:6px;width:100%;overflow:hidden"><div style="background:${safeColor};height:100%;width:${safeProgress}%;border-radius:2px;transition:width 0.3s"></div></div>`
 
         ctx.set_subtitle(
-          `<div style="font-size:12px;color:#6b7280;margin-top:4px">进度: ${safeProgress}%</div>${progressBarHtml}`,
+          `<div style="font-size:12px;color:color-mix(in oklab, var(--color-base-content) 55%, transparent);margin-top:4px">进度: ${safeProgress}%</div>${progressBarHtml}`,
         )
         ctx.set_details(
           `<div style="font-size:12px;line-height:1.8">

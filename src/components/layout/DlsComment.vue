@@ -2,8 +2,8 @@
   <div>
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h2 class="card-title text-xl">{{ config.title }}</h2>
-        <p class="text-base-content/70 text-sm mt-1">{{ config.subtitle }}</p>
+        <h2 class="panel-title">{{ config.title }}</h2>
+        <p class="panel-sub mt-1">{{ config.subtitle }}</p>
       </div>
       <div class="flex items-center gap-3">
         <span class="badge badge-secondary">{{ stats.view_count }} 浏览</span>
@@ -12,8 +12,8 @@
     </div>
 
     <!-- 评论表单 -->
-    <div class="aura aura-holo w-full [--aura-radius:0.5rem] mb-6">
-      <div class="p-4 bg-base-200 rounded-lg">
+    <div class="comment-form-wrap mb-6">
+      <div class="comment-form p-4">
         <div class="space-y-3">
           <!-- 评论内容（必填） -->
           <div>
@@ -115,12 +115,8 @@
 
     <!-- 评论列表 -->
     <div class="space-y-3">
-      <div
-        v-for="comment in comments"
-        :key="comment.id"
-        class="aura aura-holo w-full [--aura-radius:0.5rem]"
-      >
-        <div class="p-4 bg-base-200 rounded-lg">
+      <div v-for="comment in comments" :key="comment.id" class="comment-card w-full">
+        <div class="p-4">
           <div class="flex items-center gap-2 mb-2 flex-wrap">
             <span class="font-semibold text-sm text-base-content">
               {{ comment.nickname || '匿名' }}
@@ -403,3 +399,19 @@ onUnmounted(() => {
   disposed = true
 })
 </script>
+
+<style scoped>
+.comment-form-wrap {
+  border: 1px solid var(--color-base-300);
+  background-color: var(--color-base-200);
+}
+
+.comment-form {
+  background-color: transparent;
+}
+
+.comment-card {
+  border: 1px solid var(--color-base-300);
+  background-color: var(--color-base-200);
+}
+</style>

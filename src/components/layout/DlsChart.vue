@@ -1,7 +1,7 @@
 <template>
   <div>
-    <h2 class="card-title text-xl mb-4">中国各省访问量分布图</h2>
-    <p class="text-base-content/70 mb-6">鼠标悬停查看各省份的访问数据统计</p>
+    <h2 class="panel-title">中国各省访问量分布图</h2>
+    <p class="panel-sub mb-6">鼠标悬停查看各省份的访问数据统计</p>
 
     <div v-if="mapLoading" class="w-full h-[500px] flex flex-col items-center justify-center gap-3">
       <span class="loading loading-spinner loading-lg text-primary"></span>
