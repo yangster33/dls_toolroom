@@ -17,9 +17,13 @@
           </p>
         </section>
 
-        <section class="about-section">
-          <h2>顶部那 12 个色块</h2>
-          <p>那是光缆的 12 色纤序（TIA-598）。从第 1 芯到第 12 芯依次是：</p>
+        <section id="fiber-colors" class="about-section">
+          <h2>顶部的 12 色光缆纤序</h2>
+          <p>
+            顶部那条 12 色是光缆的 12
+            色纤序（TIA-598），也是本站的固定菜单入口——任何时候点一下，都会回到这里。从第 1 芯到第
+            12 芯依次是：
+          </p>
           <ol class="fiber-list">
             <li v-for="fiber in fiberColors" :key="fiber.index">
               <span
@@ -69,7 +73,7 @@
       <aside class="about-side" aria-label="站点信息">
         <div class="side-block">
           <p class="sheet-label">作者</p>
-          <p class="side-value">yangster</p>
+          <p class="side-value">DLS Rango / 大龙山兰戈</p>
         </div>
         <div class="side-block">
           <p class="sheet-label">站点</p>
@@ -93,7 +97,7 @@
         <div class="side-block">
           <p class="sheet-label">联系</p>
           <p class="side-links">
-            <a href="mailto:yangster33@outlook.com">yangster33@outlook.com</a>
+            <a href="mailto:yangster33@outlook.com">发邮件给 DLS Rango</a>
           </p>
         </div>
         <div class="side-block">
@@ -154,7 +158,7 @@ import { fiberColors } from '@/data/fiberColors'
 .about-note {
   margin-top: 0.5rem;
   font-size: 12px;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-muted);
 }
 
 .fiber-list {
@@ -183,7 +187,7 @@ import { fiberColors } from '@/data/fiberColors'
 
 .fiber-index {
   font-size: 10px;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-muted);
 }
 
 .tech-grid {
@@ -200,7 +204,7 @@ import { fiberColors } from '@/data/fiberColors'
 
 .tech-item dt {
   flex: 0 0 4.5rem;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-muted);
 }
 
 .tech-item dd {

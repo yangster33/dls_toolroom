@@ -152,14 +152,14 @@ onMounted(async () => {
   margin-top: 0.625rem;
   font-size: 11px;
   text-align: center;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-muted);
 }
 
 .donate-foot {
   padding: 1rem 1.5rem;
   font-size: 12px;
   line-height: 1.8;
-  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  color: var(--text-muted);
   border: 1px solid var(--color-base-300);
   border-top: 0;
   background-color: var(--color-base-200);

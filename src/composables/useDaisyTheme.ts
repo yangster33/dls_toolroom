@@ -11,6 +11,7 @@ export interface DaisyThemeColors {
   secondaryContent: string
   accent: string
   accentContent: string
+  accentInk: string
   neutral: string
   neutralContent: string
   info: string
@@ -30,6 +31,7 @@ const CSS_VAR_MAP: Record<keyof DaisyThemeColors, string> = {
   secondaryContent: '--color-secondary-content',
   accent: '--color-accent',
   accentContent: '--color-accent-content',
+  accentInk: '--accent-ink',
   neutral: '--color-neutral',
   neutralContent: '--color-neutral-content',
   info: '--color-info',

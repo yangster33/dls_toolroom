@@ -185,7 +185,7 @@ const breadcrumbItems = computed(() => {
   font-family: var(--font-sans);
   font-size: 11px;
   letter-spacing: 0.02em;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-muted);
 }
 
 .crumbs {
@@ -201,7 +201,7 @@ const breadcrumbItems = computed(() => {
 
 .crumb-link,
 .crumb-current {
-  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  color: var(--text-muted);
 }
 
 .crumb-link:hover {
@@ -213,7 +213,7 @@ const breadcrumbItems = computed(() => {
 }
 
 .crumb-sep {
-  color: var(--color-base-300);
+  color: var(--text-faint);
 }
 
 .nav-end {

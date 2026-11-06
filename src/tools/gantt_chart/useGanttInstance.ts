@@ -152,7 +152,7 @@ export function useGanttInstance(
         const progressBarHtml = `<div class="mt-1" style="background:color-mix(in oklab, var(--color-base-content) 12%, transparent);border-radius:2px;height:6px;width:100%;overflow:hidden"><div style="background:${safeColor};height:100%;width:${safeProgress}%;border-radius:2px;transition:width 0.3s"></div></div>`
 
         ctx.set_subtitle(
-          `<div style="font-size:12px;color:color-mix(in oklab, var(--color-base-content) 55%, transparent);margin-top:4px">进度: ${safeProgress}%</div>${progressBarHtml}`,
+          `<div style="font-size:12px;color:var(--text-muted);margin-top:4px">进度: ${safeProgress}%</div>${progressBarHtml}`,
         )
         ctx.set_details(
           `<div style="font-size:12px;line-height:1.8">

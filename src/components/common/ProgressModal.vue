@@ -97,7 +97,7 @@ defineEmits<{
   margin-top: 0.5rem;
   font-size: 11px;
   text-align: right;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-faint);
 }
 
 .modal-action {

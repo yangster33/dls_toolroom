@@ -170,6 +170,11 @@ const clearSearch = () => {
   }
 }
 
+/* 页脚紧贴抽屉底部，留白放在内容列内：侧栏背景可一直延伸到页脚，不会出现断口 */
+.drawer-content {
+  padding-bottom: 3rem;
+}
+
 .sidebar {
   display: flex;
   width: 13rem;
@@ -199,7 +204,7 @@ const clearSearch = () => {
   left: 0.5rem;
   width: 14px;
   height: 14px;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-muted);
   pointer-events: none;
 }
 
@@ -214,7 +219,7 @@ const clearSearch = () => {
 }
 
 .sidebar-search-input::placeholder {
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-faint);
 }
 
 .sidebar-search-input::-webkit-search-cancel-button {
@@ -224,7 +229,7 @@ const clearSearch = () => {
 .sidebar-search-clear {
   position: absolute;
   right: 0.375rem;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-muted);
 }
 
 .sidebar-search-clear:hover {
@@ -269,7 +274,7 @@ const clearSearch = () => {
   padding: 0.75rem;
   font-size: 12px;
   text-align: center;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-muted);
 }
 
 .sidebar-nav {
@@ -281,7 +286,7 @@ const clearSearch = () => {
   padding: 0.25rem 0.75rem 0.375rem;
   font-size: 10px;
   letter-spacing: 0.08em;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-muted);
 }
 
 .nav-item {
@@ -329,7 +334,7 @@ const clearSearch = () => {
   padding: 0.75rem;
   font-size: 10px;
   line-height: 1.6;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-muted);
 }
 
 .sidebar-foot-sub {

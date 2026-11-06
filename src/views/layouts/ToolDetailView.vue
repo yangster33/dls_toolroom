@@ -184,6 +184,6 @@ const toolNav = computed(() => {
 
 .empty-state-text {
   font-size: 13px;
-  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  color: var(--text-muted);
 }
 </style>

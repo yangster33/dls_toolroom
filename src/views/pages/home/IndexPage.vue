@@ -139,7 +139,7 @@ const professionStats = professions.map((item) => ({
   padding-top: 0.75rem;
   border-top: 1px solid var(--color-base-300);
   font-size: 11px;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-muted);
 }
 
 .masthead-note {
@@ -147,7 +147,7 @@ const professionStats = professions.map((item) => ({
   max-width: 22rem;
   font-size: 12px;
   line-height: 1.8;
-  color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
+  color: var(--text-muted);
 }
 
 .masthead-figure {
@@ -178,7 +178,7 @@ const professionStats = professions.map((item) => ({
 .block-link,
 .block-note {
   font-size: 11px;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-muted);
 }
 
 .block-link:hover {
@@ -199,7 +199,7 @@ const professionStats = professions.map((item) => ({
 
 .ledger-no {
   font-size: 11px;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-faint);
 }
 
 .ledger-name {
@@ -212,17 +212,17 @@ const professionStats = professions.map((item) => ({
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
-  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  color: var(--text-muted);
 }
 
 .ledger-prof {
   font-size: 11px;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-muted);
 }
 
 .ledger-out {
   font-size: 11px;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-muted);
 }
 
 /* ---------- 专业 ---------- */
@@ -266,7 +266,7 @@ const professionStats = professions.map((item) => ({
 .profession-count {
   margin-left: auto;
   font-size: 11px;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-faint);
 }
 
 @media (max-width: 1100px) {

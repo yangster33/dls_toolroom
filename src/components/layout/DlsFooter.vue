@@ -6,7 +6,11 @@
         <p class="footer-desc">
           通信工程科研 / 规划 / 设计工具集。纯前端实现，数据只在浏览器里处理。
         </p>
-        <p class="footer-note">顶部 12 色为光缆纤序（TIA-598），悬停可查。</p>
+        <p class="footer-note">
+          <router-link to="/about#fiber-colors" class="footer-note-link"
+            >顶部 12 色为光缆纤序（TIA-598），点击查看说明。</router-link
+          >
+        </p>
       </div>
 
       <nav class="footer-col" aria-label="站内">
@@ -56,7 +60,7 @@
     </div>
 
     <div class="footer-bottom">
-      <span>© {{ currentYear }} 大龙山工具间</span>
+      <span>© {{ currentYear }} 大龙山工具间 · DLS Rango（大龙山兰戈）</span>
       <span class="footer-bottom-sep" aria-hidden="true">/</span>
       <span>个人项目 · 工具结果请以人工复核为准</span>
     </div>
@@ -69,7 +73,6 @@ const currentYear = new Date().getFullYear()
 
 <style scoped>
 .site-footer {
-  margin-top: 3rem;
   border-top: 1px solid var(--color-base-300);
   background-color: var(--color-base-200);
 }
@@ -100,7 +103,15 @@ const currentYear = new Date().getFullYear()
 .footer-note {
   margin-top: 0.75rem;
   font-size: 11px;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-faint);
+}
+
+.footer-note-link {
+  color: inherit;
+}
+
+.footer-note-link:hover {
+  color: var(--color-primary);
 }
 
 .footer-heading {
@@ -108,7 +119,7 @@ const currentYear = new Date().getFullYear()
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.06em;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-muted);
 }
 
 .footer-col {
@@ -133,14 +144,14 @@ const currentYear = new Date().getFullYear()
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
   font-size: 11px;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-faint);
   border-top: 1px solid var(--color-base-300);
   max-width: 1400px;
   margin: 0 auto;
 }
 
 .footer-bottom-sep {
-  color: var(--color-base-300);
+  color: var(--text-faint);
 }
 
 @media (max-width: 900px) {

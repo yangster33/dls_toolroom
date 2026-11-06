@@ -119,7 +119,7 @@ const tool = computed(() => (props.toolId ? getToolById(props.toolId) : undefine
 const sheetTitle = computed(() => props.title || tool.value?.name || '')
 
 const titleCells = computed(() => {
-  if (!tool.value) return [{ label: '设计', value: 'yangster' }]
+  if (!tool.value) return [{ label: '设计', value: 'DLS Rango' }]
 
   const meta = getToolMeta(tool.value.id)
   const index = toolConfigs.findIndex((item) => item.id === tool.value!.id) + 1
@@ -129,7 +129,7 @@ const titleCells = computed(() => {
     { label: '专业', value: getProfession(meta.profession).label },
     { label: '图号', value: sheetNo },
     { label: '交付物', value: meta.output },
-    { label: '设计', value: 'yangster' },
+    { label: '设计', value: 'DLS Rango' },
   ]
 })
 </script>
@@ -202,13 +202,13 @@ const titleCells = computed(() => {
   gap: 0.5rem;
   font-family: var(--font-mono);
   font-size: 11px;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-muted);
 }
 
 .docs-toggle-hint {
   margin-left: auto;
   font-size: 11px;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-faint);
 }
 
 .docs-panel {
@@ -225,7 +225,7 @@ const titleCells = computed(() => {
 .docs-tab {
   padding: 0.375rem 1rem;
   font-size: 12px;
-  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  color: var(--text-muted);
   border-bottom: 2px solid transparent;
 }
 

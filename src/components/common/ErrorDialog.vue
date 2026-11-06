@@ -209,7 +209,7 @@ const handleCancel = () => {
 .error-label {
   font-size: 10px;
   letter-spacing: 0.06em;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-muted);
 }
 
 .error-value {

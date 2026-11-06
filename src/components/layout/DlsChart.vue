@@ -56,7 +56,8 @@ const props = defineProps<{
   toolId?: string
 }>()
 
-const { base100, base200, base300, baseContent, primary, secondary, accent } = useDaisyTheme()
+const { base100, base200, base300, baseContent, primary, secondary, accent, accentInk } =
+  useDaisyTheme()
 
 const isDark = computed(() => {
   const parts = parseOklch(base100.value)
@@ -157,7 +158,7 @@ const generateChartOption = (): EChartsOption => {
             </div>
             <div style="display: flex; justify-content: space-between;">
               <span>1年内访问数：</span>
-              <span style="font-weight: 500; color: ${accent.value};">${data.oneYear.toLocaleString()}</span>
+              <span style="font-weight: 500; color: ${accentInk.value};">${data.oneYear.toLocaleString()}</span>
             </div>
           </div>
         `
@@ -298,7 +299,7 @@ async function loadChinaMap() {
   }
 }
 
-watch([base100, base200, base300, baseContent, primary, secondary, accent], () => {
+watch([base100, base200, base300, baseContent, primary, secondary, accent, accentInk], () => {
   void nextTick().then(() => {
     applyChartOption()
   })

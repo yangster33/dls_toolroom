@@ -243,7 +243,7 @@ const resetFilters = () => {
 .index-sub {
   margin-top: 0.25rem;
   font-size: 11px;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-muted);
 }
 
 .index-search {
@@ -260,7 +260,7 @@ const resetFilters = () => {
   left: 0.5rem;
   width: 14px;
   height: 14px;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-muted);
   pointer-events: none;
 }
 
@@ -275,7 +275,7 @@ const resetFilters = () => {
 }
 
 .index-search-input::placeholder {
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-faint);
 }
 
 .index-search-input::-webkit-search-cancel-button {
@@ -285,7 +285,7 @@ const resetFilters = () => {
 .index-search-clear {
   position: absolute;
   right: 0.5rem;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-muted);
 }
 
 .index-search-clear:hover {
@@ -313,7 +313,7 @@ const resetFilters = () => {
   flex: 0 0 2.5rem;
   font-size: 11px;
   letter-spacing: 0.06em;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-muted);
 }
 
 .filter-options {
@@ -361,7 +361,7 @@ const resetFilters = () => {
   padding: 0.375rem 1.5rem;
   font-size: 10px;
   letter-spacing: 0.06em;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  color: var(--text-muted);
   background-color: var(--color-base-200);
   border-bottom: 1px solid var(--color-base-300);
 }
@@ -379,7 +379,7 @@ const resetFilters = () => {
 
 .cell-no {
   font-size: 11px;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: var(--text-faint);
 }
 
 .cell-name {
@@ -392,13 +392,13 @@ const resetFilters = () => {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
-  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  color: var(--text-muted);
 }
 
 .cell-prof,
 .cell-out {
   font-size: 11px;
-  color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  color: var(--text-muted);
 }
 
 /* 空状态 */
@@ -415,7 +415,7 @@ const resetFilters = () => {
 .empty-text {
   margin-top: 0.375rem;
   font-size: 12px;
-  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  color: var(--text-muted);
 }
 
 .empty-action {

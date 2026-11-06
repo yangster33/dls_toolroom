@@ -4,11 +4,12 @@
       <!-- 预渲染 / 禁用 JS 时的静态底图；canvas 首帧淡入后覆盖 -->
       <svg class="hero-poster" viewBox="0 0 920 380" aria-hidden="true" focusable="false">
         <g class="poster-contour">
-          <ellipse cx="838" cy="298" rx="150" ry="128" />
-          <ellipse cx="838" cy="298" rx="108" ry="92" />
-          <ellipse cx="838" cy="298" rx="68" ry="58" />
-          <ellipse cx="800" cy="82" rx="86" ry="66" />
-          <ellipse cx="800" cy="82" rx="48" ry="36" />
+          <ellipse cx="560" cy="118" rx="138" ry="118" />
+          <ellipse cx="560" cy="118" rx="98" ry="84" />
+          <ellipse cx="560" cy="118" rx="62" ry="53" />
+          <ellipse cx="620" cy="230" rx="112" ry="96" />
+          <ellipse cx="620" cy="230" rx="74" ry="63" />
+          <ellipse cx="620" cy="230" rx="42" ry="36" />
           <path d="M 560 8 C 610 70 570 140 620 200 C 660 250 640 310 690 372" />
           <path d="M 500 0 C 552 64 512 136 562 198 C 604 250 584 312 632 380" />
         </g>
@@ -242,8 +243,6 @@ interface Point {
 }
 
 interface Room extends Point {
-  a: number
-  s: number
   k: number
 }
 
@@ -535,6 +534,8 @@ class Terrain {
   ridgeBase = 0.36
   ridgeAmp = 0.05
   rooms: Room[] = []
+  bases: Point[] = []
+  peaks: Hill[] = []
   hills: Hill[] = []
   terminals: Point[] = []
 
@@ -547,27 +548,34 @@ class Terrain {
     this.rooms = roomPts.map((p, i) => ({
       x: p.x,
       y: p.y,
-      a: 0.95 + rng() * 0.45,
-      s: 0.1 + rng() * 0.05,
       k: i,
     }))
 
     while (this.rooms.length < 3) {
       const k = this.rooms.length
-      this.rooms.push({ x: 0.64 + k * 0.12, y: 0.26 + k * 0.24, a: 1, s: 0.12, k })
+      this.rooms.push({ x: 0.64 + k * 0.12, y: 0.26 + k * 0.24, k })
     }
 
     this.rooms.sort((a, b) => a.x - b.x)
-    // 最右一间是核心，山势最高
-    const core = this.rooms[this.rooms.length - 1]!
-    core.a = Math.max(core.a, 1.5)
+    // 机房是低地设施，不再抬成山峰；制高点留给基站
+    // 基站站点先落位，再由这些站点构成高斯峰
+    this.bases = placeAway(3, 0.4, 0.6, 0.12, 0.88, 0.2, this.rooms)
+    this.peaks = this.bases.map((p) => ({
+      x: p.x,
+      y: p.y,
+      a: 1.12 + rng() * 0.2,
+      s: 0.078 + rng() * 0.018,
+    }))
 
     const hillCount = 2 + Math.floor(rng() * 2)
     for (let i = 0; i < hillCount; i++) {
       for (let k = 0; k < 30; k++) {
         const cand = { x: lerp(0.28, 0.6, rng()), y: lerp(0.1, 0.9, rng()) }
-        if (this.rooms.every((r) => Math.hypot((cand.x - r.x) * 2.4, cand.y - r.y) > 0.24)) {
-          this.hills.push({ x: cand.x, y: cand.y, a: 0.16 + rng() * 0.22, s: 0.09 + rng() * 0.05 })
+        const clear = [...this.rooms, ...this.bases].every(
+          (r) => Math.hypot((cand.x - r.x) * 2.4, cand.y - r.y) > 0.2,
+        )
+        if (clear) {
+          this.hills.push({ x: cand.x, y: cand.y, a: 0.1 + rng() * 0.16, s: 0.08 + rng() * 0.04 })
           break
         }
       }
@@ -584,11 +592,11 @@ class Terrain {
     let v = 0
     const m = H * 1.15
 
-    for (const r of this.rooms) {
-      const dx = (x - r.x) * W
-      const dy = (y - r.y) * H
-      const sig = r.s * m
-      v += r.a * Math.exp(-(dx * dx + dy * dy) / (2 * sig * sig))
+    for (const p of this.peaks) {
+      const dx = (x - p.x) * W
+      const dy = (y - p.y) * H
+      const sig = p.s * m
+      v += p.a * Math.exp(-(dx * dx + dy * dy) / (2 * sig * sig))
     }
 
     for (const h of this.hills) {
@@ -613,6 +621,32 @@ class Terrain {
       0.12 * (noise3(x * 6.1, y * 6.1, 4.2) - 0.5) +
       0.06 * (noise3(x * 13, y * 13, 8.8) - 0.5)
     )
+  }
+
+  // 噪声会让峰心轻微偏移，把基站吸附到附近真正的局部最高点
+  snapToPeak(p: Point): Point {
+    let bx = p.x
+    let by = p.y
+    let bv = this.value(bx, by)
+    let rx = 0.03
+    let ry = 0.045
+    for (let pass = 0; pass < 2; pass++) {
+      for (let i = -8; i <= 8; i++) {
+        for (let j = -8; j <= 8; j++) {
+          const x = clamp(bx + (i / 8) * rx, 0.01, 0.99)
+          const y = clamp(by + (j / 8) * ry, 0.01, 0.99)
+          const v = this.value(x, y)
+          if (v > bv) {
+            bv = v
+            bx = x
+            by = y
+          }
+        }
+      }
+      rx /= 4
+      ry /= 4
+    }
+    return { x: bx, y: by }
   }
 
   ridgeXAt(y: number) {
@@ -928,7 +962,7 @@ function buildNetwork() {
   const aggregations = rooms.filter((n) => n.kind === 'aggregation')
   const accesses = rooms.filter((n) => n.kind === 'access')
 
-  // ── 基站：6G / 5G / 4G 各一座 ────────────────────────────────────────
+  // ── 基站：6G / 5G / 4G 各一座，落在地形的高斯峰顶 ────────────────────
   const baseKinds: BaseKind[] = ['6G', '5G', '4G']
   for (let i = baseKinds.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1))
@@ -936,7 +970,7 @@ function buildNetwork() {
     baseKinds[i] = baseKinds[j]!
     baseKinds[j] = tmp
   }
-  const basePts = placeAway(3, 0.4, 0.6, 0.12, 0.88, 0.18, rooms)
+  const basePts = terrain.bases.map((p) => terrain.snapToPeak(p))
   const bases: TerrainNode[] = basePts.map((p, i) => ({
     id: `base${i}`,
     type: 'base',
@@ -1805,7 +1839,7 @@ onBeforeUnmount(() => {
   font: inherit;
   font-size: 11px;
   padding: 0.2rem 0.55rem;
-  border: 1px solid color-mix(in oklab, var(--color-base-content) 25%, transparent);
+  border: 1px solid var(--line-strong);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -1815,12 +1849,12 @@ onBeforeUnmount(() => {
 }
 
 .hero-btn:hover {
-  border-color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  border-color: var(--line-strong);
   background-color: color-mix(in oklab, var(--color-base-content) 6%, transparent);
 }
 
 .hero-btn:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
@@ -1831,11 +1865,11 @@ onBeforeUnmount(() => {
   gap: 0 0.9rem;
   font-size: 10px;
   line-height: 1.6;
-  color: color-mix(in oklab, var(--color-base-content) 56%, transparent);
+  color: var(--text-muted);
 }
 
 .hero-readout-detail {
-  color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+  color: var(--text-faint);
 }
 
 @media (prefers-reduced-motion: reduce) {
