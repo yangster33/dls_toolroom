@@ -1,6 +1,6 @@
 <template>
   <div class="home">
-    <!-- 图名页：链接示意 + 光缆色谱 -->
+    <!-- 图名页：势场蔓生拓扑 -->
     <section class="masthead paper-grid">
       <div class="masthead-copy">
         <h1 class="masthead-title">大龙山工具间</h1>
@@ -8,49 +8,12 @@
         <p class="masthead-meta readout">
           {{ toolCount }} 个工具 · {{ professionStats.length }} 个专业 · 数据不出浏览器
         </p>
+        <p class="masthead-note">
+          每一张图都由一个种子长成：机房、基站、设备先连成一张图，终端再接入设备、基站、机房或卫星。
+        </p>
       </div>
 
-      <figure class="masthead-figure">
-        <svg
-          class="route"
-          viewBox="0 0 460 150"
-          role="img"
-          aria-label="链路示意：站址到汇聚到核心，链路以 12 色光缆表示"
-        >
-          <rect
-            x="57"
-            y="59"
-            width="346"
-            height="15"
-            fill="none"
-            stroke="currentColor"
-            stroke-opacity="0.22"
-          />
-          <rect
-            v-for="(fiber, i) in fiberColors"
-            :key="fiber.index"
-            x="58"
-            :y="60 + i * 1.16"
-            width="344"
-            height="1.06"
-            :fill="fiber.hex"
-          />
-
-          <rect x="50" y="60" width="14" height="13" class="route-node" />
-          <rect x="223" y="58" width="18" height="17" class="route-node route-node-strong" />
-          <rect x="394" y="56" width="22" height="21" class="route-node route-node-core" />
-
-          <text x="57" y="44" class="route-label route-label-sm">24 芯</text>
-          <text x="232" y="42" class="route-label route-label-sm">48 芯</text>
-
-          <text x="57" y="104" class="route-label">站址</text>
-          <text x="232" y="104" class="route-label">汇聚</text>
-          <text x="405" y="104" class="route-label">核心</text>
-        </svg>
-        <figcaption class="masthead-caption">
-          链路示意 · 光缆按 12 色纤序绘制（悬停顶部色条可查）
-        </figcaption>
-      </figure>
+      <HeroTopology class="masthead-figure" />
     </section>
 
     <!-- 常用 -->
@@ -102,7 +65,7 @@
 <script setup lang="ts">
 import { toolConfigs, getToolById } from '@/tools/toolData'
 import { professions, getProfession, getToolMeta } from '@/tools/toolTaxonomy'
-import { fiberColors } from '@/data/fiberColors'
+import HeroTopology from '@/components/home/HeroTopology.vue'
 import { useSeo, useSiteSchema } from '@/composables/useSeo'
 
 useSeo({
@@ -150,7 +113,7 @@ const professionStats = professions.map((item) => ({
 /* ---------- 图名页 ---------- */
 .masthead {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(16rem, 0.75fr) minmax(0, 1.9fr);
   gap: 2rem;
   align-items: center;
   padding: 2.5rem;
@@ -159,7 +122,7 @@ const professionStats = professions.map((item) => ({
 
 .masthead-title {
   font-family: var(--font-drawing);
-  font-size: 2.75rem;
+  font-size: clamp(2rem, 3.6vw, 2.75rem);
   font-weight: 400;
   letter-spacing: 0.03em;
   line-height: 1.15;
@@ -179,50 +142,16 @@ const professionStats = professions.map((item) => ({
   color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
 }
 
+.masthead-note {
+  margin-top: 1rem;
+  max-width: 22rem;
+  font-size: 12px;
+  line-height: 1.8;
+  color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
+}
+
 .masthead-figure {
   min-width: 0;
-}
-
-.route {
-  width: 100%;
-  height: auto;
-  color: var(--color-base-content);
-}
-
-.route-node {
-  fill: var(--color-base-100);
-  stroke: var(--color-base-content);
-  stroke-opacity: 0.55;
-  stroke-width: 1;
-}
-
-.route-node-strong {
-  stroke: var(--color-primary);
-  stroke-opacity: 1;
-}
-
-.route-node-core {
-  fill: var(--color-primary);
-  stroke: var(--color-primary);
-}
-
-.route-label {
-  font-family: var(--font-sans);
-  font-size: 11px;
-  fill: color-mix(in oklab, var(--color-base-content) 65%, transparent);
-}
-
-.route-label-sm {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  fill: color-mix(in oklab, var(--color-base-content) 45%, transparent);
-}
-
-.masthead-caption {
-  margin-top: 0.5rem;
-  font-size: 11px;
-  text-align: right;
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
 }
 
 /* ---------- 区块 ---------- */
@@ -340,22 +269,20 @@ const professionStats = professions.map((item) => ({
   color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .masthead {
     grid-template-columns: 1fr;
+    padding: 1.75rem;
+  }
+
+  .masthead-note {
+    max-width: 40rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .masthead {
     padding: 1.5rem;
-  }
-
-  .masthead-title {
-    font-size: 2rem;
-  }
-
-  .route {
-    max-width: 520px;
-  }
-
-  .masthead-caption {
-    text-align: left;
   }
 
   .ledger-row-tool {
