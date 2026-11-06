@@ -8,6 +8,7 @@
     "build": "run-s lint type-check test:unit build-only prerender",
     "build:fast": "run-p type-check \"build-only {@}\" --",
     "prerender": "node scripts/prerender.mjs",
+    "brand:build": "node scripts/build-brand-assets.mjs",
     "preview": "vite preview",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",

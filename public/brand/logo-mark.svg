@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" fill="none" role="img" aria-labelledby="dls-mark-title" style="color: #16588c">
+  <title id="dls-mark-title">大龙山 · 山脊信号</title>
+  <defs>
+    <clipPath id="dls-clip-mark"><rect x="0" y="0" width="96" height="88" /></clipPath>
+  </defs>
+  <g stroke="currentColor" fill="none">
+    <path d="M8.59 90 34 64.17 46 70.83 64 56.17 87.88 90" stroke-width="5.5" stroke-linejoin="miter" stroke-linecap="butt" clip-path="url(#dls-clip-mark)" />
+    <path d="M8 86h80" stroke-width="4" stroke-linecap="square" />
+    <path d="M64 56.17V34.7" stroke-width="3.5" stroke-linecap="square" />
+    <path d="M73.958 26.343A13 13 0 0 1 73.958 43.057" stroke-width="3.2" stroke-linecap="butt" />
+    <path d="M54.042 43.056A13 13 0 0 1 54.042 26.344" stroke-width="3.2" stroke-linecap="butt" />
+    <path d="M79.321 21.844A20 20 0 0 1 79.321 47.556" stroke-width="3.2" stroke-linecap="butt" />
+    <path d="M48.679 47.556A20 20 0 0 1 48.679 21.844" stroke-width="3.2" stroke-linecap="butt" />
+    <path d="M42.55 16.7A28 28 0 0 0 42.55 52.7" stroke-width="3.2" stroke-linecap="butt" />
+  </g>
+  <circle cx="64" cy="34.7" r="6.8" fill="#d6a21c" />
+</svg>

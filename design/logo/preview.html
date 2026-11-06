@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>大龙山工具间 · 标识方案</title>
+    <style>
+      :root {
+        --paper: #f4f3ec;
+        --paper-2: #ebeade;
+        --ink: #1f2a2c;
+        --blue: #16588c;
+        --blue-soft: #9ac8e6;
+        --ochre: #d6a21c;
+        --night: #121d2b;
+        --line: rgba(31, 42, 44, 0.16);
+        --font-sans: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+        --font-mono: 'JetBrains Mono', Consolas, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        -webkit-font-smoothing: antialiased;
+      }
+
+      body {
+        margin: 0;
+        padding: 48px 32px 96px;
+        background-color: var(--paper-2);
+        background-image:
+          linear-gradient(rgba(31, 42, 44, 0.045) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(31, 42, 44, 0.045) 1px, transparent 1px);
+        background-size: 24px 24px;
+        color: var(--ink);
+        font-family: var(--font-sans);
+      }
+
+      .wrap {
+        max-width: 1080px;
+        margin: 0 auto;
+      }
+
+      .meta {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--ink);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .meta span:last-child {
+        color: var(--blue);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+        gap: 48px;
+        align-items: end;
+        padding: 56px 0 48px;
+      }
+
+      .eyebrow {
+        margin: 0 0 18px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.22em;
+        color: var(--blue);
+      }
+
+      h1 {
+        margin: 0;
+        font-family: 'FangSong', 'STFangsong', 'Songti SC', serif;
+        font-size: clamp(40px, 5.4vw, 68px);
+        font-weight: 400;
+        letter-spacing: 0.06em;
+        line-height: 1.15;
+      }
+
+      .lede {
+        max-width: 34em;
+        margin: 22px 0 0;
+        font-size: 14px;
+        line-height: 1.9;
+        color: rgba(31, 42, 44, 0.72);
+      }
+
+      .hero-mark {
+        padding: 34px 36px 30px;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        box-shadow: 0 1px 0 rgba(31, 42, 44, 0.05);
+      }
+
+      .hero-mark img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .hero-mark figcaption {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        margin-top: 22px;
+        padding-top: 12px;
+        border-top: 1px solid var(--line);
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        color: rgba(31, 42, 44, 0.5);
+      }
+
+      section {
+        margin-top: 64px;
+      }
+
+      .section-head {
+        display: flex;
+        align-items: baseline;
+        gap: 16px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .section-head h2 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+      }
+
+      .section-head em {
+        font-family: var(--font-mono);
+        font-style: normal;
+        font-size: 10px;
+        letter-spacing: 0.16em;
+        color: rgba(31, 42, 44, 0.45);
+      }
+
+      .rationale {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 32px;
+        padding-top: 28px;
+      }
+
+      .rationale article {
+        border-top: 2px solid var(--blue);
+        padding-top: 14px;
+      }
+
+      .rationale .num {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.14em;
+        color: var(--blue);
+      }
+
+      .rationale h3 {
+        margin: 10px 0 8px;
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .rationale p {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.85;
+        color: rgba(31, 42, 44, 0.7);
+      }
+
+      .dark-panel {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+        gap: 40px;
+        align-items: center;
+        margin-top: 64px;
+        padding: 44px 44px;
+        background-color: var(--night);
+        background-image:
+          linear-gradient(rgba(154, 200, 230, 0.07) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(154, 200, 230, 0.07) 1px, transparent 1px);
+        background-size: 24px 24px;
+        color: #e7eef2;
+      }
+
+      .dark-panel img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .dark-panel h2 {
+        margin: 0 0 14px;
+        font-family: 'FangSong', 'STFangsong', 'Songti SC', serif;
+        font-size: 24px;
+        font-weight: 400;
+        letter-spacing: 0.08em;
+      }
+
+      .dark-panel p {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.9;
+        color: rgba(231, 238, 242, 0.66);
+      }
+
+      .dark-panel .tag {
+        display: inline-block;
+        margin-bottom: 18px;
+        padding: 4px 8px;
+        border: 1px solid rgba(154, 200, 230, 0.4);
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.14em;
+        color: var(--blue-soft);
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 32px;
+        padding-top: 28px;
+      }
+
+      .card {
+        padding: 28px;
+        background: var(--paper);
+        border: 1px solid var(--line);
+      }
+
+      .card h3 {
+        margin: 0 0 22px;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 0.16em;
+        color: rgba(31, 42, 44, 0.5);
+        text-transform: uppercase;
+      }
+
+      .sizes {
+        display: flex;
+        align-items: flex-end;
+        gap: 22px;
+        min-height: 104px;
+      }
+
+      .sizes figure {
+        margin: 0;
+        text-align: center;
+      }
+
+      .sizes img {
+        display: block;
+        margin: 0 auto;
+      }
+
+      .sizes figcaption {
+        margin-top: 10px;
+        font-family: var(--font-mono);
+        font-size: 9px;
+        color: rgba(31, 42, 44, 0.45);
+      }
+
+      .app-row {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+      }
+
+      .app-row img {
+        width: 96px;
+        height: 96px;
+        display: block;
+      }
+
+      .app-row p {
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.8;
+        color: rgba(31, 42, 44, 0.65);
+      }
+
+      .swatches {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 24px;
+      }
+
+      .swatch {
+        border: 1px solid var(--line);
+      }
+
+      .swatch .chip {
+        height: 64px;
+      }
+
+      .swatch .label {
+        padding: 8px 10px;
+        background: var(--paper);
+        font-family: var(--font-mono);
+        font-size: 9px;
+        line-height: 1.6;
+        letter-spacing: 0.04em;
+        color: rgba(31, 42, 44, 0.6);
+      }
+
+      .lab {
+        padding: 36px;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        background-image:
+          linear-gradient(rgba(22, 88, 140, 0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(22, 88, 140, 0.05) 1px, transparent 1px);
+        background-size: 16px 16px;
+      }
+
+      .lab img {
+        display: block;
+        width: 100%;
+        max-width: 520px;
+        height: auto;
+      }
+
+      .lab p {
+        max-width: 42em;
+        margin: 22px 0 0;
+        font-size: 12px;
+        line-height: 1.9;
+        color: rgba(31, 42, 44, 0.62);
+      }
+
+      .rules {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 28px;
+        padding-top: 26px;
+      }
+
+      .rules div {
+        font-size: 12px;
+        line-height: 1.9;
+        color: rgba(31, 42, 44, 0.68);
+      }
+
+      .rules strong {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--ink);
+        font-weight: 600;
+      }
+
+      footer {
+        margin-top: 72px;
+        padding-top: 14px;
+        border-top: 1px solid var(--ink);
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        color: rgba(31, 42, 44, 0.5);
+      }
+
+      @media (max-width: 820px) {
+        body {
+          padding: 28px 18px 64px;
+        }
+
+        .hero,
+        .dark-panel,
+        .split,
+        .rationale,
+        .rules {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .hero {
+          gap: 28px;
+          padding-top: 36px;
+        }
+
+        .dark-panel {
+          padding: 28px;
+        }
+
+        .swatches {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="meta">
+        <span>DLS / Brand System</span>
+        <span>标识方案 01 · 2026</span>
+      </div>
+
+      <div class="hero">
+        <div>
+          <p class="eyebrow">MARK CONCEPT — SIGNAL RIDGE</p>
+          <h1>山脊<br />之上，<br />信号可达。</h1>
+          <p class="lede">
+            以大龙山的两道山脊为骨架，把通信桅杆、覆盖弧线与测绘基准线并置在同一个几何结构里。它既是山的轮廓，也是站点、覆盖与图纸的轮廓——工具间与实验室共用同一枚符号。
+          </p>
+        </div>
+        <figure class="hero-mark">
+          <img src="../../public/brand/logo-lockup.svg" alt="大龙山工具间横向标识" />
+          <figcaption>
+            <span>HORIZONTAL LOCKUP</span>
+            <span>大龙山工具间 / DLS TOOLROOM</span>
+          </figcaption>
+        </figure>
+      </div>
+
+      <section>
+        <div class="section-head">
+          <h2>符号构成</h2>
+          <em>THREE READINGS</em>
+        </div>
+        <div class="rationale">
+          <article>
+            <span class="num">01 / 山</span>
+            <h3>两道山脊</h3>
+            <p>
+              延续现有双山图标的轮廓，一大一小、一高一低，指代大龙山本身。折线保持工程制图的直率，不做圆滑的山形插画。
+            </p>
+          </article>
+          <article>
+            <span class="num">02 / 通信</span>
+            <h3>桅杆与信号弧</h3>
+            <p>
+              较高的山峰同时是一根基站桅杆。信号弧以塔顶黄点为中心：右侧两道，左侧三道，外圈半径
+              28，形成朝左上方多伸一瓣的定向波瓣——既是无线电覆盖，也把视觉重心从右下往左上提。
+            </p>
+          </article>
+          <article>
+            <span class="num">03 / 基准</span>
+            <h3>底线与黄点</h3>
+            <p>
+              贯穿底部的测量基准线把图形“压”在图纸上；塔顶的赭黄点既是站点，也是整枚标识唯一的热色，作为视觉锚点。
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <div class="dark-panel">
+        <img src="../../public/brand/logo-lockup-dark.svg" alt="大龙山工具间蓝图版横向标识" />
+        <div>
+          <span class="tag">BLUEPRINT / 蓝图模式</span>
+          <h2>同一套线，换一张纸</h2>
+          <p>
+            站点只有“白图 /
+            蓝图”两套主题，标识因此也只做两套明度。线宽、比例、赭黄点位置完全不变，仅把主色替换为蓝图模式下的浅蓝，保证在深底上仍然清晰。
+          </p>
+        </div>
+      </div>
+
+      <section>
+        <div class="section-head">
+          <h2>尺寸与适配</h2>
+          <em>SCALE TEST</em>
+        </div>
+        <div class="split">
+          <div class="card">
+            <h3>Symbol / 16 – 96 px</h3>
+            <div class="sizes">
+              <figure>
+                <img src="../../public/brand/logo-mark.svg" width="96" height="96" alt="96px" />
+                <figcaption>96</figcaption>
+              </figure>
+              <figure>
+                <img src="../../public/brand/logo-mark.svg" width="64" height="64" alt="64px" />
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <img src="../../public/brand/logo-mark.svg" width="48" height="48" alt="48px" />
+                <figcaption>48</figcaption>
+              </figure>
+              <figure>
+                <img src="../../public/brand/logo-mark.svg" width="32" height="32" alt="32px" />
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <img src="../../public/brand/logo-mark.svg" width="24" height="24" alt="24px" />
+                <figcaption>24</figcaption>
+              </figure>
+              <figure>
+                <img src="../../public/brand/logo-mark.svg" width="16" height="16" alt="16px" />
+                <figcaption>16</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="card">
+            <h3>App Icon / Favicon</h3>
+            <div class="app-row">
+              <img src="../../public/brand/logo-app.svg" alt="应用图标" />
+              <p>
+                16 px 以下不再使用细线版，改用蓝底纸白的实心图标。桅杆、山脊与信号弧在 32 px
+                仍可辨认；16 px 时保留整体剪影即可。
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2>色彩</h2>
+          <em>PALETTE</em>
+        </div>
+        <div class="swatches">
+          <div class="swatch">
+            <div class="chip" style="background: #16588c"></div>
+            <div class="label">BLUEPRINT<br />#16588C</div>
+          </div>
+          <div class="swatch">
+            <div class="chip" style="background: #d6a21c"></div>
+            <div class="label">SURVEY POINT<br />#D6A21C</div>
+          </div>
+          <div class="swatch">
+            <div class="chip" style="background: #f4f3ec"></div>
+            <div class="label">DRAWING PAPER<br />#F4F3EC</div>
+          </div>
+          <div class="swatch">
+            <div class="chip" style="background: #121d2b"></div>
+            <div class="label">BLUEPRINT NIGHT<br />#121D2B</div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2>面向未来</h2>
+          <em>LABORATORY</em>
+        </div>
+        <div class="lab">
+          <img src="../../public/brand/logo-lockup-lab.svg" alt="大龙山实验室横向标识" />
+          <p>
+            符号不绑定“工具间”三个字。更名实验室时，只替换字标与英文行，山脊、桅杆、信号弧、基准线全部保留——这正是从工具集走向研究平台时，品牌资产需要保持连续的部分。
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2>使用规则</h2>
+          <em>USAGE</em>
+        </div>
+        <div class="rules">
+          <div>
+            <strong>留白</strong>
+            标识四周至少预留一个“山峰高度”的 1/4 作为安全区，约为符号宽度的 8%。
+          </div>
+          <div>
+            <strong>最小尺寸</strong>
+            横版组合不小于 120 px 宽；独立符号不小于 24 px。印刷时符号不小于 8 mm。
+          </div>
+          <div>
+            <strong>不要这样做</strong>
+            不改变线宽比例，不旋转山脊，不给右侧补第三道弧——左右不对称是定稿的一部分，补上就变回普通无线符号。不把赭黄点换成第二种彩色，不给线条加渐变或阴影。
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <span>大龙山工具间 / DALONGSHAN TOOLROOM</span>
+        <span>DLSLAB.CN</span>
+      </footer>
+    </div>
+  </body>
+</html>

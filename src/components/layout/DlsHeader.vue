@@ -16,8 +16,26 @@
       </label>
 
       <router-link to="/" class="brand">
-        大龙山工具间
-        <span class="brand-sub">通信工程 · 科研 / 规划 / 设计工具集</span>
+        <span class="brand-mark-wrap" aria-hidden="true">
+          <img
+            class="brand-mark brand-mark-light"
+            src="/brand/logo-mark.svg"
+            alt=""
+            width="28"
+            height="28"
+          />
+          <img
+            class="brand-mark brand-mark-dark"
+            src="/brand/logo-mark-dark.svg"
+            alt=""
+            width="28"
+            height="28"
+          />
+        </span>
+        <span class="brand-copy">
+          <span class="brand-title">大龙山工具间</span>
+          <span class="brand-sub">通信工程 · 科研 / 规划 / 设计工具集</span>
+        </span>
       </router-link>
 
       <nav v-if="breadcrumbItems.length > 1" class="crumbs" aria-label="面包屑">
@@ -118,14 +136,49 @@ const breadcrumbItems = computed(() => {
 
 .brand {
   display: flex;
-  align-items: baseline;
-  gap: 0.625rem;
+  align-items: center;
+  gap: 0.5rem;
   flex-shrink: 0;
   font-family: var(--font-drawing);
   font-size: 1.125rem;
   letter-spacing: 0.02em;
   color: var(--color-base-content);
   white-space: nowrap;
+}
+
+.brand-mark-wrap {
+  position: relative;
+  display: block;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+}
+
+.brand-mark {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 28px;
+  height: 28px;
+}
+
+.brand-mark-dark {
+  display: none;
+}
+
+:global(html[data-theme='lantu']) .brand-mark-light {
+  display: none;
+}
+
+:global(html[data-theme='lantu']) .brand-mark-dark {
+  display: block;
+}
+
+.brand-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+  min-width: 0;
 }
 
 .brand-sub {

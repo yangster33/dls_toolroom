@@ -107,7 +107,7 @@ useHead({
       content: computed(() => (tool.value ? tool.value.description : '')),
     },
     { property: 'og:url', content: computed(() => `${SITE_URL}/tools/${toolId.value}`) },
-    { property: 'og:image', content: `${SITE_URL}/my-logo.png` },
+    { property: 'og:image', content: `${SITE_URL}/brand/og-cover.png` },
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:title', content: computed(() => (tool.value ? tool.value.name : SITE_NAME)) },
     {
@@ -115,7 +115,7 @@ useHead({
       content: computed(() => (tool.value ? tool.value.description : '')),
     },
     { name: 'twitter:url', content: computed(() => `${SITE_URL}/tools/${toolId.value}`) },
-    { name: 'twitter:image', content: `${SITE_URL}/my-logo.png` },
+    { name: 'twitter:image', content: `${SITE_URL}/brand/og-cover.png` },
   ],
   link: [{ rel: 'canonical', href: computed(() => `${SITE_URL}/tools/${toolId.value}`) }],
   script: [

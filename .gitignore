@@ -80,3 +80,9 @@ Desktop.ini
 # deepwork local state (git-local, not tracked)
 .slim/deepwork/
 
+# 本地设计稿 / 原型 / QA 截图（品牌构建源文件与设计说明除外）
+design/*
+!design/algorithmic-philosophy-potential-mycelium.md
+!design/logo/
+design/logo/*.png
+

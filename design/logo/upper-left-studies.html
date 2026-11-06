@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>大龙山工具间 · 左上角填空对照</title>
+    <style>
+      :root {
+        --paper: #f4f3ec;
+        --paper-2: #ebeade;
+        --ink: #1f2a2c;
+        --blue: #16588c;
+        --blue-soft: #9ac8e6;
+        --ochre: #d6a21c;
+        --ochre-soft: #e3b23a;
+        --night: #121d2b;
+        --line: rgba(31, 42, 44, 0.16);
+        --font-sans: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+        --font-mono: 'JetBrains Mono', Consolas, monospace;
+      }
+
+      * { box-sizing: border-box; }
+
+      html { -webkit-font-smoothing: antialiased; }
+
+      body {
+        margin: 0;
+        padding: 48px 32px 80px;
+        background-color: var(--paper-2);
+        background-image:
+          linear-gradient(rgba(31, 42, 44, 0.045) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(31, 42, 44, 0.045) 1px, transparent 1px);
+        background-size: 24px 24px;
+        color: var(--ink);
+        font-family: var(--font-sans);
+      }
+
+      .wrap { max-width: 1080px; margin: 0 auto; }
+
+      .meta {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 24px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--ink);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .meta span:last-child { color: var(--blue); text-align: right; }
+
+      .head {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+        gap: 56px;
+        align-items: end;
+        padding: 44px 0 40px;
+      }
+
+      .eyebrow {
+        margin: 0 0 16px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.22em;
+        color: var(--blue);
+      }
+
+      h1 {
+        margin: 0;
+        font-family: 'FangSong', 'STFangsong', 'Songti SC', serif;
+        font-size: clamp(34px, 4.4vw, 52px);
+        font-weight: 400;
+        letter-spacing: 0.06em;
+        line-height: 1.22;
+      }
+
+      .lede {
+        max-width: 34em;
+        margin: 18px 0 0;
+        font-size: 13.5px;
+        line-height: 1.9;
+        color: rgba(31, 42, 44, 0.72);
+      }
+
+      .lede b { font-weight: 600; color: var(--blue); }
+
+      .rule {
+        border-top: 1px solid var(--line);
+        padding-top: 16px;
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        line-height: 1.95;
+        letter-spacing: 0.03em;
+        color: rgba(31, 42, 44, 0.58);
+      }
+
+      .rule strong {
+        display: block;
+        margin-bottom: 6px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        color: var(--blue);
+      }
+
+      .rows { border-bottom: 1px solid var(--line); }
+
+      .row {
+        display: grid;
+        grid-template-columns: minmax(250px, 1fr) 186px 186px 132px;
+        gap: 18px;
+        align-items: center;
+        padding: 20px 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .row:first-child { border-top: 1px solid var(--ink); }
+
+      .info { padding-right: 8px; }
+
+      .tag {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        color: rgba(31, 42, 44, 0.45);
+      }
+
+      .tag b { font-weight: 500; color: var(--blue); }
+
+      .info h2 {
+        margin: 6px 0 8px;
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+
+      .note {
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.75;
+        color: rgba(31, 42, 44, 0.66);
+      }
+
+      .note em { font-style: normal; color: var(--blue); }
+
+      .geo {
+        display: block;
+        margin-top: 7px;
+        font-family: var(--font-mono);
+        font-size: 9.5px;
+        letter-spacing: 0.02em;
+        color: rgba(31, 42, 44, 0.42);
+      }
+
+      .stage {
+        position: relative;
+        aspect-ratio: 1;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--line);
+      }
+
+      .stage svg { width: 84%; height: 84%; }
+
+      .light { background: var(--paper); color: var(--blue); --dot: var(--ochre); }
+      .dark { background: var(--night); color: var(--blue-soft); --dot: var(--ochre-soft); }
+
+      .stage::after {
+        content: attr(data-label);
+        position: absolute;
+        left: 9px;
+        bottom: 7px;
+        font-family: var(--font-mono);
+        font-size: 8px;
+        letter-spacing: 0.14em;
+        opacity: 0.4;
+      }
+
+      .sizes {
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 10px;
+        padding: 10px 8px 8px;
+        border: 1px solid var(--line);
+        background: rgba(244, 243, 236, 0.55);
+      }
+
+      .sizes figure {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .sizes svg { display: block; color: var(--blue); --dot: var(--ochre); }
+
+      .sizes figcaption {
+        font-family: var(--font-mono);
+        font-size: 8px;
+        letter-spacing: 0.04em;
+        opacity: 0.45;
+      }
+
+      .verdict {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        padding: 32px 0 0;
+      }
+
+      .card {
+        padding: 18px 18px 16px;
+        border: 1px solid var(--line);
+        background: rgba(244, 243, 236, 0.55);
+      }
+
+      .card .rank {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.16em;
+        color: var(--blue);
+      }
+
+      .card h3 { margin: 8px 0 8px; font-size: 14px; font-weight: 600; }
+      .card p { margin: 0; font-size: 12px; line-height: 1.75; color: rgba(31, 42, 44, 0.66); }
+
+      .context {
+        margin-top: 30px;
+        border: 1px solid var(--line);
+        background: rgba(244, 243, 236, 0.5);
+      }
+
+      .context-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--line);
+        font-family: var(--font-mono);
+        font-size: 9.5px;
+        letter-spacing: 0.08em;
+        color: rgba(31, 42, 44, 0.5);
+      }
+
+      .context-head span:first-child { color: var(--blue); }
+
+      .mini {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        padding: 12px 16px;
+        min-height: 52px;
+      }
+
+      .mini svg {
+        width: 28px;
+        height: 28px;
+        align-self: center;
+        flex-shrink: 0;
+        color: var(--blue);
+        --dot: var(--ochre);
+      }
+
+      .mini b {
+        font-family: 'FangSong', 'STFangsong', 'Songti SC', serif;
+        font-size: 18px;
+        font-weight: 400;
+        letter-spacing: 0.02em;
+      }
+
+      .mini span {
+        font-size: 11px;
+        color: rgba(31, 42, 44, 0.55);
+      }
+
+      .mini.light { background: var(--paper); border-bottom: 1px solid var(--line); }
+      .mini.dark { background: var(--night); color: var(--blue-soft); }
+      .mini.dark svg { color: var(--blue-soft); --dot: var(--ochre-soft); }
+      .mini.dark b { color: #e8eef4; }
+      .mini.dark span { color: rgba(232, 238, 244, 0.55); }
+
+      .foot {
+        display: flex;
+        justify-content: space-between;
+        gap: 32px;
+        margin-top: 36px;
+        padding-top: 14px;
+        border-top: 1px solid var(--ink);
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        color: rgba(31, 42, 44, 0.45);
+      }
+
+      .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+      @media (max-width: 900px) {
+        .head { grid-template-columns: 1fr; gap: 26px; }
+        .row { grid-template-columns: 1fr 1fr; }
+        .info { grid-column: 1 / -1; }
+        .sizes { grid-column: 1 / -1; justify-content: flex-start; }
+        .verdict { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <svg class="sprite" aria-hidden="true" focusable="false">
+      <defs>
+        <clipPath id="clipBase"><rect x="0" y="0" width="96" height="88" /></clipPath>
+
+        <symbol id="base" viewBox="0 0 96 96">
+          <g stroke="currentColor" fill="none">
+            <path d="M8.59 90 34 64.17 46 70.83 64 56.17 87.88 90" stroke-width="5.5" stroke-linejoin="miter" stroke-linecap="butt" clip-path="url(#clipBase)" />
+            <path d="M8 86h80" stroke-width="4" stroke-linecap="square" />
+            <path d="M64 56.17V34.7" stroke-width="3.5" stroke-linecap="square" />
+            <path d="M73.958 26.343A13 13 0 0 1 73.958 43.057" stroke-width="3.2" />
+            <path d="M54.042 43.056A13 13 0 0 1 54.042 26.344" stroke-width="3.2" />
+            <path d="M79.321 21.844A20 20 0 0 1 79.321 47.556" stroke-width="3.2" />
+            <path d="M48.679 47.556A20 20 0 0 1 48.679 21.844" stroke-width="3.2" />
+          </g>
+          <circle cx="64" cy="34.7" r="6.8" fill="var(--dot, #d6a21c)" />
+        </symbol>
+
+        <!-- A · 现状 -->
+        <symbol id="v-base" viewBox="0 0 96 96">
+          <use href="#base" />
+        </symbol>
+
+        <!-- B · 风线 -->
+        <symbol id="v-wind" viewBox="0 0 96 96">
+          <use href="#base" />
+          <g stroke="currentColor" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 28.5H34A2.2 2.2 0 1 1 36.2 26.3" />
+            <path d="M10 34H34A2.2 2.2 0 1 0 36.2 36.2" />
+            <path d="M14 40H31A1.6 1.6 0 0 1 31 36.8" />
+          </g>
+        </symbol>
+
+        <!-- C · 标高线：把站点水平轴延伸到左缘，端头加测量短竖 -->
+        <symbol id="v-datum" viewBox="0 0 96 96">
+          <use href="#base" />
+          <g stroke="currentColor" fill="none" stroke-linecap="butt">
+            <path d="M12 34.7H42" stroke-width="1.6" stroke-dasharray="3 3.2" opacity="0.85" />
+            <path d="M12 29.2V40.2" stroke-width="2" stroke-linecap="square" />
+          </g>
+        </symbol>
+
+        <!-- D · 链路：左上远端节点 + 虚线链路指向站点 -->
+        <symbol id="v-link" viewBox="0 0 96 96">
+          <use href="#base" />
+          <path d="M20 16.6 52.6 30.2" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3.4" fill="none" opacity="0.9" />
+          <circle cx="14" cy="15" r="2.2" fill="currentColor" />
+        </symbol>
+
+        <!-- E · 远山：左峰后方一条细山脊 -->
+        <symbol id="v-ridge" viewBox="0 0 96 96">
+          <use href="#base" />
+          <path
+            d="M3 51 15 38 22 44 33 31 41 39"
+            stroke="currentColor"
+            fill="none"
+            stroke-width="2.1"
+            stroke-linejoin="miter"
+            stroke-linecap="square"
+            opacity="0.7"
+          />
+        </symbol>
+
+        <!-- F · 角标：左上双折角登记线 -->
+        <symbol id="v-bracket" viewBox="0 0 96 96">
+          <use href="#base" />
+          <g stroke="currentColor" fill="none" stroke-linecap="square">
+            <path d="M7 23V7H23" stroke-width="2" opacity="0.85" />
+            <path d="M12 19V12H19" stroke-width="1.4" opacity="0.55" />
+          </g>
+        </symbol>
+
+        <!-- G · 轨道：共心的大半径弧 + 卫星点 -->
+        <symbol id="v-orbit" viewBox="0 0 96 96">
+          <use href="#base" />
+          <g stroke="currentColor" fill="none">
+            <path d="M46.8 10.1A30 30 0 0 0 34.1 32.1" stroke-width="1.5" opacity="0.55" />
+          </g>
+          <circle cx="39.1" cy="17.9" r="2.1" fill="currentColor" opacity="0.9" />
+        </symbol>
+      </defs>
+    </svg>
+
+    <div class="wrap">
+      <div class="meta">
+        <span>大龙山工具间 / 标识方案 01 / 左上角对照</span>
+        <span>Upper-left Study · 2026-11</span>
+      </div>
+
+      <header class="head">
+        <div>
+          <p class="eyebrow">FILLING THE UPPER LEFT</p>
+          <h1>空着，还是<br />放一句话进去？</h1>
+          <p class="lede">
+            符号的重量现在压在右下（山）和右上（信号），左上象限 <b>x 8–44 / y 8–50</b> 几乎全空。
+            这不一定是错误——留白本身能托住山峰的上升感；但如果你想补，补的东西最好
+            <b>不是装饰，而是第二层信息</b>：测量、链路、距离、方位。
+          </p>
+        </div>
+        <div class="rule">
+          <strong>READING / 判断标准</strong>
+          1. 不加第三种语义，最好还是「山 / 信号 / 图纸」的延伸。<br />
+          2. 32 px 下不糊成噪点，或允许在该尺寸隐藏。<br />
+          3. 与右侧字标同处一行时，不把视线往左拉走。<br />
+          4. 深色蓝图模式下不需要换一套几何。
+        </div>
+      </header>
+
+      <main class="rows">
+        <!-- A -->
+        <section class="row">
+          <div class="info">
+            <div class="tag"><b>A</b><span>CONTROL</span></div>
+            <h2>现状 / 什么都不加</h2>
+            <p class="note">
+              左上留白让山脊的斜线和信号弧各占一个方向，读起来干净。缺点是缩到 32 px 时，
+              右侧信号弧成为唯一高点，重心有点偏。
+            </p>
+          </div>
+          <div class="stage light" data-label="LIGHT / 360"><svg viewBox="0 0 96 96" role="img" aria-label="现状"><use href="#v-base" /></svg></div>
+          <div class="stage dark" data-label="BLUEPRINT / 360"><svg viewBox="0 0 96 96" role="img" aria-label="现状"><use href="#v-base" /></svg></div>
+          <div class="sizes">
+            <figure><svg width="96" height="96" viewBox="0 0 96 96"><use href="#v-base" /></svg><figcaption>96</figcaption></figure>
+            <figure><svg width="48" height="48" viewBox="0 0 96 96"><use href="#v-base" /></svg><figcaption>48</figcaption></figure>
+            <figure><svg width="32" height="32" viewBox="0 0 96 96"><use href="#v-base" /></svg><figcaption>32</figcaption></figure>
+          </div>
+        </section>
+
+        <!-- B -->
+        <section class="row">
+          <div class="info">
+            <div class="tag"><b>B</b><span>WIND / 已有试验</span></div>
+            <h2>风线 / 从左上吹向信号</h2>
+            <p class="note">
+              三条平行线，端头 270° 卷梢。语义上把「山」扩成「山 + 大气」，也暗示无线传播的介质。
+              视觉最满，但最容易读成天气图标；<em>32 px 下建议整组隐藏</em>。
+            </p>
+            <span class="geo">x 9–37 / y 24–41 · stroke 2.4 · round cap</span>
+          </div>
+          <div class="stage light" data-label="LIGHT / 360"><svg viewBox="0 0 96 96" role="img" aria-label="风线"><use href="#v-wind" /></svg></div>
+          <div class="stage dark" data-label="BLUEPRINT / 360"><svg viewBox="0 0 96 96" role="img" aria-label="风线"><use href="#v-wind" /></svg></div>
+          <div class="sizes">
+            <figure><svg width="96" height="96" viewBox="0 0 96 96"><use href="#v-wind" /></svg><figcaption>96</figcaption></figure>
+            <figure><svg width="48" height="48" viewBox="0 0 96 96"><use href="#v-wind" /></svg><figcaption>48</figcaption></figure>
+            <figure><svg width="32" height="32" viewBox="0 0 96 96"><use href="#v-wind" /></svg><figcaption>32</figcaption></figure>
+          </div>
+        </section>
+
+        <!-- C -->
+        <section class="row">
+          <div class="info">
+            <div class="tag"><b>C</b><span>DATUM / 推荐</span></div>
+            <h2>标高线 / 把站点轴延长</h2>
+            <p class="note">
+              从塔顶黄点向左拉一条虚线，端头一条测量短竖。它不新增语义，只是把「制图基准线」
+              从底边搬到信号高度：左有标高，右有覆盖弧，下面有地平线，三根横线自成秩序。
+              视觉最轻，却把空的地方「框」住了。
+            </p>
+            <span class="geo">y 34.7 · x 12–42 · dash 3 / 3.2 · 端竖 11</span>
+          </div>
+          <div class="stage light" data-label="LIGHT / 360"><svg viewBox="0 0 96 96" role="img" aria-label="标高线"><use href="#v-datum" /></svg></div>
+          <div class="stage dark" data-label="BLUEPRINT / 360"><svg viewBox="0 0 96 96" role="img" aria-label="标高线"><use href="#v-datum" /></svg></div>
+          <div class="sizes">
+            <figure><svg width="96" height="96" viewBox="0 0 96 96"><use href="#v-datum" /></svg><figcaption>96</figcaption></figure>
+            <figure><svg width="48" height="48" viewBox="0 0 96 96"><use href="#v-datum" /></svg><figcaption>48</figcaption></figure>
+            <figure><svg width="32" height="32" viewBox="0 0 96 96"><use href="#v-datum" /></svg><figcaption>32</figcaption></figure>
+          </div>
+        </section>
+
+        <!-- D -->
+        <section class="row">
+          <div class="info">
+            <div class="tag"><b>D</b><span>LINK / 推荐</span></div>
+            <h2>链路 / 远端节点指向本站</h2>
+            <p class="note">
+              左上一个小实心点，一条虚线斜着落在塔顶。补的是「点对点」这层意思：
+              工具间不是孤立的点，是链路的一端；虚线也正好接住山脊的斜势。
+              它比 C 更直接地占住那个角，代价是 32 px 下只剩一个点和一小截虚线。
+            </p>
+            <span class="geo">节点 (14,15) r 2.2 · 虚线至 (52.6,30.2) · stroke 1.5</span>
+          </div>
+          <div class="stage light" data-label="LIGHT / 360"><svg viewBox="0 0 96 96" role="img" aria-label="链路"><use href="#v-link" /></svg></div>
+          <div class="stage dark" data-label="BLUEPRINT / 360"><svg viewBox="0 0 96 96" role="img" aria-label="链路"><use href="#v-link" /></svg></div>
+          <div class="sizes">
+            <figure><svg width="96" height="96" viewBox="0 0 96 96"><use href="#v-link" /></svg><figcaption>96</figcaption></figure>
+            <figure><svg width="48" height="48" viewBox="0 0 96 96"><use href="#v-link" /></svg><figcaption>48</figcaption></figure>
+            <figure><svg width="32" height="32" viewBox="0 0 96 96"><use href="#v-link" /></svg><figcaption>32</figcaption></figure>
+          </div>
+        </section>
+
+        <!-- E -->
+        <section class="row">
+          <div class="info">
+            <div class="tag"><b>E</b><span>RIDGE / 最含蓄</span></div>
+            <h2>远山 / 左峰后面再加一道脊</h2>
+            <p class="note">
+              用更细的线在左峰后画一道远山，把「大龙山」从一座山扩成山脉，同时压住左上。
+              语义最顺，但 32 px 下会变成一撮折线；而且容易显得像随手画的背景。
+            </p>
+            <span class="geo">x 3–41 / y 31–51 · stroke 2.1 · opacity 0.7</span>
+          </div>
+          <div class="stage light" data-label="LIGHT / 360"><svg viewBox="0 0 96 96" role="img" aria-label="远山"><use href="#v-ridge" /></svg></div>
+          <div class="stage dark" data-label="BLUEPRINT / 360"><svg viewBox="0 0 96 96" role="img" aria-label="远山"><use href="#v-ridge" /></svg></div>
+          <div class="sizes">
+            <figure><svg width="96" height="96" viewBox="0 0 96 96"><use href="#v-ridge" /></svg><figcaption>96</figcaption></figure>
+            <figure><svg width="48" height="48" viewBox="0 0 96 96"><use href="#v-ridge" /></svg><figcaption>48</figcaption></figure>
+            <figure><svg width="32" height="32" viewBox="0 0 96 96"><use href="#v-ridge" /></svg><figcaption>32</figcaption></figure>
+          </div>
+        </section>
+
+        <!-- F -->
+        <section class="row">
+          <div class="info">
+            <div class="tag"><b>F</b><span>REGISTER / 最克制</span></div>
+            <h2>角标 / 图纸登记角</h2>
+            <p class="note">
+              左上双折角，像制图胶片或印版的对位线。它不描述任何东西，只声明「这是一张图」。
+              好处是 32 px 仍成立，坏处是只有一个角时略像 UI 裁剪框；可考虑右下再加一个极轻的角。
+            </p>
+            <span class="geo">外 16 / 内 7 · stroke 2 + 1.4</span>
+          </div>
+          <div class="stage light" data-label="LIGHT / 360"><svg viewBox="0 0 96 96" role="img" aria-label="角标"><use href="#v-bracket" /></svg></div>
+          <div class="stage dark" data-label="BLUEPRINT / 360"><svg viewBox="0 0 96 96" role="img" aria-label="角标"><use href="#v-bracket" /></svg></div>
+          <div class="sizes">
+            <figure><svg width="96" height="96" viewBox="0 0 96 96"><use href="#v-bracket" /></svg><figcaption>96</figcaption></figure>
+            <figure><svg width="48" height="48" viewBox="0 0 96 96"><use href="#v-bracket" /></svg><figcaption>48</figcaption></figure>
+            <figure><svg width="32" height="32" viewBox="0 0 96 96"><use href="#v-bracket" /></svg><figcaption>32</figcaption></figure>
+          </div>
+        </section>
+
+        <!-- G -->
+        <section class="row">
+          <div class="info">
+            <div class="tag"><b>G</b><span>ORBIT / 最大胆</span></div>
+            <h2>轨道 / 同心的第三道大弧</h2>
+            <p class="note">
+              不画新东西，只把已有的「弧」语言放大到 r 30，在左上露出一小段轨道和一个卫星点。
+              山是地面站，弧是覆盖，轨道是空间段——三层通信叙事一次说清。风险是容易读成一道乱入的光晕。
+            </p>
+            <span class="geo">r 30 · 125°–170° · stroke 1.5 · 点 r 2.1</span>
+          </div>
+          <div class="stage light" data-label="LIGHT / 360"><svg viewBox="0 0 96 96" role="img" aria-label="轨道"><use href="#v-orbit" /></svg></div>
+          <div class="stage dark" data-label="BLUEPRINT / 360"><svg viewBox="0 0 96 96" role="img" aria-label="轨道"><use href="#v-orbit" /></svg></div>
+          <div class="sizes">
+            <figure><svg width="96" height="96" viewBox="0 0 96 96"><use href="#v-orbit" /></svg><figcaption>96</figcaption></figure>
+            <figure><svg width="48" height="48" viewBox="0 0 96 96"><use href="#v-orbit" /></svg><figcaption>48</figcaption></figure>
+            <figure><svg width="32" height="32" viewBox="0 0 96 96"><use href="#v-orbit" /></svg><figcaption>32</figcaption></figure>
+          </div>
+        </section>
+      </main>
+
+      <section class="verdict">
+        <div class="card">
+          <div class="rank">FIRST CHOICE</div>
+          <h3>D · 链路节点</h3>
+          <p>
+            最直接地补掉左上角的空，而且补的是信息不是装饰：远端点、虚线、本站，把「通信」这层
+            说完整。建议实心点 r 2.2、虚线 3/3.4、线宽 1.5；32 px 以下可省略虚线，只留点。
+          </p>
+        </div>
+        <div class="card">
+          <div class="rank">SECOND CHOICE</div>
+          <h3>C · 标高线</h3>
+          <p>
+            如果不想再加一个「点」，这是最克制的一笔：一条测量基准线，不抢山、不抢信号，还在
+            32 px 下保得住。建议线宽 1.6、虚线 3/3.2、端竖用方头，不透明度 0.85。
+          </p>
+        </div>
+        <div class="card">
+          <div class="rank">KEEP AS OPTION</div>
+          <h3>B · 风线</h3>
+          <p>
+            已有稿，语义和完成度都够，只是「天气感」比「工程感」强。若最终选它，建议把三道线的
+            间距再收紧 1 px、线宽降到 2.2，让它退到背景层，别和信号弧抢粗细。
+          </p>
+        </div>
+      </section>
+
+      <section class="context">
+        <div class="context-head">
+          <span>CONTEXT / 页头 28 PX</span>
+          <span>站点页头目前仍是纯文字品牌，标识接上后左上角会同时多一个「点」</span>
+        </div>
+        <div class="mini light">
+          <svg viewBox="0 0 96 96" aria-hidden="true"><use href="#v-link" /></svg>
+          <b>大龙山工具间</b>
+          <span>通信工程 · 科研 / 规划 / 设计工具集</span>
+        </div>
+        <div class="mini dark">
+          <svg viewBox="0 0 96 96" aria-hidden="true"><use href="#v-link" /></svg>
+          <b>大龙山工具间</b>
+          <span>通信工程 · 科研 / 规划 / 设计工具集</span>
+        </div>
+      </section>
+
+      <footer class="foot">
+        <span>对照稿 · 不改动已定稿文件 · 同一 96 × 96 网格</span>
+        <span>DLS / UPPER-LEFT STUDY / 2026-11</span>
+      </footer>
+    </div>
+  </body>
+</html>
