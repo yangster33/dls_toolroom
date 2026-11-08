@@ -126,7 +126,7 @@ geometry: (geomsAndTimes.geoms.length === 1) ? geomsAndTimes.geoms[0] : {
 | `manualChunks` 顺序、首屏 810 kB | 需逐 chunk 核对产物 | 阶段 2 剩余 | ✅ **B4** `b98b0cd`（387 → 129 KB gzip） |
 | `ref`→`shallowRef`、大文件 Worker 化 | 性能优化 | 阶段 3 | ✅ **C3** `1f53c9d`（6 处）/ **C4** `50ff7d2`…`5bbf164`（Worker 化四阶段 + 收尾） |
 | 模板读取器 7 份 → 参数化工厂 | 大重构 | 阶段 3 | ✅ **D1** `cafc56d` + `d606716`（见 `docs/2026-10-15-d1-fix-record.md`） |
-| 拆 `GanttChartPage.vue` / `KmlViewerPage.vue` | 大重构 | 阶段 3 | ⬜ 仍是待办：**D4**（连同 `GeocodeCommon.vue`） |
+| 拆 `GanttChartPage.vue` / `KmlViewerPage.vue` | 大重构 | 阶段 3 | ✅ **D4 已完成**：Gantt `1d73d5a`；KmlViewer / GeocodeCommon `c66de9c` |
 | `vercel.json` 裸 IP → 环境变量 | 需 Vercel 控制台 | 阶段 4 | ⬜ 仍是待办：**E1** |
 | 4 处裸 `fetch` 无超时/无取消 | 与 P0 批次无关 | 阶段 2 剩余 | ✅ **B2** `c8903b5`（`fetchWithTimeout` + 页面级 abort） |
 | 两处监听器泄漏（`KmlViewerPage` / 甘特图重建） | 需单独验证 | 阶段 2 剩余 | ✅ **B3** `c93a842`（甘特图那处为缓解非根治，见 D4 关联项） |

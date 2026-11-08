@@ -190,7 +190,7 @@
 1. 7 份 `TemplateReader` → 参数化工厂；7 份 `TemplateExporter` → 单一实现 + 配置 → [P3-2](./2026-10-09-audit-04-P3-cleanup.md)
 2. 5 份文件名模板 / 4 份花括号校验 / 3 份 `sanitizeFilename` → 各收敛为 1 份 → [P3-2](./2026-10-09-audit-04-P3-cleanup.md)
 3. 删 12 个零引用依赖 + 约 850 行零引用文件 → [P3-1](./2026-10-09-audit-04-P3-cleanup.md)、[P3-3](./2026-10-09-audit-04-P3-cleanup.md)
-4. 拆 `GanttChartPage.vue`（1623 行）、`KmlViewerPage.vue`（1157 行）、`GeocodeCommon.vue`（983 行）→ [P3-5](./2026-10-09-audit-04-P3-cleanup.md)
+4. 拆 `GanttChartPage.vue`（1623 行）、`KmlViewerPage.vue`（1157 行）、`GeocodeCommon.vue`（983 行）→ [P3-5](./2026-10-09-audit-04-P3-cleanup.md) —— ✅ 2026-11-08 全部完成（D4）
 5. 统一 `ref` → `shallowRef`；`useECharts` 缺数据时不清空图表 → [P2-12](./2026-10-09-audit-03-P2-engineering.md)
 
 ### 阶段 4：文档与部署（约半天）

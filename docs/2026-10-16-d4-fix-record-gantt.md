@@ -3,7 +3,7 @@
 > **依据**：审计 [`2026-10-09-audit-04-P3-cleanup.md`](./2026-10-09-audit-04-P3-cleanup.md) 的 **P3-5**（超大文件与结构腐化）
 > **台账**：[`../plan/2026-10-11-progress-ledger.md`](../plan/2026-10-11-progress-ledger.md) **D 档 D4**
 > **提交**：`b2d3978`（导出模块）/ `87280cc`（实例生命周期）/ `1d73d5a`（任务弹窗）
-> **状态**：**D4 仅完成第一个文件**。`KmlViewerPage.vue`(1183) 与 `GeocodeCommon.vue`(1037) 未开始，见 §六。
+> **状态**：**本批完成 D4 第一个文件**。`KmlViewerPage.vue` 与 `GeocodeCommon.vue` 已于 2026-11-08 完成，见 [`2026-11-08-d4-fix-record-kml-geocode.md`](./2026-11-08-d4-fix-record-kml-geocode.md)。
 > **测试**：766 → **785 passed / 55 files**（含仓库**首个 .vue 组件挂载测试**）
 
 ---

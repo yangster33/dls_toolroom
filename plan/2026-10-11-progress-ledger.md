@@ -7,11 +7,11 @@
 | 属性 | 值 |
 |---|---|
 | 审查基线 | `c096944`（2026-10-09 审计） |
-| 台账更新 | 2026-10-15（D3 死代码清理、D1 reader 收敛、D2 命名模板收敛 完成） |
-| 当前 HEAD | `fa61f26`（本条台账的回填提交；最后一条代码提交 `d606716`） |
+| 台账更新 | 2026-11-08（D4 第二批：KmlViewerPage / GeocodeCommon 拆分完成） |
+| 当前 HEAD | `c66de9c`（最后一条代码提交；本台账回填提交见 git log） |
 | 工具数 | 26 个路由（预渲染 sitemap） |
-| 测试 | **785 passed / 55 files** |
-| 最近更新 | 2026-10-16 · **D3/D1/D2 完成，D4 完成第一个文件（GanttChartPage）**；剩余 KmlViewerPage / GeocodeCommon / E 档 / F 档 |
+| 测试 | **948 passed / 75 files**（当前工作区） |
+| 最近更新 | 2026-11-08 · **D4 全部完成（Gantt + KmlViewer + GeocodeCommon）**；剩余 E 档 / F 档 |
 
 ---
 
@@ -167,7 +167,7 @@
 | D1 | P3-2 | 7 份 `TemplateReader` → 参数化工厂 | −800 行 | ✅ `cafc56d` + `d606716` |
 | D2 | P3-2 | 5 份文件名模板 / 4 份花括号校验 / 3 份 `sanitizeFilename` → 各 1 份 | −400 行 | ✅ `fce7aec` |
 | D3 | P3-3 | 删 12 个零引用依赖 + 850 行死代码 | 依赖体积 | ✅ `75fda16` |
-| D4 | P3-5 | 拆 `GanttChartPage.vue`(1623) / `KmlViewerPage.vue`(1157) / `GeocodeCommon.vue`(983) | 1 周 | 🟡 `1d73d5a`（仅 GanttChartPage 完成） |
+| D4 | P3-5 | 拆 `GanttChartPage.vue`(1623) / `KmlViewerPage.vue`(1157) / `GeocodeCommon.vue`(983) | 1 周 | ✅ `1d73d5a`（Gantt）+ `c66de9c`（KmlViewer / Geocode） |
 
 #### D3 执行明细（2026-10-15，提交 `75fda16` + `2485d1f`）
 
@@ -247,6 +247,22 @@
 **环境问题（与本批无关，已排除）**：`npm run build` 的 prerender 步骤在本机起不了浏览器（puppeteer-core 与 Edge 155 不兼容）。`git stash` 后在 clean HEAD 复现同样失败；Playwright 能正常启动同一 Edge（e2e 7 passed）。已用 `build-only` + 完整 e2e 验证。
 
 > **已修复（2026-10-16）**：`scripts/prerender.mjs` 本地分支改用 Playwright 启动器（优先系统 Edge，退回自带 chromium，本地默认无头），CI/Vercel 仍走 puppeteer-core + `@sparticuz/chromium`。`npm run build` 本机 EXIT=0、26 路由全绿。原因为脚本硬编码浏览器路径（本机无 Chrome 只有 Edge）且兜底的 `@sparticuz/chromium` 是 Linux 专用二进制，Windows 上等于没有兜底。
+
+#### D4 第二批 · KmlViewerPage / GeocodeCommon 拆分（2026-11-08，提交 `c66de9c`）
+
+依据 [`../docs/2026-11-08-d4-fix-record-kml-geocode.md`](../docs/2026-11-08-d4-fix-record-kml-geocode.md)。
+
+| 文件 | 拆分前 | 拆分后 | 抽出内容 |
+|---|---|---|---|
+| `KmlViewerPage.vue` | 1389 | **540** | `kmlStyle` / `kmlPlacemark` / `kmlLayerBuilder` / `kmlMarkerIcon` / `kmlMeasureMath` / `useKmlMeasure` / `KmlSidebar` / `KmlMapToolbar` |
+| `GeocodeCommon.vue` | 1144 | **148** | `geocodeParsing` / `geocodeFields` / `geocodeTypes` / `useGeocodeWorkflow` + 5 个步骤子组件 + 结果表 |
+
+**关键点**：
+- KML 的样式/元数据/测量数学全部与 Leaflet 解耦，`buildKmlTree` 保留原递归建树、图层挂载、bounds 传播与 MultiGeometry 取首个子几何的语义。
+- 测量/采点收进 `useKmlMeasure`，页面注入 `getMap`；B3 的 fullscreenchange 监听器注册/移除仍留在页面，原回归测试不改。
+- Geocode 的取消导入/清除上传/清除全部由页面统一清原生 input，避免拆分后漏掉「文件名还在」的行为。
+- 测试 887 → **948 passed / 75 files**（+61），type-check / oxlint / eslint / prettier / `build-only` 全绿。
+- **遗留**：KML 查看器交互没有新增 Playwright e2e；Geocode 页内 `XLSX.read` 仍是同步块（F3 不变）。
 
 ### E 档 · 需决策（非纯技术）
 
