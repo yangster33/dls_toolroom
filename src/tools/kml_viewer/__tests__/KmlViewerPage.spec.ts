@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import KmlViewerPage from '../KmlViewerPage.vue'
+import KmlSidebar from '../KmlSidebar.vue'
 
 /**
  * 审计报告 B3 / P2-14 的回归测试
@@ -147,5 +148,16 @@ describe('KmlViewerPage fullscreenchange 监听器（B3）', () => {
     wrapper.unmount()
     await flushPromises()
     expect(instr.count('fullscreenchange')).toBe(0)
+  })
+
+  it('侧栏天地图 Key 通过 v-model 回写到页面 ref', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const sidebar = wrapper.findComponent(KmlSidebar)
+    await sidebar.find('input[type="text"]').setValue('test-key')
+
+    expect(sidebar.props('tiandituKey')).toBe('test-key')
+    wrapper.unmount()
   })
 })

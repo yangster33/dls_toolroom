@@ -40,3 +40,12 @@ export interface KmlTreeNodeData {
 
 /** 把 LeafletLayerLike 收窄成 leaflet 的 L.Layer，供 map.addLayer() 使用 */
 export type { LeafletLayerLike as LeafletLayerHandle }
+
+/** 测量工具模式（null 表示未启用） */
+export type MeasureMode = 'length' | 'area' | 'angle' | null
+
+/** 经纬度采集点（WGS84） */
+export interface PickedCoord {
+  lat: number
+  lng: number
+}
