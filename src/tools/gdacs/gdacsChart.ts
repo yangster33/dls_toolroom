@@ -1,5 +1,6 @@
 import type { EChartsOption } from 'echarts'
 import * as echarts from 'echarts'
+import { CHART_FONT_FAMILY } from '@/utils/colorUtils'
 import type { GdacsEvent } from './gdacsService'
 import { getAlertLevelColor, getEventTypeLabel } from './gdacsService'
 
@@ -110,7 +111,7 @@ export function generateEventTypeChart(
     backgroundColor: 'transparent',
     textStyle: {
       color: theme.baseContent,
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamily: CHART_FONT_FAMILY,
     },
     tooltip: {
       trigger: 'item',
@@ -173,7 +174,7 @@ export function generateAlertLevelChart(
     backgroundColor: 'transparent',
     textStyle: {
       color: theme.baseContent,
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamily: CHART_FONT_FAMILY,
     },
     tooltip: {
       trigger: 'axis',
@@ -239,7 +240,7 @@ export function generateTimeChart(
     backgroundColor: 'transparent',
     textStyle: {
       color: theme.baseContent,
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamily: CHART_FONT_FAMILY,
     },
     tooltip: {
       trigger: 'item',

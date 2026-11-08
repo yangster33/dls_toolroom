@@ -33,7 +33,7 @@ import * as echarts from 'echarts'
 import { maxOf } from '@/utils/arrayUtils'
 import type { ECharts, EChartsOption } from 'echarts'
 import { useDaisyTheme } from '@/composables/useDaisyTheme'
-import { parseOklch, oklchToHex } from '@/utils/colorUtils'
+import { CHART_FONT_FAMILY, parseOklch, oklchToHex } from '@/utils/colorUtils'
 import { logger } from '@/utils/logger'
 
 /**
@@ -132,7 +132,7 @@ const generateChartOption = (): EChartsOption => {
     backgroundColor: 'transparent',
     textStyle: {
       color: baseContent.value,
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamily: CHART_FONT_FAMILY,
     },
     tooltip: {
       trigger: 'item',

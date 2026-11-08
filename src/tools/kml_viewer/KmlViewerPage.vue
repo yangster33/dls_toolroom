@@ -1293,4 +1293,97 @@ function closeErrorDialog() {
   background: transparent !important;
   border: none !important;
 }
+
+/* Leaflet 自带控件和弹窗是固定浅色/蓝色，跟随站点主题收敛。
+   leaflet.css 在组件里 import，注入顺序可能晚于本文件，用 :root[data-theme] 提高优先级。 */
+:root[data-theme] .leaflet-container {
+  background: var(--color-base-200);
+  color: var(--color-base-content);
+  font-family: var(--font-sans);
+}
+
+:root[data-theme] .leaflet-container a {
+  color: var(--color-primary);
+}
+
+:root[data-theme] .leaflet-bar {
+  border: 1px solid var(--color-base-300);
+  box-shadow: 0 2px 6px color-mix(in oklab, var(--color-base-content) 18%, transparent);
+}
+
+:root[data-theme] .leaflet-bar a,
+:root[data-theme] .leaflet-bar a.leaflet-disabled {
+  background-color: var(--color-base-100);
+  border-bottom-color: var(--color-base-300);
+  color: var(--color-base-content);
+}
+
+:root[data-theme] .leaflet-bar a:hover,
+:root[data-theme] .leaflet-bar a:focus {
+  background-color: var(--color-base-200);
+  color: var(--color-primary);
+}
+
+:root[data-theme] .leaflet-bar a.leaflet-disabled {
+  color: var(--text-faint);
+}
+
+:root[data-theme] .leaflet-control-attribution {
+  background: color-mix(in oklab, var(--color-base-100) 82%, transparent);
+  color: var(--text-muted);
+}
+
+:root[data-theme] .leaflet-control-attribution a {
+  color: var(--color-primary);
+}
+
+:root[data-theme] .leaflet-control-scale-line {
+  background: color-mix(in oklab, var(--color-base-100) 65%, transparent);
+  border-color: var(--line-strong);
+  color: var(--color-base-content);
+}
+
+:root[data-theme] .leaflet-popup-content-wrapper,
+:root[data-theme] .leaflet-popup-tip {
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+  border-radius: var(--radius-box, 0.25rem);
+}
+
+:root[data-theme] .leaflet-popup-content-wrapper {
+  border: 1px solid var(--color-base-300);
+  box-shadow: 0 6px 18px color-mix(in oklab, var(--color-base-content) 22%, transparent);
+}
+
+:root[data-theme] .leaflet-container a.leaflet-popup-close-button {
+  color: var(--text-muted);
+}
+
+:root[data-theme] .leaflet-container a.leaflet-popup-close-button:hover,
+:root[data-theme] .leaflet-container a.leaflet-popup-close-button:focus {
+  color: var(--color-error);
+}
+
+:root[data-theme] .leaflet-tooltip {
+  background: var(--color-base-100);
+  border-color: var(--color-base-300);
+  color: var(--color-base-content);
+  box-shadow: 0 2px 8px color-mix(in oklab, var(--color-base-content) 18%, transparent);
+}
+
+:root[data-theme] .leaflet-tooltip-top::before {
+  border-top-color: var(--color-base-100);
+}
+
+:root[data-theme] .leaflet-tooltip-bottom::before {
+  border-bottom-color: var(--color-base-100);
+}
+
+:root[data-theme] .leaflet-tooltip-left::before {
+  border-left-color: var(--color-base-100);
+}
+
+:root[data-theme] .leaflet-tooltip-right::before {
+  border-right-color: var(--color-base-100);
+}
 </style>

@@ -53,7 +53,6 @@
             :teleport="true"
             :locale="zhCN"
             placeholder="选择开始日期"
-            menu-class-name="dp-custom-menu"
             class="w-full"
           />
         </div>
@@ -74,7 +73,6 @@
             :teleport="true"
             :locale="zhCN"
             placeholder="选择结束日期"
-            menu-class-name="dp-custom-menu"
             class="w-full"
           />
         </div>

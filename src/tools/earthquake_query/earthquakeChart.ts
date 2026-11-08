@@ -1,5 +1,6 @@
 import type { EChartsOption } from 'echarts'
 import * as echarts from 'echarts'
+import { CHART_FONT_FAMILY } from '@/utils/colorUtils'
 import type { EarthquakeApiResponse } from './earthquakeService'
 
 /**
@@ -123,7 +124,8 @@ export function generateMagnitudeTimeChart(
 
   const seriesData = sortedFeatures.map((f, i) => ({
     name: dateStrings[i]!,
-    value: [dateStrings[i]!, f.properties.mag],
+    // 用时间戳 + time 轴：同一天可能有多条记录，category 轴会把它们挤到同一个刻度
+    value: [f.properties.time, f.properties.mag],
     mag: f.properties.mag,
     time: new Date(f.properties.time).toLocaleString('zh-CN', {
       month: '2-digit',
@@ -138,7 +140,7 @@ export function generateMagnitudeTimeChart(
     backgroundColor: 'transparent',
     textStyle: {
       color: theme.baseContent,
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamily: CHART_FONT_FAMILY,
     },
     tooltip: {
       trigger: 'item',
@@ -168,11 +170,12 @@ export function generateMagnitudeTimeChart(
       containLabel: true,
     },
     xAxis: {
-      type: 'category',
-      data: dateStrings,
+      type: 'time',
       axisLabel: {
         color: theme.baseContent,
         rotate: 45,
+        formatter: (value: number) =>
+          new Date(value).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }),
       },
       axisLine: { lineStyle: { color: theme.base300 } },
     },
@@ -190,7 +193,14 @@ export function generateMagnitudeTimeChart(
       {
         type: 'scatter',
         data: seriesData,
-        symbolSize: (data: { mag: number }) => Math.max(10, data.mag * 5),
+        // echarts 的 symbolSize 回调第一个参数是 data.value（这里是 [时间戳, 震级]），
+        // 不是 data 对象；原来读 data.mag 会得到 NaN，符号尺寸被归一成 0，整张图只剩坐标轴。
+        symbolSize: (rawValue: unknown, rawParams?: unknown) => {
+          const mag =
+            extractSeriesData<{ mag: number }>(normalizeCallback(rawParams) ?? {})?.mag ??
+            (Array.isArray(rawValue) ? Number(rawValue[1]) : Number(rawValue))
+          return typeof mag === 'number' && Number.isFinite(mag) ? Math.max(10, mag * 5) : 10
+        },
         itemStyle: {
           color: (raw: unknown) => {
             const mag = extractSeriesData<{ mag: number }>(normalizeCallback(raw) ?? {})?.mag
@@ -244,7 +254,7 @@ export function generateMagnitudeDistributionChart(
     backgroundColor: 'transparent',
     textStyle: {
       color: theme.baseContent,
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamily: CHART_FONT_FAMILY,
     },
     tooltip: {
       trigger: 'axis',
@@ -312,7 +322,7 @@ export function generateDepthChart(
 
   const seriesData = sortedFeatures.map((f, i) => ({
     name: dateStrings[i]!,
-    value: [dateStrings[i]!, f.geometry.coordinates[2]],
+    value: [f.properties.time, f.geometry.coordinates[2]],
     mag: f.properties.mag,
     depth: f.geometry.coordinates[2],
     time: new Date(f.properties.time).toLocaleString('zh-CN', {
@@ -327,7 +337,7 @@ export function generateDepthChart(
     backgroundColor: 'transparent',
     textStyle: {
       color: theme.baseContent,
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamily: CHART_FONT_FAMILY,
     },
     tooltip: {
       trigger: 'item',
@@ -357,11 +367,12 @@ export function generateDepthChart(
       containLabel: true,
     },
     xAxis: {
-      type: 'category',
-      data: dateStrings,
+      type: 'time',
       axisLabel: {
         color: theme.baseContent,
         rotate: 45,
+        formatter: (value: number) =>
+          new Date(value).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }),
       },
       axisLine: { lineStyle: { color: theme.base300 } },
     },
@@ -378,7 +389,11 @@ export function generateDepthChart(
       {
         type: 'scatter',
         data: seriesData,
-        symbolSize: (data: { mag: number }) => Math.max(8, data.mag * 4),
+        // 同 time 图：value 是 [时间戳, 深度]，震级要从第二个参数 params.data 取
+        symbolSize: (rawValue: unknown, rawParams?: unknown) => {
+          const mag = extractSeriesData<{ mag: number }>(normalizeCallback(rawParams) ?? {})?.mag
+          return typeof mag === 'number' && Number.isFinite(mag) ? Math.max(8, mag * 4) : 8
+        },
         itemStyle: {
           color: (raw: unknown) => {
             const mag = extractSeriesData<{ mag: number }>(normalizeCallback(raw) ?? {})?.mag

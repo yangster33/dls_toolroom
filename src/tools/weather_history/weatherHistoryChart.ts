@@ -1,7 +1,7 @@
 import type { EChartsOption } from 'echarts'
 import * as echarts from 'echarts'
 import type { WeatherApiResponse } from './weatherHistoryService'
-import { oklchToHex } from '@/utils/colorUtils'
+import { CHART_FONT_FAMILY, oklchToHex } from '@/utils/colorUtils'
 
 /**
  * 天气图表 option 生成器
@@ -37,7 +37,7 @@ export function generateTemperatureChart(
     backgroundColor: 'transparent',
     textStyle: {
       color: theme.baseContent,
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamily: CHART_FONT_FAMILY,
     },
     tooltip: {
       trigger: 'axis',
@@ -111,7 +111,7 @@ export function generatePrecipitationChart(
     backgroundColor: 'transparent',
     textStyle: {
       color: theme.baseContent,
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamily: CHART_FONT_FAMILY,
     },
     tooltip: {
       trigger: 'axis',
@@ -178,7 +178,7 @@ export function generateHumidityChart(
     backgroundColor: 'transparent',
     textStyle: {
       color: theme.baseContent,
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamily: CHART_FONT_FAMILY,
     },
     tooltip: {
       trigger: 'axis',
@@ -254,7 +254,7 @@ export function generateWindSpeedChart(
     backgroundColor: 'transparent',
     textStyle: {
       color: theme.baseContent,
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamily: CHART_FONT_FAMILY,
     },
     tooltip: {
       trigger: 'axis',
@@ -322,7 +322,7 @@ export function generateTemperatureRangeChart(
     backgroundColor: 'transparent',
     textStyle: {
       color: theme.baseContent,
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamily: CHART_FONT_FAMILY,
     },
     tooltip: {
       trigger: 'axis',

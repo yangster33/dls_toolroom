@@ -242,7 +242,7 @@
       v-if="isConverting"
       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
     >
-      <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+      <div class="bg-base-100 rounded-lg p-8 max-w-md w-full mx-4 shadow-xl">
         <h3 class="font-bold text-lg mb-4">正在转换...</h3>
         <div class="w-full bg-base-200 rounded-full h-2.5 mb-2">
           <div

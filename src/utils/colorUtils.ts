@@ -1,3 +1,7 @@
+/** 与 main.css 的 --font-sans 一致：ECharts 画在 canvas 上，读不到 CSS 变量 */
+export const CHART_FONT_FAMILY =
+  "'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'Source Han Sans SC', system-ui, sans-serif"
+
 interface OklchParts {
   L: number
   C: number
