@@ -222,7 +222,7 @@ export interface CableSizingInput {
 - 计算书：DC 下第 ③ 步不显示 kh，第 ④ 步不乘 kh，第 ⑤ 步不显示 X/cosφ，第 ⑦ 步不显示 k3。
 - 测试：cable_sizing 45 条（引擎 26 + 可追溯 12 + 计算书 7）；全量 997 / 80 files。
 - 截图：`test-results/dc-top.png`、`dc-manufacturer-table.png`、`dc-book-pass.png`。
-- 提交：待提交（本轮代码提交后回填）。
+- 提交：`5c85ce0`。
 
 ## 14. 风险
 
