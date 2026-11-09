@@ -2,7 +2,7 @@
 
 > 分支：`maint/tool-23-cable-sizing`
 > 日期：2026-11-09
-> 状态：待实施
+> 状态：已实施（2026-11-09）
 > 前置：`fbee2a2`（计算口径调整已完成）
 
 ## 1. 背景
@@ -163,3 +163,13 @@ export interface ParameterDoc {
 - 不做“简明/专业”双模式。
 - 不修改计算引擎与基础数据。
 - 不做参数弹窗，统一用参数说明表。
+
+## 13. 实施记录（2026-11-09）
+
+- 状态徽标：`.check-status` 替换 daisyUI badge，`white-space: nowrap`、`height: auto`、`min-width: 3.5em`；实测 36.4 × 20.2 px，横向显示。
+- 计算书：`calculationSteps.ts` 生成八步，复用结果区下方折叠面板；符号 chip + `data-symbol` 事件委托联动。
+- 参数说明：覆盖 28 个符号，含含义、位置、影响方向、依据；表格移到工作区下方全宽显示，避免右栏拥挤。
+- 结论卡：新增自然语言“为什么”一段。
+- 测试：`calculationSteps.spec.ts` 6 条；cable_sizing 合计 26 条。
+- 验证：`type-check`、`lint:check`、`vitest`、`build-only` 通过；默认工况与“D 直埋 + 40% 谐波 + 3 回路 × 2 根并联”截图正常。
+- 联动实测：悬停 `U 380 V` chip → 电压输入框加 `is-symbol-active`；悬停电压输入框 → 同符号 chip 高亮。

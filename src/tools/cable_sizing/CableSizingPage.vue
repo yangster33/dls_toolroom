@@ -39,7 +39,13 @@
     </div>
 
     <div class="workbench">
-      <div class="input-column">
+      <div
+        class="input-column"
+        @mouseover="handleSymbolOver"
+        @mouseleave="activeSymbol = ''"
+        @focusin="handleSymbolOver"
+        @focusout="handleSymbolOut"
+      >
         <section class="panel">
           <div class="panel-head">
             <span class="panel-no">01</span>
@@ -59,6 +65,8 @@
 
             <UnitField
               v-model="form.voltage"
+              data-symbol="U"
+              :class="{ 'is-symbol-active': isActive('U') }"
               label="标称电压 U"
               unit="V"
               :min="1"
@@ -92,6 +100,8 @@
             <UnitField
               v-if="form.inputMode === 'power'"
               v-model="form.powerKw"
+              data-symbol="P"
+              :class="{ 'is-symbol-active': isActive('P') }"
               label="负载功率 P"
               unit="kW"
               :min="0"
@@ -101,6 +111,8 @@
             <UnitField
               v-else
               v-model="form.currentA"
+              data-symbol="Ib"
+              :class="{ 'is-symbol-active': isActive('Ib') }"
               label="负载电流 Ib"
               unit="A"
               :min="0"
@@ -110,6 +122,8 @@
 
             <UnitField
               v-model="form.powerFactor"
+              data-symbol="cosφ"
+              :class="{ 'is-symbol-active': isActive('cosφ') }"
               label="功率因数 cosφ"
               :min="0.1"
               :max="1"
@@ -121,6 +135,8 @@
             <UnitField
               v-if="form.system === 'three-phase'"
               v-model="form.harmonicThdPercent"
+              data-symbol="h3"
+              :class="{ 'is-symbol-active': isActive('h3') }"
               label="3 次谐波含量"
               unit="%"
               :min="0"
@@ -131,6 +147,8 @@
 
             <UnitField
               v-model="form.efficiency"
+              data-symbol="η"
+              :class="{ 'is-symbol-active': isActive('η') }"
               label="效率 η"
               :min="0.1"
               :max="1"
@@ -141,6 +159,8 @@
             <UnitField
               v-if="form.inputMode === 'power'"
               v-model="form.demandFactor"
+              data-symbol="Kd"
+              :class="{ 'is-symbol-active': isActive('Kd') }"
               label="需要系数 Kd"
               :min="0.1"
               :max="1"
@@ -197,7 +217,7 @@
             </p>
 
             <template v-if="isBuried">
-              <label class="field">
+              <label class="field" data-symbol="s" :class="{ 'is-symbol-active': isActive('s') }">
                 <span class="field-label">
                   电缆间距
                   <span class="field-hint">按 B.52.18</span>
@@ -218,6 +238,8 @@
 
               <UnitField
                 v-model="form.soilThermalResistivity"
+                data-symbol="ρ"
+                :class="{ 'is-symbol-active': isActive('ρ') }"
                 label="土壤热阻率"
                 unit="K·m/W"
                 :min="0.5"
@@ -229,6 +251,8 @@
 
             <UnitField
               v-model="form.ambientTempC"
+              data-symbol="θ"
+              :class="{ 'is-symbol-active': isActive('θ') }"
               :label="ambientLabel"
               unit="℃"
               :min="-20"
@@ -239,6 +263,8 @@
 
             <UnitField
               v-model="form.lengthM"
+              data-symbol="L"
+              :class="{ 'is-symbol-active': isActive('L') }"
               label="线路长度 L"
               unit="m"
               :min="0"
@@ -248,6 +274,8 @@
 
             <UnitField
               v-model="form.groupedCircuits"
+              data-symbol="G"
+              :class="{ 'is-symbol-active': isActive('G') }"
               label="并列回路数"
               unit="回"
               :min="1"
@@ -258,6 +286,8 @@
 
             <UnitField
               v-model="form.parallelCables"
+              data-symbol="n"
+              :class="{ 'is-symbol-active': isActive('n') }"
               label="每相并联电缆"
               unit="根"
               :min="1"
@@ -268,6 +298,8 @@
 
             <UnitField
               v-model="form.reactanceOhmPerKm"
+              data-symbol="X"
+              :class="{ 'is-symbol-active': isActive('X') }"
               label="线路电抗 X"
               unit="Ω/km"
               :min="0"
@@ -288,6 +320,8 @@
           <div class="field-grid">
             <UnitField
               v-model="form.allowedDropPercent"
+              data-symbol="U%"
+              :class="{ 'is-symbol-active': isActive('U%') }"
               label="允许电压降"
               unit="%"
               :min="0.1"
@@ -298,6 +332,8 @@
 
             <UnitField
               v-model="form.shortCircuitKa"
+              data-symbol="Isc"
+              :class="{ 'is-symbol-active': isActive('Isc') }"
               label="短路电流 Isc"
               unit="kA"
               :min="0"
@@ -308,6 +344,8 @@
 
             <UnitField
               v-model="form.clearingTimeS"
+              data-symbol="t"
+              :class="{ 'is-symbol-active': isActive('t') }"
               label="保护动作时间 t"
               unit="s"
               :min="0.01"
@@ -316,7 +354,7 @@
               hint="用于热稳定校核"
             />
 
-            <label class="field">
+            <label class="field" data-symbol="In" :class="{ 'is-symbol-active': isActive('In') }">
               <span class="field-label">
                 断路器额定电流 In
                 <span class="field-hint">0 = 自动</span>
@@ -376,6 +414,8 @@
             <template v-if="form.motorStarting">
               <UnitField
                 v-model="form.startingCurrentMultiple"
+                data-symbol="k_start"
+                :class="{ 'is-symbol-active': isActive('k_start') }"
                 label="启动电流倍数"
                 unit="×Ib"
                 :min="1"
@@ -386,6 +426,8 @@
 
               <UnitField
                 v-model="form.allowedStartingDropPercent"
+                data-symbol="ΔU_start"
+                :class="{ 'is-symbol-active': isActive('ΔU_start') }"
                 label="启动允许压降"
                 unit="%"
                 :min="1"
@@ -425,6 +467,8 @@
             {{ result.parallelCables > 1 ? `${result.parallelCables} 根/相并联` : '单根敷设' }} · 由
             {{ result.drivers.join(' / ') }} 控制
           </p>
+
+          <p class="verdict-why">{{ verdictWhy }}</p>
 
           <div class="verdict-metrics">
             <div>
@@ -485,10 +529,7 @@
                   <td class="readout">{{ check.required }}</td>
                   <td class="readout">{{ check.actual }}</td>
                   <td>
-                    <span
-                      class="badge badge-sm"
-                      :class="check.pass ? 'badge-success' : 'badge-error'"
-                    >
+                    <span class="check-status" :class="check.pass ? 'is-pass' : 'is-fail'">
                       {{ check.pass ? '通过' : '不通过' }}
                     </span>
                   </td>
@@ -499,84 +540,55 @@
         </div>
 
         <details v-if="result" class="panel calc-panel" open>
-          <summary>计算过程</summary>
-          <dl class="calc-list">
-            <div>
-              <dt>计算负荷</dt>
-              <dd class="readout">
-                <template v-if="form.inputMode === 'power'">
-                  Pjs = {{ form.powerKw || 0 }} × {{ form.demandFactor || 0 }} =
-                  {{ result.designPowerKw.toFixed(2) }} kW
-                </template>
-                <template v-else>
-                  由负载电流反算：{{ result.designPowerKw.toFixed(2) }} kW
-                </template>
-              </dd>
-            </div>
-            <div>
-              <dt>计算电流</dt>
-              <dd class="readout">Ib = {{ result.designCurrentA.toFixed(2) }} A</dd>
-            </div>
-            <div>
-              <dt>载流量修正</dt>
-              <dd class="readout">
-                kt = {{ result.temperatureFactor.toFixed(2) }}，kg =
-                {{ result.groupFactor.toFixed(2) }}（{{ result.groupingCount }} 根），ks =
-                {{ result.soilFactor.toFixed(2) }}，kh =
-                {{ result.harmonicFactor.toFixed(2) }}，Iz,req =
-                {{ result.requiredBaseAmpacityA.toFixed(1) }} A
-              </dd>
-            </div>
-            <div v-if="result.neutralCurrentA > 0">
-              <dt>中性线电流</dt>
-              <dd class="readout">IN = {{ result.neutralCurrentA.toFixed(1) }} A</dd>
-            </div>
-            <div>
-              <dt>线路阻抗</dt>
-              <dd class="readout">
-                R = {{ result.resistanceMilliohm.toFixed(2) }} mΩ，X =
-                {{ result.reactanceMilliohm.toFixed(2) }} mΩ
-              </dd>
-            </div>
-            <div>
-              <dt>电压降</dt>
-              <dd class="readout">
-                ΔU = {{ result.voltageDropV.toFixed(1) }} V（{{
-                  result.voltageDropPercent.toFixed(2)
-                }}
-                %）
-              </dd>
-            </div>
-            <div>
-              <dt>短路热稳定</dt>
-              <dd class="readout">
-                Smin = Isc·√t / k = {{ result.shortCircuitMinSection.toFixed(1) }} mm²
-              </dd>
-            </div>
-            <div>
-              <dt>保护配合</dt>
-              <dd class="readout">
-                In = {{ result.breakerRatingA.toFixed(0) }} A（{{
-                  result.breakerAuto ? '自动' : '手动'
-                }}）· {{ protectionInfo.label }}
-                <template v-if="result.fuseK3 !== null">
-                  ，k3 = {{ result.fuseK3.toFixed(2) }}
-                </template>
-              </dd>
-            </div>
-            <div v-if="result.startingVoltageDropPercent !== null">
-              <dt>电机启动压降</dt>
-              <dd class="readout">{{ result.startingVoltageDropPercent.toFixed(2) }} %</dd>
-            </div>
-            <div>
-              <dt>视在功率</dt>
-              <dd class="readout">{{ result.apparentPowerKva.toFixed(1) }} kVA</dd>
-            </div>
-            <div>
-              <dt>线路损耗</dt>
-              <dd class="readout">{{ result.lineLossW.toFixed(0) }} W（满载时估算）</dd>
-            </div>
-          </dl>
+          <summary>计算书（逐步推导）</summary>
+
+          <div class="calc-book">
+            <article
+              v-for="step in calcSteps"
+              :key="step.key"
+              class="calc-step"
+              :class="{ 'is-fail': step.pass === false }"
+            >
+              <header class="calc-step-head">
+                <span class="calc-step-no">{{ step.index }}</span>
+                <h3>{{ step.title }}</h3>
+                <span
+                  v-if="step.pass !== undefined"
+                  class="check-status"
+                  :class="step.pass ? 'is-pass' : 'is-fail'"
+                >
+                  {{ step.pass ? '通过' : '不通过' }}
+                </span>
+              </header>
+
+              <p class="calc-formula">{{ step.formula }}</p>
+              <p class="calc-substitution">{{ step.substitution }}</p>
+              <p class="calc-result">{{ step.result }}</p>
+
+              <div v-if="step.symbols.length" class="calc-symbols">
+                <button
+                  v-for="symbol in step.symbols"
+                  :key="`${step.key}-${symbol.symbol}`"
+                  type="button"
+                  class="symbol-chip"
+                  :class="{ 'is-symbol-active': chipActive(symbol) }"
+                  :data-symbol="symbol.inputSymbol"
+                  @mouseenter="activateSymbol(symbol)"
+                  @mouseleave="activeSymbol = ''"
+                  @focus="activateSymbol(symbol)"
+                  @blur="activeSymbol = ''"
+                >
+                  <span class="symbol-name">{{ symbol.symbol }}</span>
+                  <span class="symbol-value"
+                    >{{ symbol.value }}{{ symbol.unit ? ` ${symbol.unit}` : '' }}</span
+                  >
+                  <span class="symbol-label">{{ symbol.name }}</span>
+                </button>
+              </div>
+
+              <p v-if="step.note" class="calc-step-note">{{ step.note }}</p>
+            </article>
+          </div>
         </details>
 
         <div v-if="result && result.warnings.length" class="warning-box">
@@ -612,6 +624,34 @@
         </details>
       </aside>
     </div>
+
+    <details class="panel param-panel">
+      <summary>参数说明</summary>
+      <div class="table-wrap">
+        <table class="param-table">
+          <thead>
+            <tr>
+              <th>符号</th>
+              <th>名称</th>
+              <th>含义</th>
+              <th>在计算中的位置</th>
+              <th>影响方向</th>
+              <th>依据</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="doc in parameterDocs" :key="doc.symbol">
+              <td class="readout">{{ doc.symbol }}</td>
+              <td>{{ doc.name }}</td>
+              <td>{{ doc.meaning }}</td>
+              <td>{{ doc.position }}</td>
+              <td>{{ doc.impact }}</td>
+              <td>{{ doc.basis }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
   </div>
 </template>
 
@@ -640,6 +680,7 @@ import {
   formatSection,
   type CableSizingInput,
 } from './cableSizing'
+import { buildCalculationSteps, buildParameterDocs, type CalcSymbol } from './calculationSteps'
 
 const toolConfig = getToolById('cable_sizing')
 const toast = useToast()
@@ -648,6 +689,10 @@ const form = reactive<CableSizingInput>(createDefaultInput())
 const copied = ref(false)
 
 const result = computed(() => calculateCableSizing({ ...form }))
+
+const activeSymbol = ref('')
+const parameterDocs = buildParameterDocs()
+const calcSteps = computed(() => (result.value ? buildCalculationSteps(form, result.value) : []))
 
 const methodInfo = computed(
   () =>
@@ -664,6 +709,27 @@ const protectionInfo = computed(
     PROTECTION_DEVICE_OPTIONS.find((option) => option.key === form.protectionDevice) ??
     PROTECTION_DEVICE_OPTIONS[0]!,
 )
+
+const verdictWhy = computed(() => {
+  const value = result.value
+  if (!value) return ''
+  const limit = value.fuseK3 ? value.totalAmpacityA / value.fuseK3 : value.totalAmpacityA
+  const limitLabel = value.fuseK3 ? 'Iz/k3' : 'Iz'
+  const protectionText = value.protectionPass
+    ? `保护电器 ${value.breakerRatingA.toFixed(0)} A 不超过 ${limitLabel} ${limit.toFixed(1)} A`
+    : `保护电器 ${value.breakerRatingA.toFixed(0)} A 超出 ${limitLabel} ${limit.toFixed(1)} A`
+  const parts = [
+    `计算电流 ${value.designCurrentA.toFixed(1)} A`,
+    `按 ${methodInfo.value.label}、${form.ambientTempC} ℃、${value.groupingCount} 根成束修正后，${formatSection(value.selectedSection)} mm² 的允许载流量 ${value.totalAmpacityA.toFixed(1)} A`,
+    `压降 ${value.voltageDropPercent.toFixed(2)}%`,
+    `热稳定要求至少 ${value.shortCircuitMinSection.toFixed(1)} mm²`,
+    protectionText,
+  ]
+  const conclusion = value.overallPass
+    ? `各项校核通过，最终取 ${formatSection(value.selectedSection)} mm²。`
+    : `存在未通过项，当前方案为 ${formatSection(value.selectedSection)} mm²，需调整参数。`
+  return `${parts.join('；')}。${conclusion}`
+})
 
 const isBuried = computed(() => methodInfo.value.buried)
 const ambientLabel = computed(() => (isBuried.value ? '土壤温度' : '环境温度'))
@@ -687,6 +753,31 @@ watch(
     }
   },
 )
+
+function handleSymbolOver(event: Event) {
+  const target = event.target as HTMLElement | null
+  activeSymbol.value = target?.closest<HTMLElement>('[data-symbol]')?.dataset.symbol ?? ''
+}
+
+function handleSymbolOut(event: FocusEvent) {
+  const next = event.relatedTarget as HTMLElement | null
+  if (!next?.closest('[data-symbol]')) activeSymbol.value = ''
+}
+
+function isActive(symbol: string): boolean {
+  return activeSymbol.value === symbol
+}
+
+function activateSymbol(symbol: CalcSymbol) {
+  activeSymbol.value = symbol.inputSymbol ?? symbol.symbol
+}
+
+function chipActive(symbol: CalcSymbol): boolean {
+  return (
+    activeSymbol.value === symbol.symbol ||
+    (symbol.inputSymbol !== undefined && activeSymbol.value === symbol.inputSymbol)
+  )
+}
 
 function resetForm() {
   Object.assign(form, createDefaultInput())
@@ -1036,6 +1127,15 @@ async function copyReport() {
   color: var(--text-muted);
 }
 
+.verdict-why {
+  margin-top: 0.55rem;
+  padding-top: 0.55rem;
+  border-top: 1px dashed var(--color-base-300);
+  font-size: 11px;
+  line-height: 1.65;
+  color: var(--text-muted);
+}
+
 .verdict-metrics {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1138,34 +1238,201 @@ async function copyReport() {
   background-color: var(--color-base-200);
 }
 
-.calc-list {
-  margin: 0;
-  padding: 0.3rem 0.8rem 0.7rem;
+.check-table td:last-child {
+  white-space: nowrap;
 }
 
-.calc-list div {
+.check-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.5em;
+  padding: 0.1rem 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: nowrap;
+  border: 1px solid currentColor;
+}
+
+.check-status.is-pass {
+  color: var(--color-success);
+  background-color: color-mix(in oklab, var(--color-success) 10%, var(--color-base-100));
+}
+
+.check-status.is-fail {
+  color: var(--color-error);
+  background-color: color-mix(in oklab, var(--color-error) 10%, var(--color-base-100));
+}
+
+.calc-book {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.8rem;
-  padding: 0.38rem 0;
+  flex-direction: column;
+}
+
+.calc-step {
+  padding: 0.7rem 0.8rem;
   border-bottom: 1px dashed color-mix(in oklab, var(--color-base-300) 70%, transparent);
 }
 
-.calc-list div:last-child {
+.calc-step:last-child {
   border-bottom: 0;
 }
 
-.calc-list dt {
-  flex: 0 0 auto;
+.calc-step.is-fail {
+  background-color: color-mix(in oklab, var(--color-error) 4%, transparent);
+}
+
+.calc-step-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.calc-step-head h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.calc-step-head .check-status {
+  margin-left: auto;
+}
+
+.calc-step-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1;
+  color: var(--color-primary);
+  border: 1px solid color-mix(in oklab, var(--color-primary) 40%, transparent);
+}
+
+.calc-formula,
+.calc-substitution,
+.calc-result {
+  margin: 0.35rem 0 0;
+  font-family: var(--font-mono);
   font-size: 11px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.calc-formula {
   color: var(--text-muted);
 }
 
-.calc-list dd {
-  margin: 0;
-  font-size: 11px;
-  text-align: right;
+.calc-substitution {
+  color: var(--text-muted);
+}
+
+.calc-result {
+  color: var(--color-base-content);
+  font-weight: 600;
+}
+
+.calc-step-note {
+  margin: 0.35rem 0 0;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+.calc-symbols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.symbol-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.18rem 0.42rem;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1.4;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  background-color: var(--color-base-200);
+  border: 1px solid var(--color-base-300);
+}
+
+.symbol-chip:hover,
+.symbol-chip:focus-visible {
+  border-color: var(--color-primary);
+}
+
+.symbol-chip.is-symbol-active {
+  border-color: var(--color-primary);
+  background-color: color-mix(in oklab, var(--color-primary) 8%, var(--color-base-100));
+}
+
+.symbol-name {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.symbol-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-base-content);
+}
+
+.symbol-label {
+  color: var(--text-faint);
+}
+
+.param-panel {
+  margin-top: 1rem;
+}
+
+.param-panel summary {
+  padding: 0.55rem 0.8rem;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-base-300);
+  background-color: var(--color-base-200);
+}
+
+.param-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10.5px;
+}
+
+.param-table th,
+.param-table td {
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid color-mix(in oklab, var(--color-base-300) 60%, transparent);
+}
+
+.param-table th {
+  font-size: 9.5px;
+  font-weight: 500;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.param-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.is-symbol-active {
+  outline: 2px solid color-mix(in oklab, var(--color-primary) 70%, transparent);
+  outline-offset: 2px;
 }
 
 .warning-box {
