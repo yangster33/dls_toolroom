@@ -222,7 +222,7 @@
 - 部署侧确认 **CSP 允许 `worker-src 'self'`**（阶段 4 引入的新硬需求；没有 CSP 则无影响，有的话被拦会自动降级，但 Worker 就白设了）
 - xlsx 导出无边框的老 bug：把 `toSheetSpec`/`generateXlsx` 的 `border: false` 改 `true` 即可打开，代价是大表总耗时 +50%（1987ms → 2967ms @5万×9）
 - D 档（D1~D4）与 E 档（E1~E4）未动
-- `elevations_batch`/`GeocodeCommon`/`distance_sensor` 三页仍是页内 `XLSX.read`（取消只能停在它之后的校验阶段）；根治要把页内解析也统一走 `filePipeline.parse`（与 D1 一并做更划算）
+- ~~`elevations_batch`/`GeocodeCommon`/`distance_sensor` 三页仍是页内 `XLSX.read`（取消只能停在它之后的校验阶段）；根治要把页内解析也统一走 `filePipeline.parse`~~ —— ✅ 2026-11-09 已由 **F3** 完成（`5d761a5`）
 
 ## 七、本批次期间新发现、未修的问题（超出 C4 范围，建议单独立项）
 
@@ -271,7 +271,7 @@ reader 侧：`utils/TemplateReader.readAndValidateTemplate` 的 options 增 `sig
 - 两页新增 `pipelineProgress` + `useProgressTimer`（与既有的「转换中」内联进度区 `isConverting` / `progress` 相互独立，旧的那套没动）；导出不可取消，故 `:show-cancel="false"`。
 
 **已知残差**
-- elevations_batch / GeocodeCommon / distance_sensor 三页的 `XLSX.read + sheet_to_json` 仍在**页内同步块**，取消只能停在它之后的逐行校验阶段（阶段 4 记录的同一问题，根治要把页内解析也搬进 Worker）。
+- ~~elevations_batch / GeocodeCommon / distance_sensor 三页的 `XLSX.read + sheet_to_json` 仍在**页内同步块**，取消只能停在它之后的逐行校验阶段（阶段 4 记录的同一问题，根治要把页内解析也搬进 Worker）。~~ —— ✅ 2026-11-09 已由 **F3** 完成（`5d761a5`）
 - 取消只到「读完并校验完」为止；csv 下载、结果导出都没有取消能力。
 - 未做页面 mount 级单测（仓库无页面单测先例），靠 type-check + eslint + 全量单测 + e2e（kml-upload / worker-pipeline / coordinate-convert）保证。
 

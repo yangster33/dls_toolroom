@@ -7,11 +7,11 @@
 | 属性 | 值 |
 |---|---|
 | 审查基线 | `c096944`（2026-10-09 审计） |
-| 台账更新 | 2026-11-08（D4 第二批：KmlViewerPage / GeocodeCommon 拆分完成） |
-| 当前 HEAD | `c66de9c`（最后一条代码提交；本台账回填提交见 git log） |
-| 工具数 | 26 个路由（预渲染 sitemap） |
-| 测试 | **948 passed / 75 files**（当前工作区） |
-| 最近更新 | 2026-11-08 · **D4 全部完成（Gantt + KmlViewer + GeocodeCommon）**；剩余 E 档 / F 档 |
+| 台账更新 | 2026-11-09（E3 浏览量双计 / F3 三页解析 Worker 化 / F4 GeoJSON 强引用 完成） |
+| 当前 HEAD | `5d761a5`（最后一条代码提交；本台账回填提交见 git log） |
+| 工具数 | 26 个路由（预渲染 sitemap；`feat/sizing-sheet-tools` 分支另有 5 个新工具待审） |
+| 测试 | **884 passed / 71 files**（master；含 5 个新工具的分支为 948） |
+| 最近更新 | 2026-11-09 · **D4 / E3 / F3 / F4 完成**；剩余 E1/E2/E4、F1/F2/F5 |
 
 ---
 
@@ -105,11 +105,23 @@
 | `oxlint` | 0 / 0 | ✅ 0 / 0 |
 | `eslint` | ❌ 133 errors | ✅ **0** |
 | `prettier --check` | ❌ 216 files 不符 | ✅ 全符合 |
-| `vitest` | 524 / 35 files | ✅ **785 / 55 files** |
+| `vitest` | 524 / 35 files | ✅ **884 / 71 files**（master；分支 948） |
 | `playwright`（生产构建） | 未验证 | ✅ 6 passed / 1 flaky → C4 后 **dev 8 passed · preview 7 passed**（新增 worker 链路用例，断言 worker 模块响应 200） |
 | 产物一致性（C4 新增项） | — | 4 处导出与旧实现**逐格一致**（黄金参考内联在 spec 里，另有变异验证） |
 | 主线程阻塞（C4 新增项） | — | 5 万行导入 **~1900ms → 几十 ms**（Node 基准 + e2e 证真实加载） |
 | `npm run build` | 不带门禁 | ✅ 全链路通过 |
+
+### 2026-11-09 · E3 / F3 / F4（提交 `5d761a5`）
+
+依据 [`../docs/2026-11-09-e3-f3-f4-fix-record.md`](../docs/2026-11-09-e3-f3-f4-fix-record.md)。
+
+| 项 | 改动 | 测试 |
+|---|---|---|
+| **E3** | 浏览量只由 `router.afterEach` 上报；`DlsComment` 删除 `incrementView`，只读统计 | 挂载后无 `/view` POST（1 条） |
+| **F3** | `elevations_batch` / `distance_sensor` / `GeocodeCommon` 的 XLSX 解析改走 `filePipeline.parse`；新增 `matrixToRows` 通用行整形 | `matrixToRows` 5 条 |
+| **F4** | `GeoFeature` 删除 `feature: GeoJSON.Feature` 及两处赋值，消除大文件强引用 | parseKML 结果不含 `feature`（1 条） |
+
+门禁：type-check 0 / oxlint 0·0 / eslint 0 / prettier 全符合 / vitest **884 passed · 71 files** / `build-only` 成功。
 
 ---
 
@@ -270,7 +282,7 @@
 |---|---|---|---|---|
 | E1 | P2-16 | `vercel.json` 裸 IP + 明文 HTTP 传输评论 PII | Vercel 控制台 | ⬜ |
 | E2 | P1-8 | README 写"无需后端"，实际 6 处 `/api/*` 调用。**主标语已被工作区那版重写解决**，仍缺「哪些功能依赖后端 + 后端不可用时的降级行为」章节 | 文档更新 | ◐ 部分 |
-| E3 | — | 浏览量双计（`router:85` + `DlsComment:332`） | 决定保留哪一端 | ⬜ |
+| E3 | — | 浏览量双计（`router:85` + `DlsComment:332`） | 决定保留哪一端 | ✅ `5d761a5`（保留 router） |
 | E4 | — | lefthook 未装，git hook 从未生效。**现象复核（2026-10-15）**：D3/D1 共 6 次提交，每次都打印 `Can't find lefthook in PATH`（与 stage2 计划 §六.3 记录一致）——钩子确实从未跑过 | 确认是否故意 | ⬜ |
 
 ### F 档 · C4 期间新发现（2026-10-12）
@@ -279,8 +291,8 @@
 |---|---|---|---|---|
 | F1 | — | **部署侧 CSP 需允许 `worker-src 'self'`**（阶段 4 引入的新硬需求）。没有 CSP 则无影响；有的话 Worker 被拦 → 自动降级主线程，功能不坏但 Worker 白设 | 部署侧确认 | ⬜ |
 | F2 | — | xlsx 导出**没有边框**（老 bug：xlsx@0.18.5 会静默丢弃所有单元格样式，连官方 `add_style` 也落不了盘）。改 `toSheetSpec`/`generateXlsx` 的 `border: false` → `true` 即可打开，代价是大表总耗时 **+50%**（5万×9：1987→2967ms） | 产品决策 | ⬜ |
-| F3 | — | `elevations_batch` / `GeocodeCommon` / `distance_sensor` 三页仍是**页内** `XLSX.read + sheet_to_json`（不走 `filePipeline.parse`），所以取消只能停在它之后的校验阶段。**D1 已完成 reader 侧收敛，但页内解析是另一个入口**，需把这三页的解析也统一走 `filePipeline.parse` | 排期 | ⬜ |
-| F4 | — | `geoDataService` 的要素强引用原始 GeoJSON 对象（`feature` 字段），大文件内存放大 | 排期 | ⬜ |
+| F3 | — | `elevations_batch` / `GeocodeCommon` / `distance_sensor` 三页仍是**页内** `XLSX.read + sheet_to_json`（不走 `filePipeline.parse`），所以取消只能停在它之后的校验阶段。**D1 已完成 reader 侧收敛，但页内解析是另一个入口**，需把这三页的解析也统一走 `filePipeline.parse` | 排期 | ✅ `5d761a5`（新增 `matrixToRows`） |
+| F4 | — | `geoDataService` 的要素强引用原始 GeoJSON 对象（`feature` 字段），大文件内存放大 | 排期 | ✅ `5d761a5`（删除 `feature` 字段与赋值） |
 | F5 | — | togeojson 对「MultiGeometry 里再嵌套 MultiGeometry」只返回最后一个几何（库局限，已用一条用例钉住，等库修好把期望 1 改成 2） | 跟上游 | ⬜ |
 
 ---
