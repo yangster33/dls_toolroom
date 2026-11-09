@@ -84,6 +84,12 @@
 - XLSX 导入 → 验证通过，并断言 `filePipeline.worker` 响应 200（F3 路径真实走 Worker）；
 - `get_lonlat` CSV 地址模板导入 → 验证通过 2 条。
 
+顺手修了旧首页/工具索引 e2e 的选择器（提交 `8adc8e3`）：
+
+- 首页文案改为「通信工程科研、规划与设计工具集」，入口改为「全部 N 个工具」链接；
+- 导航链接限定在 `.site-nav`，避免页脚同名链接触发 strict mode；
+- 工具条目改用 `.ledger-tool[href="..."]`，避免「坐标转换」同时命中「批量转换」。
+
 ---
 
 ## 四、D5 · 拆分 SheetTemplatePage
