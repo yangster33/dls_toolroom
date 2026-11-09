@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig, loadEnv } from 'vite'
@@ -6,6 +7,54 @@ import vueJsx from '@vitejs/plugin-vue-jsx'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import { viteMockServe } from 'vite-plugin-mock'
 // import tailwindcss from '@tailwindcss/vite'
+
+/**
+ * Windows 上的安全软件（联想电脑管家/火绒引擎、奇安信天擎等）会实时扫描
+ * 刚写入 `node_modules/.vite/deps_temp_*` 的预构建产物。扫描期间目录被占用，
+ * Vite 提交缓存时把临时目录 rename 成 `deps` 会持续抛 EPERM；而 Vite 内置
+ * 的重试窗口只有 5s，超时后依赖缓存无法落盘，页面请求依赖模块就 404，
+ * 表现为 dev server「起不来」。
+ *
+ * 这里给 `fs.rename` 加一层更长的重试（仅 Windows，见下方常量），让预构建
+ * 能在安全软件扫描结束后正常提交。只对 EPERM/EACCES/EBUSY 这类瞬时错误
+ * 重试，其他错误照常抛出。
+ */
+const RENAME_RETRY_MS = 30_000
+const retryableRenameCodes = new Set(['EPERM', 'EACCES', 'EBUSY'])
+
+if (process.platform === 'win32') {
+  type PatchedRename = typeof fs.rename & { __dlsRetrying?: boolean }
+
+  const mutableFs = fs as unknown as { rename: PatchedRename }
+  const originalRename = mutableFs.rename
+
+  if (!originalRename.__dlsRetrying) {
+    const retryingRename = ((oldPath, newPath, callback) => {
+      const startedAt = Date.now()
+      let delay = 50
+
+      const attempt = () => {
+        originalRename(oldPath, newPath, (error) => {
+          if (
+            error &&
+            retryableRenameCodes.has(error.code ?? '') &&
+            Date.now() - startedAt < RENAME_RETRY_MS
+          ) {
+            setTimeout(attempt, delay)
+            delay = Math.min(delay * 2, 500)
+            return
+          }
+          callback(error)
+        })
+      }
+
+      attempt()
+    }) as PatchedRename
+
+    retryingRename.__dlsRetrying = true
+    mutableFs.rename = retryingRename
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig(({ command, mode }) => {
