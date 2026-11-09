@@ -15,17 +15,52 @@
  * 电缆厂家数据和实际敷设条件复核。
  */
 
-export type SystemType = 'three-phase' | 'single-phase' | 'dc'
-export type Material = 'cu' | 'al'
-export type Insulation = 'pvc' | 'xlpe'
-export type InstallationMethod = 'A1' | 'A2' | 'B1' | 'B2' | 'C' | 'D' | 'E' | 'F' | 'G'
-export type InputMode = 'power' | 'current'
+import {
+  ALPHA,
+  AMPACITY,
+  AMPACITY_DATA_NOTE,
+  BREAKER_RATINGS,
+  MAX_TEMPERATURE,
+  RHO20,
+  THERMAL_K,
+} from './ampacityTables'
+import {
+  AIR_TEMPERATURE_FACTORS,
+  SOIL_TEMPERATURE_FACTORS,
+  airGroupingCategory,
+  airGroupingFactor,
+  buriedGroupingFactor,
+  harmonicFactor,
+  interpolateFactor,
+  soilResistivityFactor,
+} from './correctionFactors'
+import {
+  STANDARD_SECTIONS,
+  type BuriedSpacing,
+  type CableSizingInput,
+  type CableSizingResult,
+  type CheckResult,
+  type InstallationMethod,
+  type Insulation,
+  type Material,
+  type ProtectionDevice,
+  type SystemType,
+} from './types'
 
-export const STANDARD_SECTIONS = [
-  1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300,
-] as const
-
-export type CrossSection = (typeof STANDARD_SECTIONS)[number]
+export type {
+  BuriedSpacing,
+  CableSizingInput,
+  CableSizingResult,
+  CheckResult,
+  CrossSection,
+  InputMode,
+  InstallationMethod,
+  Insulation,
+  Material,
+  ProtectionDevice,
+  SystemType,
+} from './types'
+export { AMPACITY_DATA_NOTE, BREAKER_RATINGS, STANDARD_SECTIONS }
 
 export interface SystemOption {
   key: SystemType
@@ -147,221 +182,42 @@ export const INSTALLATION_OPTIONS: ReadonlyArray<InstallationOption> = [
   },
 ]
 
-type AmpacityRow = readonly number[]
-
-type AmpacityTable = Record<Material, Record<Insulation, Record<InstallationMethod, AmpacityRow>>>
-
-/**
- * 基准载流量（A）：3 根负载导体、空气 30 ℃ / 土壤 20 ℃、土壤热阻率 2.5 K·m/W。
- * 截面顺序与 STANDARD_SECTIONS 一致。
- */
-const AMPACITY: AmpacityTable = {
-  cu: {
-    pvc: {
-      A1: [13.5, 18, 24, 31, 42, 56, 73, 89, 108, 136, 164, 188, 216, 245, 286, 328],
-      A2: [12.5, 16.5, 22, 28, 38, 50, 66, 80, 97, 122, 147, 169, 194, 220, 257, 295],
-      B1: [15.5, 21, 28, 36, 50, 68, 89, 110, 134, 171, 207, 239, 275, 314, 369, 424],
-      B2: [15, 20, 27, 34, 46, 62, 80, 99, 118, 149, 179, 206, 236, 268, 313, 353],
-      C: [17.5, 24, 32, 41, 57, 76, 101, 125, 151, 192, 232, 269, 309, 353, 415, 477],
-      D: [18, 24, 31, 38, 51, 66, 84, 101, 122, 151, 179, 207, 235, 265, 305, 346],
-      E: [18.5, 25, 34, 42, 58, 79, 104, 129, 159, 201, 244, 283, 325, 371, 437, 502],
-      F: [19, 26, 35, 44, 61, 83, 110, 137, 169, 214, 260, 302, 347, 397, 468, 538],
-      G: [20, 27, 37, 46, 64, 88, 116, 145, 179, 227, 276, 321, 369, 422, 498, 573],
-    },
-    xlpe: {
-      A1: [16, 21, 28, 37, 50, 66, 86, 105, 127, 160, 193, 221, 254, 288, 337, 386],
-      A2: [15, 20, 26, 33, 45, 59, 78, 94, 114, 143, 173, 199, 228, 259, 302, 347],
-      B1: [18, 25, 33, 43, 59, 80, 105, 130, 158, 201, 243, 281, 323, 369, 434, 499],
-      B2: [18, 24, 32, 40, 54, 73, 94, 116, 139, 175, 210, 242, 278, 315, 368, 415],
-      C: [21, 28, 38, 48, 67, 89, 119, 147, 178, 226, 273, 316, 363, 415, 488, 561],
-      D: [21, 28, 36, 45, 60, 78, 99, 119, 144, 178, 211, 244, 277, 312, 359, 407],
-      E: [22, 30, 40, 50, 68, 93, 122, 152, 187, 236, 287, 333, 382, 436, 514, 590],
-      F: [22, 31, 41, 52, 72, 98, 129, 161, 199, 252, 306, 355, 408, 467, 551, 633],
-      G: [24, 32, 44, 54, 75, 103, 136, 170, 210, 267, 324, 377, 434, 496, 585, 674],
-    },
-  },
-  al: {
-    pvc: {
-      A1: [10.5, 14, 19, 24, 33, 44, 57, 69, 84, 106, 128, 147, 168, 191, 223, 256],
-      A2: [9.8, 13, 17, 22, 30, 39, 51, 62, 76, 95, 115, 132, 151, 172, 200, 230],
-      B1: [12, 16, 22, 28, 39, 53, 69, 86, 105, 133, 161, 186, 215, 245, 288, 331],
-      B2: [12, 16, 21, 27, 36, 48, 62, 77, 92, 116, 140, 161, 184, 209, 244, 275],
-      C: [14, 19, 25, 32, 44, 59, 79, 98, 118, 150, 181, 210, 241, 275, 324, 372],
-      D: [14, 19, 24, 30, 40, 51, 66, 79, 95, 118, 140, 161, 183, 207, 238, 270],
-      E: [14, 20, 27, 33, 45, 62, 81, 101, 124, 157, 190, 221, 254, 289, 341, 392],
-      F: [15, 20, 27, 34, 48, 65, 86, 107, 132, 167, 203, 236, 271, 310, 365, 420],
-      G: [16, 21, 29, 36, 50, 69, 90, 113, 140, 177, 215, 250, 288, 329, 389, 447],
-    },
-    xlpe: {
-      A1: [12.6, 16.6, 22, 29, 39.5, 52, 68, 83, 100, 126, 152, 175, 201, 228, 266, 305],
-      A2: [11.9, 15.8, 20.5, 26, 35.5, 46.6, 61.6, 74, 90, 113, 137, 157, 180, 205, 239, 274],
-      B1: [14.2, 19.8, 26, 34, 46.6, 63, 83, 103, 125, 159, 192, 222, 255, 291, 343, 394],
-      B2: [14.2, 19, 25, 32, 42.7, 57.7, 74, 92, 110, 138, 166, 191, 220, 249, 291, 328],
-      C: [16.6, 22, 30, 38, 53, 70, 94, 116, 141, 179, 216, 250, 287, 328, 386, 443],
-      D: [16.6, 22, 28, 35.5, 47.4, 61.6, 78, 94, 114, 141, 167, 193, 219, 246, 284, 321],
-      E: [17.4, 24, 32, 39.5, 53.7, 73.5, 96, 120, 148, 186, 227, 263, 302, 344, 406, 466],
-      F: [17.4, 24.5, 32.4, 41, 57, 77, 102, 127, 157, 199, 242, 280, 322, 369, 435, 500],
-      G: [19, 25, 35, 43, 59, 81, 107, 134, 166, 211, 256, 298, 343, 392, 462, 532],
-    },
-  },
-}
-
-export const AMPACITY_DATA_NOTE =
-  '基准载流量按 GB/T 16895.6-2014 / IEC 60364-5-52 附录 B 常用表整理，' +
-  '对应 3 根负载导体、空气 30 ℃ / 土壤 20 ℃、土壤热阻率 2.5 K·m/W。' +
-  '单相与直流按 3 根负载导体表取值，结果偏保守。'
-
-type FactorPoint = readonly [temperature: number, factor: number]
-
-const AIR_TEMPERATURE_FACTORS: Record<Insulation, ReadonlyArray<FactorPoint>> = {
-  pvc: [
-    [10, 1.22],
-    [15, 1.17],
-    [20, 1.12],
-    [25, 1.06],
-    [30, 1.0],
-    [35, 0.94],
-    [40, 0.87],
-    [45, 0.79],
-    [50, 0.71],
-    [55, 0.61],
-    [60, 0.5],
-  ],
-  xlpe: [
-    [10, 1.15],
-    [15, 1.12],
-    [20, 1.08],
-    [25, 1.04],
-    [30, 1.0],
-    [35, 0.96],
-    [40, 0.91],
-    [45, 0.87],
-    [50, 0.82],
-    [55, 0.76],
-    [60, 0.71],
-    [65, 0.65],
-    [70, 0.58],
-    [75, 0.5],
-    [80, 0.41],
-  ],
-}
-
-const SOIL_TEMPERATURE_FACTORS: Record<Insulation, ReadonlyArray<FactorPoint>> = {
-  pvc: [
-    [10, 1.1],
-    [15, 1.05],
-    [20, 1.0],
-    [25, 0.95],
-    [30, 0.89],
-    [35, 0.84],
-    [40, 0.77],
-    [45, 0.71],
-    [50, 0.63],
-    [55, 0.55],
-    [60, 0.45],
-  ],
-  xlpe: [
-    [10, 1.07],
-    [15, 1.04],
-    [20, 1.0],
-    [25, 0.96],
-    [30, 0.93],
-    [35, 0.89],
-    [40, 0.85],
-    [45, 0.8],
-    [50, 0.76],
-    [55, 0.71],
-    [60, 0.65],
-    [65, 0.6],
-    [70, 0.53],
-    [75, 0.46],
-    [80, 0.38],
-  ],
-}
-
-/** 2～12 个并列回路的同时负载修正系数 */
-const GROUP_FACTORS: ReadonlyArray<number> = [
-  0.8, 0.7, 0.65, 0.6, 0.57, 0.54, 0.52, 0.5, 0.48, 0.47, 0.45,
-]
-
-export const BREAKER_RATINGS: ReadonlyArray<number> = [
-  6, 10, 13, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 225, 250, 315, 350, 400, 500, 630,
-  800, 1000, 1250, 1600,
-]
-
-const RHO20: Record<Material, number> = { cu: 0.01724, al: 0.02826 }
-const ALPHA: Record<Material, number> = { cu: 0.00393, al: 0.00403 }
-const MAX_TEMPERATURE: Record<Insulation, number> = { pvc: 70, xlpe: 90 }
-
-/** 短路热稳定系数 k（A·√s/mm²），按 GB/T 16895.5 常用值 */
-const THERMAL_K: Record<Material, Record<Insulation, number>> = {
-  cu: { pvc: 115, xlpe: 143 },
-  al: { pvc: 76, xlpe: 94 },
-}
-
-export interface CableSizingInput {
-  system: SystemType
-  voltage: number
-  inputMode: InputMode
-  powerKw: number
-  currentA: number
-  powerFactor: number
-  efficiency: number
-  demandFactor: number
-  lengthM: number
-  material: Material
-  insulation: Insulation
-  method: InstallationMethod
-  ambientTempC: number
-  groupedCircuits: number
-  parallelCables: number
-  allowedDropPercent: number
-  shortCircuitKa: number
-  clearingTimeS: number
-  breakerRatingA: number | null
-  reactanceOhmPerKm: number
-}
-
-export interface CheckResult {
-  key: string
+export interface ProtectionDeviceOption {
+  key: ProtectionDevice
   label: string
-  required: string
-  actual: string
-  pass: boolean
-  note: string
+  description: string
 }
 
-export interface CableSizingResult {
-  designPowerKw: number
-  designCurrentA: number
-  apparentPowerKva: number
-  temperatureFactor: number
-  groupFactor: number
-  requiredBaseAmpacityA: number
-  baseAmpacityA: number
-  ampacityPerCableA: number
-  totalAmpacityA: number
-  ampacityMarginPercent: number
-  selectedSection: CrossSection
-  parallelCables: number
-  voltageDropV: number
-  voltageDropPercent: number
-  resistanceMilliohm: number
-  reactanceMilliohm: number
-  lineLossW: number
-  thermalK: number
-  shortCircuitMinSection: number
-  shortCircuitMinSectionPerCable: number
-  shortCircuitWithstandKa: number
-  breakerRatingA: number
-  breakerAuto: boolean
-  protectionPass: boolean
-  cableLabel: string
-  drivers: string[]
-  checks: CheckResult[]
-  warnings: string[]
-  overallPass: boolean
+export const PROTECTION_DEVICE_OPTIONS: ReadonlyArray<ProtectionDeviceOption> = [
+  {
+    key: 'mcb',
+    label: '微型断路器 MCB',
+    description: 'I2 = 1.45 In，In ≤ Iz 即可满足 I2 ≤ 1.45 Iz。',
+  },
+  {
+    key: 'mccb',
+    label: '塑壳断路器 MCCB',
+    description: 'I2 ≤ 1.45 In，In ≤ Iz 即可满足 I2 ≤ 1.45 Iz。',
+  },
+  {
+    key: 'fuse',
+    label: '熔断器 gG',
+    description: '按 In ≤ Iz / k3 校核：In < 16 A 取 k3 = 1.31，In ≥ 16 A 取 k3 = 1.10。',
+  },
+]
+
+export interface BuriedSpacingOption {
+  key: BuriedSpacing
+  label: string
 }
+
+export const BURIED_SPACING_OPTIONS: ReadonlyArray<BuriedSpacingOption> = [
+  { key: 'touching', label: '相触（无间距）' },
+  { key: 'oneDiameter', label: '1 倍电缆外径' },
+  { key: 'gap125', label: '0.125 m' },
+  { key: 'gap250', label: '0.25 m' },
+  { key: 'gap500', label: '0.5 m' },
+]
 
 export function createDefaultInput(): CableSizingInput {
   return {
@@ -385,39 +241,18 @@ export function createDefaultInput(): CableSizingInput {
     clearingTimeS: 0.1,
     breakerRatingA: null,
     reactanceOhmPerKm: 0.08,
+    harmonicThdPercent: 0,
+    protectionDevice: 'mcb',
+    buriedSpacing: 'touching',
+    soilThermalResistivity: 2.5,
+    motorStarting: false,
+    startingCurrentMultiple: 6,
+    allowedStartingDropPercent: 15,
   }
 }
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
-}
-
-function interpolateFactor(
-  table: ReadonlyArray<FactorPoint>,
-  temperature: number,
-): { factor: number; clamped: boolean } {
-  const first = table[0]
-  const last = table[table.length - 1]
-  if (!first || !last) return { factor: 1, clamped: true }
-  if (temperature <= first[0]) return { factor: first[1], clamped: temperature < first[0] }
-  if (temperature >= last[0]) return { factor: last[1], clamped: temperature > last[0] }
-
-  for (let i = 1; i < table.length; i += 1) {
-    const previous = table[i - 1]
-    const current = table[i]
-    if (!previous || !current) continue
-    if (temperature <= current[0]) {
-      const ratio = (temperature - previous[0]) / (current[0] - previous[0])
-      return { factor: previous[1] + ratio * (current[1] - previous[1]), clamped: false }
-    }
-  }
-  return { factor: last[1], clamped: true }
-}
-
-function groupFactor(circuitCount: number): number {
-  if (circuitCount <= 1) return 1
-  const index = Math.min(circuitCount - 2, GROUP_FACTORS.length - 1)
-  return GROUP_FACTORS[index] ?? 0.45
 }
 
 function standardIndexAtLeast(section: number): number {
@@ -530,6 +365,8 @@ export function calculateCableSizing(input: CableSizingInput): CableSizingResult
       : (voltage * designCurrentA) / 1000
 
   const ambientTempC = Number(input.ambientTempC)
+  if (!Number.isFinite(ambientTempC)) return null
+
   const methodInfo = INSTALLATION_OPTIONS.find((option) => option.key === input.method)
   const isBuried = methodInfo?.buried ?? false
   const temperatureTable = isBuried
@@ -548,9 +385,8 @@ export function calculateCableSizing(input: CableSizingInput): CableSizingResult
   const rawGrouped = Number(input.groupedCircuits)
   const groupedCircuits = clamp(Math.round(Number.isFinite(rawGrouped) ? rawGrouped : 1), 1, 12)
   if (rawGrouped > 12) {
-    warnings.push('并列回路数超过 12，按 12 回路修正系数 0.45 取值，建议分层敷设或补充计算。')
+    warnings.push('并列回路数超过 12，按 12 回路取值，建议分层敷设或补充计算。')
   }
-  const groupingFactor = groupFactor(groupedCircuits)
 
   const rawParallel = Number(input.parallelCables)
   const parallelCables = clamp(Math.round(Number.isFinite(rawParallel) ? rawParallel : 1), 1, 4)
@@ -558,9 +394,50 @@ export function calculateCableSizing(input: CableSizingInput): CableSizingResult
     warnings.push('每相并联电缆数超过 4，按 4 根计算；多根并联需校验均流与敷设间距。')
   }
 
+  // 并联电缆本身也参与相互加热，按电缆根数（回路数 × 并联根数）查成束系数
+  const groupingCount = Math.max(1, groupedCircuits * parallelCables)
+  const groupingCategory = airGroupingCategory(input.method)
+  const groupingFactor = isBuried
+    ? buriedGroupingFactor(input.buriedSpacing, groupingCount)
+    : groupingCategory
+      ? airGroupingFactor(groupingCategory, groupingCount)
+      : 1
+  if (groupingCount > 20) {
+    warnings.push('成束电缆根数超过 20，按 20 根对应的系数取值，建议分层敷设或补充计算。')
+  } else if (isBuried && groupingCount > 12) {
+    warnings.push('埋地成束超过 12 回路，按 20 回路系数保守取值，建议校核敷设间距。')
+  }
+
+  const rawSoil = Number(input.soilThermalResistivity)
+  const soilThermalResistivity = Number.isFinite(rawSoil) && rawSoil > 0 ? rawSoil : 2.5
+  const soilInfo = isBuried
+    ? soilResistivityFactor(soilThermalResistivity)
+    : { factor: 1, clamped: false }
+  if (isBuried && (soilThermalResistivity < 0.5 || soilThermalResistivity > 3)) {
+    warnings.push(
+      `土壤热阻率 ${formatNumber(soilThermalResistivity, 2)} K·m/W 超出 0.5～3.0 范围，已按边界值修正。`,
+    )
+  }
+
+  const rawThd = Number(input.harmonicThdPercent)
+  const thdPercent =
+    input.system === 'three-phase' && Number.isFinite(rawThd) ? clamp(rawThd, 0, 100) : 0
+  const harmonic = harmonicFactor(thdPercent)
+  const neutralCurrentA = harmonic.neutralBased ? harmonic.neutralMultiplier * designCurrentA : 0
+  const ampacityDesignCurrentA = Math.max(designCurrentA, neutralCurrentA)
+  if (thdPercent > 33) {
+    warnings.push(
+      `三次谐波 ${formatNumber(thdPercent, 0)}%，已按中性线电流 ${formatNumber(neutralCurrentA, 1)} A 选型。`,
+    )
+  }
+
   const table = AMPACITY[input.material][input.insulation][input.method]
   const requiredBaseAmpacityA =
-    designCurrentA / Math.max(0.01, temperatureFactor * groupingFactor * parallelCables)
+    ampacityDesignCurrentA /
+    Math.max(
+      0.01,
+      temperatureFactor * groupingFactor * soilInfo.factor * harmonic.factor * parallelCables,
+    )
 
   let ampacityIndex = table.findIndex((value) => value >= requiredBaseAmpacityA)
   let ampacityLimited = false
@@ -569,7 +446,12 @@ export function calculateCableSizing(input: CableSizingInput): CableSizingResult
     ampacityLimited = true
   }
 
-  const reactanceOhmPerKm = clamp(Number(input.reactanceOhmPerKm), 0, 1)
+  const rawReactance = Number(input.reactanceOhmPerKm)
+  const reactanceOhmPerKm = Number.isFinite(rawReactance) ? clamp(rawReactance, 0, 1) : 0.08
+  if (!Number.isFinite(rawReactance)) {
+    warnings.push('线路电抗输入无效，已按 0.08 Ω/km 取值。')
+  }
+
   const maxTemperature = MAX_TEMPERATURE[input.insulation]
   const resistivityAtTemperature =
     RHO20[input.material] * (1 + ALPHA[input.material] * (maxTemperature - 20))
@@ -617,28 +499,37 @@ export function calculateCableSizing(input: CableSizingInput): CableSizingResult
   const mechanicalMinSection = input.material === 'cu' ? 1.5 : 10
   const mechanicalIndex = standardIndexAtLeast(mechanicalMinSection)
 
+  const requiredInA = Math.max(designCurrentA, neutralCurrentA)
   const requestedBreaker = Number(input.breakerRatingA)
   const breakerAuto = !Number.isFinite(requestedBreaker) || requestedBreaker <= 0
   const breakerRatingA = breakerAuto
-    ? (BREAKER_RATINGS.find((rating) => rating >= designCurrentA) ??
+    ? (BREAKER_RATINGS.find((rating) => rating >= requiredInA) ??
       BREAKER_RATINGS[BREAKER_RATINGS.length - 1] ??
       1600)
     : requestedBreaker
+  const fuseK3 = input.protectionDevice === 'fuse' ? (breakerRatingA < 16 ? 1.31 : 1.1) : null
 
-  if (breakerAuto && breakerRatingA < designCurrentA) {
+  if (breakerAuto && breakerRatingA < requiredInA) {
     warnings.push('自动选择的断路器额定电流仍小于计算电流，请采用更大壳架或并联方案。')
   }
 
-  let finalIndex = Math.max(ampacityIndex, voltageDropIndex, thermalIndex, mechanicalIndex)
-  let protectionDriven = false
   const ampacityAtIndex = (index: number) =>
     (table[index] ?? table[table.length - 1] ?? 0) *
     temperatureFactor *
     groupingFactor *
+    soilInfo.factor *
+    harmonic.factor *
     parallelCables
+  const protectionLimitAtIndex = (index: number) => {
+    const corrected = ampacityAtIndex(index)
+    return fuseK3 ? corrected / fuseK3 : corrected
+  }
+
+  let finalIndex = Math.max(ampacityIndex, voltageDropIndex, thermalIndex, mechanicalIndex)
+  let protectionDriven = false
   while (
     finalIndex < STANDARD_SECTIONS.length - 1 &&
-    ampacityAtIndex(finalIndex) < breakerRatingA - 1e-6
+    protectionLimitAtIndex(finalIndex) < breakerRatingA - 1e-6
   ) {
     finalIndex += 1
     protectionDriven = true
@@ -646,7 +537,8 @@ export function calculateCableSizing(input: CableSizingInput): CableSizingResult
 
   const selectedSection = STANDARD_SECTIONS[finalIndex] ?? STANDARD_SECTIONS[0]
   const baseAmpacityA = table[finalIndex] ?? table[table.length - 1] ?? 0
-  const ampacityPerCableA = baseAmpacityA * temperatureFactor * groupingFactor
+  const ampacityPerCableA =
+    baseAmpacityA * temperatureFactor * groupingFactor * soilInfo.factor * harmonic.factor
   const totalAmpacityA = ampacityPerCableA * parallelCables
 
   const resistanceMilliohm = (resistivityAtTemperature / selectedSection / parallelCables) * 1000
@@ -670,12 +562,13 @@ export function calculateCableSizing(input: CableSizingInput): CableSizingResult
   const shortCircuitWithstandKa =
     (thermalK * selectedSection * parallelCables) / (1000 * Math.sqrt(clearingTimeS))
 
-  const ampacityPass = totalAmpacityA >= designCurrentA - 1e-6
+  const ampacityPass = totalAmpacityA >= ampacityDesignCurrentA - 1e-6
   const voltageDropPass = voltageDropPercent <= allowedDropPercent + 1e-9
   const thermalPass = selectedSection * parallelCables >= shortCircuitMinSection - 1e-6
   const mechanicalPass = selectedSection >= mechanicalMinSection - 1e-9
+  const protectionLimitA = fuseK3 ? totalAmpacityA / fuseK3 : totalAmpacityA
   const protectionPass =
-    breakerRatingA >= designCurrentA - 1e-6 && breakerRatingA <= totalAmpacityA + 1e-6
+    breakerRatingA >= requiredInA - 1e-6 && breakerRatingA <= protectionLimitA + 1e-6
 
   if (ampacityLimited) {
     warnings.push('按 300 mm² 单根载流量仍不足，请增加每相并联根数、缩短线路或改用母线槽。')
@@ -697,7 +590,7 @@ export function calculateCableSizing(input: CableSizingInput): CableSizingResult
   }
   if (!protectionPass) {
     warnings.push(
-      `断路器额定电流 ${formatNumber(breakerRatingA, 0)} A 不在 Ib～Iz 区间（${formatNumber(designCurrentA, 1)}～${formatNumber(totalAmpacityA, 1)} A），请调整保护整定或截面。`,
+      `保护电器额定电流 ${formatNumber(breakerRatingA, 0)} A 不在 Ib～${fuseK3 ? 'Iz/k3' : 'Iz'} 区间（${formatNumber(requiredInA, 1)}～${formatNumber(protectionLimitA, 1)} A），请调整保护整定或截面。`,
     )
   }
   if (parallelCables > 1) {
@@ -706,12 +599,35 @@ export function calculateCableSizing(input: CableSizingInput): CableSizingResult
     )
   }
 
+  const startingMultiple = clamp(Number(input.startingCurrentMultiple) || 6, 1, 12)
+  const allowedStartingDropPercent = clamp(Number(input.allowedStartingDropPercent) || 15, 1, 50)
+  let startingVoltageDropPercent: number | null = null
+  let startingPass: boolean | null = null
+  if (input.motorStarting && input.system !== 'dc') {
+    const startDropV = computeVoltageDropVolts({
+      system: input.system,
+      currentA: designCurrentA * startingMultiple,
+      lengthM,
+      resistanceOhmPerM: resistanceMilliohm / 1000,
+      reactanceOhmPerM: reactanceMilliohm / 1000,
+      powerFactor,
+    })
+    startingVoltageDropPercent = (startDropV / voltage) * 100
+    startingPass = startingVoltageDropPercent <= allowedStartingDropPercent + 1e-9
+    if (!startingPass) {
+      warnings.push(
+        `电机启动压降 ${formatNumber(startingVoltageDropPercent, 2)} % 超过允许值 ${formatNumber(allowedStartingDropPercent, 1)} %，需增大截面或缩短线路。`,
+      )
+    }
+  }
+
   const drivers: string[] = []
   if (finalIndex === ampacityIndex) drivers.push('载流量')
   if (finalIndex === voltageDropIndex) drivers.push('电压降')
   if (finalIndex === thermalIndex) drivers.push('短路热稳定')
   if (finalIndex === mechanicalIndex) drivers.push('机械强度')
   if (protectionDriven) drivers.push('保护配合')
+  if (harmonic.factor < 1 || harmonic.neutralBased) drivers.push('谐波')
 
   const peSection = protectiveEarthSection(selectedSection)
   const coreLabel =
@@ -724,10 +640,10 @@ export function calculateCableSizing(input: CableSizingInput): CableSizingResult
     {
       key: 'ampacity',
       label: '载流量',
-      required: `Iz ≥ Ib = ${formatNumber(designCurrentA, 1)} A`,
+      required: `Iz ≥ ${harmonic.neutralBased ? 'IN' : 'Ib'} = ${formatNumber(ampacityDesignCurrentA, 1)} A`,
       actual: `${formatNumber(totalAmpacityA, 1)} A（${formatNumber(ampacityPerCableA, 1)} A/根）`,
       pass: ampacityPass,
-      note: `温度系数 ${formatNumber(temperatureFactor, 2)}，并列系数 ${formatNumber(groupingFactor, 2)}`,
+      note: `kt=${formatNumber(temperatureFactor, 2)}，kg=${formatNumber(groupingFactor, 2)}（${groupingCount} 根），ks=${formatNumber(soilInfo.factor, 2)}，kh=${formatNumber(harmonic.factor, 2)}`,
     },
     {
       key: 'voltage-drop',
@@ -756,16 +672,31 @@ export function calculateCableSizing(input: CableSizingInput): CableSizingResult
     {
       key: 'protection',
       label: '保护配合',
-      required: `Ib ≤ In ≤ Iz`,
-      actual: `In=${formatNumber(breakerRatingA, 0)} A，Iz=${formatNumber(totalAmpacityA, 1)} A`,
+      required: fuseK3 ? `Ib ≤ In ≤ Iz / ${formatNumber(fuseK3, 2)}` : `Ib ≤ In ≤ Iz`,
+      actual: `In=${formatNumber(breakerRatingA, 0)} A，${fuseK3 ? `Iz/k3=${formatNumber(protectionLimitA, 1)} A` : `Iz=${formatNumber(totalAmpacityA, 1)} A`}`,
       pass: protectionPass,
-      note: breakerAuto ? 'In 为按计算电流自动匹配' : 'In 为手动输入值',
+      note: breakerAuto
+        ? `${protectionDeviceLabel(input.protectionDevice)}，In 为按计算电流自动匹配`
+        : `${protectionDeviceLabel(input.protectionDevice)}，In 为手动输入值`,
     },
   ]
 
+  if (startingVoltageDropPercent !== null && startingPass !== null) {
+    checks.push({
+      key: 'motor-start',
+      label: '电机启动压降',
+      required: `ΔU_start ≤ ${formatNumber(allowedStartingDropPercent, 1)} %`,
+      actual: `${formatNumber(startingVoltageDropPercent, 2)} %`,
+      pass: startingPass,
+      note: `启动电流 ${formatNumber(startingMultiple, 1)} × Ib`,
+    })
+  }
+
   const overallPass = checks.every((check) => check.pass)
   const ampacityMarginPercent =
-    designCurrentA > 0 ? ((totalAmpacityA - designCurrentA) / designCurrentA) * 100 : 0
+    ampacityDesignCurrentA > 0
+      ? ((totalAmpacityA - ampacityDesignCurrentA) / ampacityDesignCurrentA) * 100
+      : 0
 
   return {
     designPowerKw,
@@ -773,6 +704,11 @@ export function calculateCableSizing(input: CableSizingInput): CableSizingResult
     apparentPowerKva,
     temperatureFactor,
     groupFactor: groupingFactor,
+    groupingCount,
+    soilFactor: soilInfo.factor,
+    harmonicFactor: harmonic.factor,
+    neutralCurrentA,
+    ampacityDesignCurrentA,
     requiredBaseAmpacityA,
     baseAmpacityA,
     ampacityPerCableA,
@@ -791,11 +727,26 @@ export function calculateCableSizing(input: CableSizingInput): CableSizingResult
     shortCircuitWithstandKa,
     breakerRatingA,
     breakerAuto,
+    protectionDevice: input.protectionDevice,
+    fuseK3,
     protectionPass,
+    startingVoltageDropPercent,
+    startingPass,
     cableLabel,
     drivers,
     checks,
     warnings,
     overallPass,
+  }
+}
+
+function protectionDeviceLabel(device: ProtectionDevice): string {
+  switch (device) {
+    case 'mcb':
+      return '微型断路器 MCB'
+    case 'mccb':
+      return '塑壳断路器 MCCB'
+    case 'fuse':
+      return '熔断器 gG'
   }
 }

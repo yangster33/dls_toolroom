@@ -28,7 +28,7 @@
     <div class="notice">
       <PhInfo weight="fill" aria-hidden="true" />
       <p>
-        本页用于方案初选：载流量、电压降、短路热稳定、机械强度四类约束同时校核，取最大标准截面。
+        本页用于方案初选：载流量、电压降、短路热稳定、机械强度、保护配合五类约束同时校核，取最大标准截面。
         内置载流量表为常用值整理，施工图应由注册电气工程师按现行
         <span class="readout">GB/T 16895.6</span>、<span class="readout">GB 50054</span>、<span
           class="readout"
@@ -119,6 +119,17 @@
             />
 
             <UnitField
+              v-if="form.system === 'three-phase'"
+              v-model="form.harmonicThdPercent"
+              label="3 次谐波含量"
+              unit="%"
+              :min="0"
+              :max="100"
+              :step="1"
+              hint="无谐波填 0"
+            />
+
+            <UnitField
               v-model="form.efficiency"
               label="效率 η"
               :min="0.1"
@@ -184,6 +195,37 @@
             <p class="field-note field-wide">
               {{ methodInfo.description }}
             </p>
+
+            <template v-if="isBuried">
+              <label class="field">
+                <span class="field-label">
+                  电缆间距
+                  <span class="field-hint">按 B.52.18</span>
+                </span>
+                <select
+                  v-model="form.buriedSpacing"
+                  class="select select-bordered select-sm w-full"
+                >
+                  <option
+                    v-for="option in BURIED_SPACING_OPTIONS"
+                    :key="option.key"
+                    :value="option.key"
+                  >
+                    {{ option.label }}
+                  </option>
+                </select>
+              </label>
+
+              <UnitField
+                v-model="form.soilThermalResistivity"
+                label="土壤热阻率"
+                unit="K·m/W"
+                :min="0.5"
+                :max="3"
+                :step="0.1"
+                hint="基准 2.5"
+              />
+            </template>
 
             <UnitField
               v-model="form.ambientTempC"
@@ -288,6 +330,70 @@
                 class="input input-bordered input-sm w-full readout"
               />
             </label>
+
+            <label class="field">
+              <span class="field-label">
+                保护电器类型
+                <span class="field-hint">熔断器按 k3</span>
+              </span>
+              <select
+                v-model="form.protectionDevice"
+                class="select select-bordered select-sm w-full"
+              >
+                <option
+                  v-for="option in PROTECTION_DEVICE_OPTIONS"
+                  :key="option.key"
+                  :value="option.key"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+            </label>
+
+            <div class="field field-wide">
+              <span class="field-label">
+                电机启动校核
+                <span class="field-hint">动力负荷可选</span>
+              </span>
+              <div class="segmented" role="group" aria-label="电机启动校核">
+                <button
+                  type="button"
+                  :class="{ active: !form.motorStarting }"
+                  @click="form.motorStarting = false"
+                >
+                  不校核
+                </button>
+                <button
+                  type="button"
+                  :class="{ active: form.motorStarting }"
+                  @click="form.motorStarting = true"
+                >
+                  校核
+                </button>
+              </div>
+            </div>
+
+            <template v-if="form.motorStarting">
+              <UnitField
+                v-model="form.startingCurrentMultiple"
+                label="启动电流倍数"
+                unit="×Ib"
+                :min="1"
+                :max="12"
+                :step="0.5"
+                hint="直接启动约 6"
+              />
+
+              <UnitField
+                v-model="form.allowedStartingDropPercent"
+                label="启动允许压降"
+                unit="%"
+                :min="1"
+                :max="50"
+                :step="1"
+                hint="常用 15"
+              />
+            </template>
           </div>
 
           <p class="field-note">
@@ -295,6 +401,8 @@
             <strong class="readout">{{ insulationInfo.maxTemp }} ℃</strong>
             · 热稳定系数
             <strong class="readout">k = {{ result?.thermalK ?? '—' }}</strong>
+            · 保护电器
+            <strong class="readout">{{ protectionInfo.label }}</strong>
             · 自动匹配时取不小于 Ib 的最小标准壳架。
           </p>
         </section>
@@ -314,7 +422,8 @@
 
           <p class="verdict-spec">{{ result.cableLabel }}</p>
           <p class="verdict-sub">
-            {{ result.parallelCables }} 根/相并联 · 由 {{ result.drivers.join(' / ') }} 控制
+            {{ result.parallelCables > 1 ? `${result.parallelCables} 根/相并联` : '单根敷设' }} · 由
+            {{ result.drivers.join(' / ') }} 控制
           </p>
 
           <div class="verdict-metrics">
@@ -333,6 +442,14 @@
             <div>
               <span>热稳定最小截面</span>
               <strong>{{ formatSection(result.shortCircuitMinSection) }} mm²</strong>
+            </div>
+            <div>
+              <span>载流量裕度</span>
+              <strong>{{ result.ampacityMarginPercent.toFixed(1) }} %</strong>
+            </div>
+            <div>
+              <span>热稳定耐受</span>
+              <strong>{{ result.shortCircuitWithstandKa.toFixed(1) }} kA</strong>
             </div>
           </div>
         </div>
@@ -404,9 +521,15 @@
               <dt>载流量修正</dt>
               <dd class="readout">
                 kt = {{ result.temperatureFactor.toFixed(2) }}，kg =
-                {{ result.groupFactor.toFixed(2) }}，Iz,req =
+                {{ result.groupFactor.toFixed(2) }}（{{ result.groupingCount }} 根），ks =
+                {{ result.soilFactor.toFixed(2) }}，kh =
+                {{ result.harmonicFactor.toFixed(2) }}，Iz,req =
                 {{ result.requiredBaseAmpacityA.toFixed(1) }} A
               </dd>
+            </div>
+            <div v-if="result.neutralCurrentA > 0">
+              <dt>中性线电流</dt>
+              <dd class="readout">IN = {{ result.neutralCurrentA.toFixed(1) }} A</dd>
             </div>
             <div>
               <dt>线路阻抗</dt>
@@ -435,8 +558,19 @@
               <dd class="readout">
                 In = {{ result.breakerRatingA.toFixed(0) }} A（{{
                   result.breakerAuto ? '自动' : '手动'
-                }}）
+                }}）· {{ protectionInfo.label }}
+                <template v-if="result.fuseK3 !== null">
+                  ，k3 = {{ result.fuseK3.toFixed(2) }}
+                </template>
               </dd>
+            </div>
+            <div v-if="result.startingVoltageDropPercent !== null">
+              <dt>电机启动压降</dt>
+              <dd class="readout">{{ result.startingVoltageDropPercent.toFixed(2) }} %</dd>
+            </div>
+            <div>
+              <dt>视在功率</dt>
+              <dd class="readout">{{ result.apparentPowerKva.toFixed(1) }} kVA</dd>
             </div>
             <div>
               <dt>线路损耗</dt>
@@ -459,12 +593,20 @@
           <summary>数据与依据</summary>
           <p>{{ AMPACITY_DATA_NOTE }}</p>
           <ul>
-            <li>载流量修正：GB/T 16895.6-2014 附录 B；低压设计：GB 50054-2011、GB 51348-2019。</li>
-            <li>电力电缆：GB 50217-2018；通用规范：GB 55024-2022。</li>
+            <li>
+              成束修正：GB/T 16895.6-2014 附录 B 表 B.52.17（空气按敷设方式）、表
+              B.52.18（埋地按间距）。
+            </li>
+            <li>温度修正：表 B.52.14 / B.52.15；土壤热阻率：表 B.52.16；三次谐波：表 E.52.1。</li>
+            <li>
+              低压设计：GB 50054-2011、GB 51348-2019；电力电缆：GB 50217-2018；通用规范：GB
+              55024-2022。
+            </li>
             <li>三相电压降：ΔU = √3·I·L·(R·cosφ + X·sinφ)；单相 / 直流按往返 2 倍计算。</li>
             <li>
               短路热稳定：S ≥ Isc·√t / k；k 按铜/PVC 115、铜/XLPE 143、铝/PVC 76、铝/XLPE 94 取值。
             </li>
+            <li>保护配合：MCB/MCCB 按 In ≤ Iz；熔断器 gG 按 In ≤ Iz / k3（k3 = 1.31 / 1.10）。</li>
             <li>机械强度：铜芯固定敷设最小 1.5 mm²；铝芯固定敷设最小 10 mm²。</li>
           </ul>
         </details>
@@ -487,9 +629,11 @@ import { getToolById } from '../toolData'
 import UnitField from './UnitField.vue'
 import {
   AMPACITY_DATA_NOTE,
+  BURIED_SPACING_OPTIONS,
   INSULATION_OPTIONS,
   INSTALLATION_OPTIONS,
   MATERIAL_OPTIONS,
+  PROTECTION_DEVICE_OPTIONS,
   SYSTEM_OPTIONS,
   calculateCableSizing,
   createDefaultInput,
@@ -515,6 +659,12 @@ const insulationInfo = computed(
     INSULATION_OPTIONS.find((option) => option.key === form.insulation) ?? INSULATION_OPTIONS[0]!,
 )
 
+const protectionInfo = computed(
+  () =>
+    PROTECTION_DEVICE_OPTIONS.find((option) => option.key === form.protectionDevice) ??
+    PROTECTION_DEVICE_OPTIONS[0]!,
+)
+
 const isBuried = computed(() => methodInfo.value.buried)
 const ambientLabel = computed(() => (isBuried.value ? '土壤温度' : '环境温度'))
 
@@ -523,6 +673,18 @@ watch(
   (system) => {
     const option = SYSTEM_OPTIONS.find((item) => item.key === system)
     if (option) form.voltage = option.defaultVoltage
+  },
+)
+
+watch(
+  () => form.method,
+  (method) => {
+    const buried = INSTALLATION_OPTIONS.find((option) => option.key === method)?.buried ?? false
+    if (buried && form.ambientTempC === 35) {
+      form.ambientTempC = 20
+    } else if (!buried && form.ambientTempC === 20) {
+      form.ambientTempC = 35
+    }
   },
 )
 
@@ -539,14 +701,17 @@ function buildReport(): string {
     `系统：${SYSTEM_OPTIONS.find((item) => item.key === form.system)?.label ?? form.system}`,
     `标称电压：${form.voltage} V；线路长度：${form.lengthM} m`,
     `导体 / 绝缘：${form.material === 'cu' ? '铜芯' : '铝芯'} / ${insulationInfo.value.shortLabel}`,
-    `敷设方式：${methodInfo.value.label}；环境温度：${form.ambientTempC} ℃；并列回路：${form.groupedCircuits} 回`,
-    `计算电流 Ib：${value.designCurrentA.toFixed(2)} A`,
+    `敷设方式：${methodInfo.value.label}；${isBuried.value ? '土壤' : '环境'}温度：${form.ambientTempC} ℃；并列回路：${form.groupedCircuits} 回`,
+    `计算电流 Ib：${value.designCurrentA.toFixed(2)} A${value.neutralCurrentA > 0 ? `；中性线电流 IN：${value.neutralCurrentA.toFixed(2)} A` : ''}`,
     `推荐截面：${formatSection(value.selectedSection)} mm²/相 × ${value.parallelCables} 根/相`,
     `推荐规格：${value.cableLabel}`,
     `校正载流量 Iz：${value.totalAmpacityA.toFixed(1)} A（${value.ampacityPerCableA.toFixed(1)} A/根）`,
+    `修正系数：kt=${value.temperatureFactor.toFixed(2)}，kg=${value.groupFactor.toFixed(2)}（${value.groupingCount} 根），ks=${value.soilFactor.toFixed(2)}，kh=${value.harmonicFactor.toFixed(2)}`,
     `电压降：${value.voltageDropV.toFixed(1)} V（${value.voltageDropPercent.toFixed(2)} %）`,
     `短路热稳定最小截面：${value.shortCircuitMinSection.toFixed(1)} mm²（k=${value.thermalK}）`,
-    `断路器 In：${value.breakerRatingA.toFixed(0)} A（${value.breakerAuto ? '自动' : '手动'}）`,
+    `保护电器：${protectionInfo.value.label}；In=${value.breakerRatingA.toFixed(0)} A（${value.breakerAuto ? '自动' : '手动'}）` +
+      (value.fuseK3 ? `，k3=${value.fuseK3.toFixed(2)}` : ''),
+    `电机启动压降：${value.startingVoltageDropPercent === null ? '未校核' : value.startingVoltageDropPercent.toFixed(2) + ' %'}`,
     `结论：${value.overallPass ? '各项校核通过' : '存在未通过项，需调整参数'}`,
     '',
     '校核明细：',
