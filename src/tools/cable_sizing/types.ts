@@ -17,6 +17,15 @@ export type ProtectionDevice = 'mcb' | 'mccb' | 'fuse'
 /** 埋地电缆间距（B.52.18 的列） */
 export type BuriedSpacing = 'touching' | 'oneDiameter' | 'gap125' | 'gap250' | 'gap500'
 
+/** 直流回路类型：只改标签/提示，不改变电缆计算 */
+export type DcCircuitType = 'load' | 'charge' | 'discharge' | 'rectifier' | 'bus'
+
+/** 直流导线制式 */
+export type DcWiring = 'twoWire' | 'twoWirePe' | 'positiveEarthed'
+
+/** 直流载流量数据源：国家标准表 / 厂家 DC 表 */
+export type DcAmpacitySource = 'standard' | 'manufacturer'
+
 export const STANDARD_SECTIONS = [
   1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300,
 ] as const
@@ -58,6 +67,16 @@ export interface CableSizingInput {
   startingCurrentMultiple: number
   /** 启动时允许电压降（%） */
   allowedStartingDropPercent: number
+  /** 直流回路类型（仅 system='dc'） */
+  dcCircuitType: DcCircuitType
+  /** 直流导线制式（仅 system='dc'） */
+  dcWiring: DcWiring
+  /** 直流载流量数据源（仅 system='dc'） */
+  dcAmpacitySource: DcAmpacitySource
+  /** 厂家 DC 表：当前材料+绝缘+敷设方式的 16 个载流量值；空数组表示未填 */
+  dcManufacturerAmpacity: number[]
+  /** 厂家/表名（仅展示） */
+  dcManufacturerName: string
 }
 
 export interface CheckResult {
@@ -106,6 +125,14 @@ export interface CableSizingResult {
   startingVoltageDropPercent: number | null
   startingPass: boolean | null
   cableLabel: string
+  /** 载流量数据源（DC 用；AC 固定 standard） */
+  ampacitySource: DcAmpacitySource
+  /** 载流量来源说明 */
+  ampacitySourceLabel: string
+  /** 直流回路类型标签（AC 为空） */
+  dcCircuitLabel: string
+  /** 直流导线制式标签（AC 为空） */
+  dcWiringLabel: string
   drivers: string[]
   checks: CheckResult[]
   warnings: string[]

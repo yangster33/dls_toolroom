@@ -40,6 +40,9 @@ import {
   type CableSizingInput,
   type CableSizingResult,
   type CheckResult,
+  type DcAmpacitySource,
+  type DcCircuitType,
+  type DcWiring,
   type InstallationMethod,
   type Insulation,
   type Material,
@@ -219,6 +222,43 @@ export const BURIED_SPACING_OPTIONS: ReadonlyArray<BuriedSpacingOption> = [
   { key: 'gap500', label: '0.5 m' },
 ]
 
+export interface DcCircuitTypeOption {
+  key: DcCircuitType
+  label: string
+  hint: string
+}
+
+export const DC_CIRCUIT_TYPE_OPTIONS: ReadonlyArray<DcCircuitTypeOption> = [
+  { key: 'load', label: '负荷回路', hint: '稳态负荷电流，按 P/U 或负荷清单' },
+  { key: 'charge', label: '充电回路', hint: '常见 0.1C10，按电池厂家' },
+  { key: 'discharge', label: '放电回路', hint: '按最低母线电压 U_min' },
+  { key: 'rectifier', label: '整流器输出', hint: '负荷 + 充电，N+1' },
+  { key: 'bus', label: '母线 / 分路', hint: '单路分路电流' },
+]
+
+export interface DcWiringOption {
+  key: DcWiring
+  label: string
+  hint: string
+}
+
+export const DC_WIRING_OPTIONS: ReadonlyArray<DcWiringOption> = [
+  { key: 'twoWire', label: '2 线（正/负）', hint: '标签 2×S' },
+  { key: 'twoWirePe', label: '2 线 + PE', hint: '标签 2×S+1×PE' },
+  { key: 'positiveEarthed', label: '正极接地', hint: '标签 2×S，PE 按接地系统' },
+]
+
+export interface DcAmpacitySourceOption {
+  key: DcAmpacitySource
+  label: string
+  hint: string
+}
+
+export const DC_AMPACITY_SOURCE_OPTIONS: ReadonlyArray<DcAmpacitySourceOption> = [
+  { key: 'standard', label: '国家标准表', hint: '内置 3 根导体表，DC 偏保守' },
+  { key: 'manufacturer', label: '厂家 DC 表', hint: '填当前组合的 16 个截面值' },
+]
+
 export function createDefaultInput(): CableSizingInput {
   return {
     system: 'three-phase',
@@ -248,6 +288,11 @@ export function createDefaultInput(): CableSizingInput {
     motorStarting: false,
     startingCurrentMultiple: 6,
     allowedStartingDropPercent: 15,
+    dcCircuitType: 'load',
+    dcWiring: 'twoWire',
+    dcAmpacitySource: 'standard',
+    dcManufacturerAmpacity: [],
+    dcManufacturerName: '',
   }
 }
 
@@ -300,6 +345,20 @@ function computeVoltageDropVolts(params: {
 /**
  * 执行多约束选型。输入无效时返回 null。
  */
+const DC_CIRCUIT_LABELS: Record<DcCircuitType, string> = {
+  load: '负荷电流',
+  charge: '充电电流',
+  discharge: '放电电流',
+  rectifier: '整流器输出电流',
+  bus: '分路电流',
+}
+
+const DC_WIRING_LABELS: Record<DcWiring, string> = {
+  twoWire: '2 线',
+  twoWirePe: '2 线+PE',
+  positiveEarthed: '正极接地',
+}
+
 export function calculateCableSizing(input: CableSizingInput): CableSizingResult | null {
   const warnings: string[] = []
 
@@ -431,7 +490,28 @@ export function calculateCableSizing(input: CableSizingInput): CableSizingResult
     )
   }
 
-  const table = AMPACITY[input.material][input.insulation][input.method]
+  const isDc = input.system === 'dc'
+  const manufacturerValues = Array.isArray(input.dcManufacturerAmpacity)
+    ? input.dcManufacturerAmpacity
+    : []
+  const manufacturerTableValid =
+    manufacturerValues.length === STANDARD_SECTIONS.length &&
+    manufacturerValues.every((value) => Number.isFinite(value) && value > 0)
+  const useManufacturerTable =
+    isDc && input.dcAmpacitySource === 'manufacturer' && manufacturerTableValid
+  if (isDc && input.dcAmpacitySource === 'manufacturer' && !manufacturerTableValid) {
+    warnings.push('厂家 DC 表未填满 16 个截面或存在无效值，已回退国家标准表。')
+  }
+  const ampacitySource: DcAmpacitySource = useManufacturerTable ? 'manufacturer' : 'standard'
+  const ampacitySourceLabel = useManufacturerTable
+    ? `厂家表${input.dcManufacturerName ? ` · ${input.dcManufacturerName}` : ''}`
+    : isDc
+      ? '国家标准表（3 根导体，DC 保守）'
+      : '国家标准表'
+
+  const table = useManufacturerTable
+    ? manufacturerValues
+    : AMPACITY[input.material][input.insulation][input.method]
   const requiredBaseAmpacityA =
     ampacityDesignCurrentA /
     Math.max(
@@ -507,7 +587,8 @@ export function calculateCableSizing(input: CableSizingInput): CableSizingResult
       BREAKER_RATINGS[BREAKER_RATINGS.length - 1] ??
       1600)
     : requestedBreaker
-  const fuseK3 = input.protectionDevice === 'fuse' ? (breakerRatingA < 16 ? 1.31 : 1.1) : null
+  const fuseK3 =
+    !isDc && input.protectionDevice === 'fuse' ? (breakerRatingA < 16 ? 1.31 : 1.1) : null
 
   if (breakerAuto && breakerRatingA < requiredInA) {
     warnings.push('自动选择的断路器额定电流仍小于计算电流，请采用更大壳架或并联方案。')
@@ -631,9 +712,13 @@ export function calculateCableSizing(input: CableSizingInput): CableSizingResult
 
   const peSection = protectiveEarthSection(selectedSection)
   const coreLabel =
-    input.system === 'three-phase'
-      ? `4×${formatSection(selectedSection)}+1×${formatSection(peSection)}`
-      : `2×${formatSection(selectedSection)}+1×${formatSection(peSection)}`
+    input.system === 'dc'
+      ? input.dcWiring === 'twoWirePe'
+        ? `2×${formatSection(selectedSection)}+1×${formatSection(peSection)}`
+        : `2×${formatSection(selectedSection)}`
+      : input.system === 'three-phase'
+        ? `4×${formatSection(selectedSection)}+1×${formatSection(peSection)}`
+        : `2×${formatSection(selectedSection)}+1×${formatSection(peSection)}`
   const cableLabel = `${cableFamily(input.material, input.insulation)}-0.6/1kV ${coreLabel}`
 
   const checks: CheckResult[] = [
@@ -643,7 +728,9 @@ export function calculateCableSizing(input: CableSizingInput): CableSizingResult
       required: `Iz ≥ ${harmonic.neutralBased ? 'IN' : 'Ib'} = ${formatNumber(ampacityDesignCurrentA, 1)} A`,
       actual: `${formatNumber(totalAmpacityA, 1)} A（${formatNumber(ampacityPerCableA, 1)} A/根）`,
       pass: ampacityPass,
-      note: `kt=${formatNumber(temperatureFactor, 2)}，kg=${formatNumber(groupingFactor, 2)}（${groupingCount} 根），ks=${formatNumber(soilInfo.factor, 2)}，kh=${formatNumber(harmonic.factor, 2)}`,
+      note: isDc
+        ? `kt=${formatNumber(temperatureFactor, 2)}，kg=${formatNumber(groupingFactor, 2)}（${groupingCount} 根），ks=${formatNumber(soilInfo.factor, 2)}；${ampacitySourceLabel}`
+        : `kt=${formatNumber(temperatureFactor, 2)}，kg=${formatNumber(groupingFactor, 2)}（${groupingCount} 根），ks=${formatNumber(soilInfo.factor, 2)}，kh=${formatNumber(harmonic.factor, 2)}`,
     },
     {
       key: 'voltage-drop',
@@ -651,7 +738,9 @@ export function calculateCableSizing(input: CableSizingInput): CableSizingResult
       required: `ΔU ≤ ${formatNumber(allowedDropPercent, 1)} %`,
       actual: `${formatNumber(voltageDropPercent, 2)} %（${formatNumber(voltageDropV, 1)} V）`,
       pass: voltageDropPass,
-      note: `R=${formatNumber(resistanceMilliohm, 2)} mΩ，X=${formatNumber(reactanceMilliohm, 2)} mΩ`,
+      note: isDc
+        ? `R=${formatNumber(resistanceMilliohm, 2)} mΩ（DC 往返 2×）`
+        : `R=${formatNumber(resistanceMilliohm, 2)} mΩ，X=${formatNumber(reactanceMilliohm, 2)} mΩ`,
     },
     {
       key: 'thermal',
@@ -675,9 +764,11 @@ export function calculateCableSizing(input: CableSizingInput): CableSizingResult
       required: fuseK3 ? `Ib ≤ In ≤ Iz / ${formatNumber(fuseK3, 2)}` : `Ib ≤ In ≤ Iz`,
       actual: `In=${formatNumber(breakerRatingA, 0)} A，${fuseK3 ? `Iz/k3=${formatNumber(protectionLimitA, 1)} A` : `Iz=${formatNumber(totalAmpacityA, 1)} A`}`,
       pass: protectionPass,
-      note: breakerAuto
-        ? `${protectionDeviceLabel(input.protectionDevice)}，In 为按计算电流自动匹配`
-        : `${protectionDeviceLabel(input.protectionDevice)}，In 为手动输入值`,
+      note: isDc
+        ? `${protectionDeviceLabel(input.protectionDevice)}，DC 保护电器按产品样本复核；${breakerAuto ? 'In 为自动匹配' : 'In 为手动输入值'}`
+        : breakerAuto
+          ? `${protectionDeviceLabel(input.protectionDevice)}，In 为按计算电流自动匹配`
+          : `${protectionDeviceLabel(input.protectionDevice)}，In 为手动输入值`,
     },
   ]
 
@@ -733,6 +824,10 @@ export function calculateCableSizing(input: CableSizingInput): CableSizingResult
     startingVoltageDropPercent,
     startingPass,
     cableLabel,
+    ampacitySource,
+    ampacitySourceLabel,
+    dcCircuitLabel: isDc ? DC_CIRCUIT_LABELS[input.dcCircuitType] : '',
+    dcWiringLabel: isDc ? DC_WIRING_LABELS[input.dcWiring] : '',
     drivers,
     checks,
     warnings,

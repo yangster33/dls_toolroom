@@ -290,3 +290,85 @@ describe('口径调整后的选型行为', () => {
     expect(result!.warnings.some((warning) => warning.includes('线路电抗输入无效'))).toBe(true)
   })
 })
+
+describe('直流模式', () => {
+  it('默认使用 3 根导体表并标注 DC 保守口径', () => {
+    const result = calculateCableSizing(
+      withInput({ system: 'dc', voltage: 48, powerKw: 3, demandFactor: 1, lengthM: 30 }),
+    )
+
+    expect(result).not.toBeNull()
+    expect(result!.cableLabel).toContain('2×')
+    expect(result!.ampacitySource).toBe('standard')
+    expect(result!.ampacitySourceLabel).toContain('3 根导体')
+    expect(result!.dcCircuitLabel).toBe('负荷电流')
+    expect(result!.dcWiringLabel).toBe('2 线')
+  })
+
+  it('厂家 DC 表覆盖基准载流量', () => {
+    const result = calculateCableSizing(
+      withInput({
+        system: 'dc',
+        voltage: 48,
+        powerKw: 3,
+        demandFactor: 1,
+        lengthM: 30,
+        dcAmpacitySource: 'manufacturer',
+        dcManufacturerAmpacity: Array.from({ length: 16 }, () => 200),
+        dcManufacturerName: '测试厂家',
+      }),
+    )
+
+    expect(result).not.toBeNull()
+    expect(result!.ampacitySource).toBe('manufacturer')
+    expect(result!.ampacitySourceLabel).toContain('测试厂家')
+    expect(result!.baseAmpacityA).toBe(200)
+  })
+
+  it('厂家表无效时回退国家标准表', () => {
+    const result = calculateCableSizing(
+      withInput({
+        system: 'dc',
+        dcAmpacitySource: 'manufacturer',
+        dcManufacturerAmpacity: [1, 2],
+      }),
+    )
+
+    expect(result).not.toBeNull()
+    expect(result!.ampacitySource).toBe('standard')
+    expect(result!.warnings.some((warning) => warning.includes('回退国家标准表'))).toBe(true)
+  })
+
+  it('直流熔断器不套 AC k3', () => {
+    const result = calculateCableSizing(
+      withInput({
+        system: 'dc',
+        powerKw: 3,
+        demandFactor: 1,
+        lengthM: 30,
+        protectionDevice: 'fuse',
+        breakerRatingA: 100,
+      }),
+    )
+
+    expect(result).not.toBeNull()
+    expect(result!.fuseK3).toBeNull()
+    expect(result!.protectionPass).toBe(true)
+  })
+
+  it('导线制式影响电缆标签', () => {
+    const withPe = calculateCableSizing(withInput({ system: 'dc', dcWiring: 'twoWirePe' }))
+    const earthed = calculateCableSizing(withInput({ system: 'dc', dcWiring: 'positiveEarthed' }))
+
+    expect(withPe!.cableLabel).toContain('+1×')
+    expect(earthed!.cableLabel).not.toContain('+1×')
+    expect(earthed!.dcWiringLabel).toBe('正极接地')
+  })
+
+  it('直流下忽略电机启动校核', () => {
+    const result = calculateCableSizing(withInput({ system: 'dc', motorStarting: true }))
+
+    expect(result).not.toBeNull()
+    expect(result!.startingPass).toBeNull()
+  })
+})

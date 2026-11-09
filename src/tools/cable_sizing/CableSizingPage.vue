@@ -74,6 +74,39 @@
               hint="线电压 / 直流电压"
             />
 
+            <template v-if="form.system === 'dc'">
+              <label class="field">
+                <span class="field-label">
+                  直流回路类型
+                  <span class="field-hint">{{ dcCircuitInfo.hint }}</span>
+                </span>
+                <select
+                  v-model="form.dcCircuitType"
+                  class="select select-bordered select-sm w-full"
+                >
+                  <option
+                    v-for="option in DC_CIRCUIT_TYPE_OPTIONS"
+                    :key="option.key"
+                    :value="option.key"
+                  >
+                    {{ option.label }}
+                  </option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span class="field-label">
+                  导线制式
+                  <span class="field-hint">{{ dcWiringInfo.hint }}</span>
+                </span>
+                <select v-model="form.dcWiring" class="select select-bordered select-sm w-full">
+                  <option v-for="option in DC_WIRING_OPTIONS" :key="option.key" :value="option.key">
+                    {{ option.label }}
+                  </option>
+                </select>
+              </label>
+            </template>
+
             <div class="field field-wide">
               <span class="field-label">
                 负荷输入方式
@@ -216,6 +249,86 @@
               {{ methodInfo.description }}
             </p>
 
+            <template v-if="form.system === 'dc'">
+              <label class="field field-wide">
+                <span class="field-label">
+                  载流量数据源
+                  <span class="field-hint">{{ dcAmpacitySourceInfo.hint }}</span>
+                </span>
+                <select
+                  v-model="form.dcAmpacitySource"
+                  class="select select-bordered select-sm w-full"
+                >
+                  <option
+                    v-for="option in DC_AMPACITY_SOURCE_OPTIONS"
+                    :key="option.key"
+                    :value="option.key"
+                  >
+                    {{ option.label }}
+                  </option>
+                </select>
+              </label>
+
+              <template v-if="form.dcAmpacitySource === 'manufacturer'">
+                <label class="field field-wide">
+                  <span class="field-label">
+                    厂家 / 表名
+                    <span class="field-hint">仅用于展示和计算书</span>
+                  </span>
+                  <input
+                    v-model="form.dcManufacturerName"
+                    type="text"
+                    class="input input-bordered input-sm w-full"
+                    placeholder="例如：XX 厂家 DC 载流量表"
+                  />
+                </label>
+
+                <div class="field field-wide">
+                  <div class="dc-table-head">
+                    <span class="field-label">
+                      厂家 DC 表（{{ manufacturerComboLabel }}）
+                      <span class="field-hint">16 个标准截面</span>
+                    </span>
+                    <div class="dc-table-actions">
+                      <button
+                        type="button"
+                        class="btn btn-xs"
+                        @click="fillManufacturerFromStandard"
+                      >
+                        按标准表填充
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-xs"
+                        @click="form.dcAmpacitySource = 'standard'"
+                      >
+                        恢复国家标准表
+                      </button>
+                    </div>
+                  </div>
+                  <div class="dc-table">
+                    <label
+                      v-for="(section, index) in STANDARD_SECTIONS"
+                      :key="section"
+                      class="dc-cell"
+                    >
+                      <span class="dc-cell-label">{{ section }} mm²</span>
+                      <input
+                        v-model.number="form.dcManufacturerAmpacity[index]"
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        class="input input-bordered input-xs w-full readout"
+                      />
+                    </label>
+                  </div>
+                  <p v-if="manufacturerTableInvalid" class="field-note is-warn">
+                    未填满 16 个有效值，引擎会回退国家标准表。
+                  </p>
+                </div>
+              </template>
+            </template>
+
             <template v-if="isBuried">
               <label class="field" data-symbol="s" :class="{ 'is-symbol-active': isActive('s') }">
                 <span class="field-label">
@@ -330,6 +443,29 @@
               hint="照明 / 动力按规范取值"
             />
 
+            <div v-if="form.system === 'dc'" class="field field-wide">
+              <span class="field-label">
+                直流压降预设
+                <span class="field-hint">-48V 常见 3%–5%</span>
+              </span>
+              <div class="segmented" role="group" aria-label="直流压降预设">
+                <button
+                  type="button"
+                  :class="{ active: form.allowedDropPercent === 3 }"
+                  @click="form.allowedDropPercent = 3"
+                >
+                  3%
+                </button>
+                <button
+                  type="button"
+                  :class="{ active: form.allowedDropPercent === 5 }"
+                  @click="form.allowedDropPercent = 5"
+                >
+                  5%
+                </button>
+              </div>
+            </div>
+
             <UnitField
               v-model="form.shortCircuitKa"
               data-symbol="Isc"
@@ -372,7 +508,9 @@
             <label class="field">
               <span class="field-label">
                 保护电器类型
-                <span class="field-hint">熔断器按 k3</span>
+                <span class="field-hint">{{
+                  form.system === 'dc' ? 'DC 按样本复核' : '熔断器按 k3'
+                }}</span>
               </span>
               <select
                 v-model="form.protectionDevice"
@@ -388,53 +526,55 @@
               </select>
             </label>
 
-            <div class="field field-wide">
-              <span class="field-label">
-                电机启动校核
-                <span class="field-hint">动力负荷可选</span>
-              </span>
-              <div class="segmented" role="group" aria-label="电机启动校核">
-                <button
-                  type="button"
-                  :class="{ active: !form.motorStarting }"
-                  @click="form.motorStarting = false"
-                >
-                  不校核
-                </button>
-                <button
-                  type="button"
-                  :class="{ active: form.motorStarting }"
-                  @click="form.motorStarting = true"
-                >
-                  校核
-                </button>
+            <template v-if="form.system !== 'dc'">
+              <div class="field field-wide">
+                <span class="field-label">
+                  电机启动校核
+                  <span class="field-hint">动力负荷可选</span>
+                </span>
+                <div class="segmented" role="group" aria-label="电机启动校核">
+                  <button
+                    type="button"
+                    :class="{ active: !form.motorStarting }"
+                    @click="form.motorStarting = false"
+                  >
+                    不校核
+                  </button>
+                  <button
+                    type="button"
+                    :class="{ active: form.motorStarting }"
+                    @click="form.motorStarting = true"
+                  >
+                    校核
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <template v-if="form.motorStarting">
-              <UnitField
-                v-model="form.startingCurrentMultiple"
-                data-symbol="k_start"
-                :class="{ 'is-symbol-active': isActive('k_start') }"
-                label="启动电流倍数"
-                unit="×Ib"
-                :min="1"
-                :max="12"
-                :step="0.5"
-                hint="直接启动约 6"
-              />
+              <template v-if="form.motorStarting">
+                <UnitField
+                  v-model="form.startingCurrentMultiple"
+                  data-symbol="k_start"
+                  :class="{ 'is-symbol-active': isActive('k_start') }"
+                  label="启动电流倍数"
+                  unit="×Ib"
+                  :min="1"
+                  :max="12"
+                  :step="0.5"
+                  hint="直接启动约 6"
+                />
 
-              <UnitField
-                v-model="form.allowedStartingDropPercent"
-                data-symbol="ΔU_start"
-                :class="{ 'is-symbol-active': isActive('ΔU_start') }"
-                label="启动允许压降"
-                unit="%"
-                :min="1"
-                :max="50"
-                :step="1"
-                hint="常用 15"
-              />
+                <UnitField
+                  v-model="form.allowedStartingDropPercent"
+                  data-symbol="ΔU_start"
+                  :class="{ 'is-symbol-active': isActive('ΔU_start') }"
+                  label="启动允许压降"
+                  unit="%"
+                  :min="1"
+                  :max="50"
+                  :step="1"
+                  hint="常用 15"
+                />
+              </template>
             </template>
           </div>
 
@@ -446,6 +586,11 @@
             · 保护电器
             <strong class="readout">{{ protectionInfo.label }}</strong>
             · 自动匹配时取不小于 Ib 的最小标准壳架。
+          </p>
+
+          <p v-if="form.system === 'dc'" class="field-note">
+            直流模式只做电缆校核；DC 断路器/熔断器需按 DC 电压下的 Icu/Ics、极性和 L/R
+            时间常数复核。
           </p>
         </section>
       </div>
@@ -537,6 +682,10 @@
           </div>
 
           <p class="verdict-spec">{{ result.cableLabel }}</p>
+          <p v-if="form.system === 'dc'" class="verdict-sub">
+            {{ result.dcCircuitLabel }} · {{ result.dcWiringLabel }} ·
+            {{ result.ampacitySourceLabel }}
+          </p>
           <p class="verdict-sub">
             {{ result.parallelCables > 1 ? `${result.parallelCables} 根/相并联` : '单根敷设' }} · 由
             {{ result.drivers.join(' / ') }} 控制
@@ -624,6 +773,10 @@
               B.52.18（埋地按间距）。
             </li>
             <li>温度修正：表 B.52.14 / B.52.15；土壤热阻率：表 B.52.16；三次谐波：表 E.52.1。</li>
+            <li v-if="form.system === 'dc'">
+              直流：载流量按 3 根导体表保守取值，或使用厂家 DC 表；压降按 2×I×L×R；保护电器按 DC
+              样本复核。
+            </li>
             <li>
               低压设计：GB 50054-2011、GB 51348-2019；电力电缆：GB 50217-2018；通用规范：GB
               55024-2022。
@@ -688,16 +841,21 @@ import UnitField from './UnitField.vue'
 import {
   AMPACITY_DATA_NOTE,
   BURIED_SPACING_OPTIONS,
+  DC_AMPACITY_SOURCE_OPTIONS,
+  DC_CIRCUIT_TYPE_OPTIONS,
+  DC_WIRING_OPTIONS,
   INSULATION_OPTIONS,
   INSTALLATION_OPTIONS,
   MATERIAL_OPTIONS,
   PROTECTION_DEVICE_OPTIONS,
+  STANDARD_SECTIONS,
   SYSTEM_OPTIONS,
   calculateCableSizing,
   createDefaultInput,
   formatSection,
   type CableSizingInput,
 } from './cableSizing'
+import { AMPACITY } from './ampacityTables'
 import {
   buildCalculationSteps,
   buildParameterDocs,
@@ -731,6 +889,71 @@ const protectionInfo = computed(
   () =>
     PROTECTION_DEVICE_OPTIONS.find((option) => option.key === form.protectionDevice) ??
     PROTECTION_DEVICE_OPTIONS[0]!,
+)
+
+const materialInfo = computed(
+  () => MATERIAL_OPTIONS.find((option) => option.key === form.material) ?? MATERIAL_OPTIONS[0]!,
+)
+
+const dcCircuitInfo = computed(
+  () =>
+    DC_CIRCUIT_TYPE_OPTIONS.find((option) => option.key === form.dcCircuitType) ??
+    DC_CIRCUIT_TYPE_OPTIONS[0]!,
+)
+
+const dcWiringInfo = computed(
+  () => DC_WIRING_OPTIONS.find((option) => option.key === form.dcWiring) ?? DC_WIRING_OPTIONS[0]!,
+)
+
+const dcAmpacitySourceInfo = computed(
+  () =>
+    DC_AMPACITY_SOURCE_OPTIONS.find((option) => option.key === form.dcAmpacitySource) ??
+    DC_AMPACITY_SOURCE_OPTIONS[0]!,
+)
+
+const manufacturerComboLabel = computed(
+  () => `${materialInfo.value.shortLabel} / ${insulationInfo.value.shortLabel} / ${form.method}`,
+)
+
+const manufacturerTableInvalid = computed(
+  () =>
+    form.dcAmpacitySource === 'manufacturer' &&
+    (form.dcManufacturerAmpacity.length !== STANDARD_SECTIONS.length ||
+      form.dcManufacturerAmpacity.some((value) => !Number.isFinite(value) || value <= 0)),
+)
+
+function fillManufacturerFromStandard() {
+  form.dcManufacturerAmpacity = [...AMPACITY[form.material][form.insulation][form.method]]
+}
+
+function ensureManufacturerTable() {
+  if (form.dcManufacturerAmpacity.length !== STANDARD_SECTIONS.length) {
+    fillManufacturerFromStandard()
+  }
+}
+
+watch(
+  () => form.dcAmpacitySource,
+  (source) => {
+    if (source === 'manufacturer') ensureManufacturerTable()
+  },
+)
+
+watch(
+  () => form.system,
+  (system, previous) => {
+    if (system === 'dc' && previous !== 'dc') {
+      if (form.inputMode === 'power' && form.powerKw === 30) form.powerKw = 1
+      if (form.lengthM === 80) form.lengthM = 30
+    }
+  },
+)
+
+watch(
+  () => [form.material, form.insulation, form.method],
+  () => {
+    if (form.dcAmpacitySource === 'manufacturer') fillManufacturerFromStandard()
+  },
 )
 
 const verdictWhy = computed(() => {
@@ -831,18 +1054,29 @@ function buildReport(): string {
     '电缆选型计算书（方案初选）',
     `系统：${SYSTEM_OPTIONS.find((item) => item.key === form.system)?.label ?? form.system}`,
     `标称电压：${form.voltage} V；线路长度：${form.lengthM} m`,
+    ...(form.system === 'dc'
+      ? [
+          `直流回路：${value.dcCircuitLabel}；导线制式：${value.dcWiringLabel}；载流量数据源：${value.ampacitySourceLabel}`,
+        ]
+      : []),
     `导体 / 绝缘：${form.material === 'cu' ? '铜芯' : '铝芯'} / ${insulationInfo.value.shortLabel}`,
     `敷设方式：${methodInfo.value.label}；${isBuried.value ? '土壤' : '环境'}温度：${form.ambientTempC} ℃；并列回路：${form.groupedCircuits} 回`,
-    `计算电流 Ib：${value.designCurrentA.toFixed(2)} A${value.neutralCurrentA > 0 ? `；中性线电流 IN：${value.neutralCurrentA.toFixed(2)} A` : ''}`,
+    `${form.system === 'dc' ? value.dcCircuitLabel : '计算电流 Ib'}：${value.designCurrentA.toFixed(2)} A${value.neutralCurrentA > 0 ? `；中性线电流 IN：${value.neutralCurrentA.toFixed(2)} A` : ''}`,
     `推荐截面：${formatSection(value.selectedSection)} mm²/相 × ${value.parallelCables} 根/相`,
     `推荐规格：${value.cableLabel}`,
     `校正载流量 Iz：${value.totalAmpacityA.toFixed(1)} A（${value.ampacityPerCableA.toFixed(1)} A/根）`,
-    `修正系数：kt=${value.temperatureFactor.toFixed(2)}，kg=${value.groupFactor.toFixed(2)}（${value.groupingCount} 根），ks=${value.soilFactor.toFixed(2)}，kh=${value.harmonicFactor.toFixed(2)}`,
+    form.system === 'dc'
+      ? `修正系数：kt=${value.temperatureFactor.toFixed(2)}，kg=${value.groupFactor.toFixed(2)}（${value.groupingCount} 根），ks=${value.soilFactor.toFixed(2)}；${value.ampacitySourceLabel}`
+      : `修正系数：kt=${value.temperatureFactor.toFixed(2)}，kg=${value.groupFactor.toFixed(2)}（${value.groupingCount} 根），ks=${value.soilFactor.toFixed(2)}，kh=${value.harmonicFactor.toFixed(2)}`,
     `电压降：${value.voltageDropV.toFixed(1)} V（${value.voltageDropPercent.toFixed(2)} %）`,
     `短路热稳定最小截面：${value.shortCircuitMinSection.toFixed(1)} mm²（k=${value.thermalK}）`,
     `保护电器：${protectionInfo.value.label}；In=${value.breakerRatingA.toFixed(0)} A（${value.breakerAuto ? '自动' : '手动'}）` +
       (value.fuseK3 ? `，k3=${value.fuseK3.toFixed(2)}` : ''),
-    `电机启动压降：${value.startingVoltageDropPercent === null ? '未校核' : value.startingVoltageDropPercent.toFixed(2) + ' %'}`,
+    ...(form.system === 'dc'
+      ? []
+      : [
+          `电机启动压降：${value.startingVoltageDropPercent === null ? '未校核' : value.startingVoltageDropPercent.toFixed(2) + ' %'}`,
+        ]),
     `结论：${value.overallPass ? '各项校核通过' : '存在未通过项，需调整参数'}`,
     '',
     '校核明细：',
@@ -1656,6 +1890,48 @@ async function copyReport() {
 
   .verdict-section {
     font-size: 34px;
+  }
+}
+
+.dc-table-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.dc-table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.dc-table {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.dc-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.dc-cell-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+.field-note.is-warn {
+  color: var(--color-warning);
+}
+
+@media (max-width: 640px) {
+  .dc-table {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

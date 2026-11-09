@@ -120,3 +120,22 @@ describe('buildParameterDocs', () => {
     }
   })
 })
+
+describe('DC 计算书', () => {
+  it('按直流公式和 DC 口径生成', () => {
+    const { steps } = stepsFor({
+      system: 'dc',
+      voltage: 48,
+      powerKw: 3,
+      demandFactor: 1,
+      lengthM: 30,
+    })
+
+    expect(steps[1]?.formula).toContain('U × η')
+    expect(steps[2]?.substitution).toContain('直流不适用')
+    expect(steps[3]?.formula).not.toContain('kh')
+    expect(steps[4]?.formula).toContain('2 × Ib × L × R')
+    expect(steps[6]?.formula).toBe('Ib ≤ In ≤ Iz')
+    expect(steps[6]?.note).toContain('DC 保护电器')
+  })
+})

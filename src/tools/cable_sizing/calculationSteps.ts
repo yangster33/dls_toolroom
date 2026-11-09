@@ -117,9 +117,11 @@ export function buildCalculationSteps(
   const ks = result.soilFactor
   const kh = result.harmonicFactor
   const isFuse = input.protectionDevice === 'fuse'
+  const fuseK3 = result.fuseK3
+  const currentLabel = isDc ? result.dcCircuitLabel || '直流电流' : '计算电流'
   const isc = Number.isFinite(input.shortCircuitKa) ? input.shortCircuitKa : 0
   const clearingTime = Number.isFinite(input.clearingTimeS) ? input.clearingTimeS : 0.1
-  const protectionLimit = isFuse && result.fuseK3 ? iz / result.fuseK3 : iz
+  const protectionLimit = fuseK3 ? iz / fuseK3 : iz
   const rawThd = Number(input.harmonicThdPercent)
   const thdPercent =
     isThreePhase && Number.isFinite(rawThd) ? Math.min(100, Math.max(0, rawThd)) : 0
@@ -142,7 +144,9 @@ export function buildCalculationSteps(
   const breaker = describeBreaker(result)
   const materialLabel = input.material === 'cu' ? '铜' : '铝'
   const insulationLabel = input.insulation === 'pvc' ? 'PVC' : 'XLPE'
-  const tableDetail = `${materialLabel}/${insulationLabel}/${input.method}，${formatSection(section)} mm² → ${formatNumber(result.baseAmpacityA, 1)} A/根`
+  const tableDetail = isDc
+    ? `${result.ampacitySourceLabel}；${materialLabel}/${insulationLabel}/${input.method}，${formatSection(section)} mm² → ${formatNumber(result.baseAmpacityA, 1)} A/根`
+    : `${materialLabel}/${insulationLabel}/${input.method}，${formatSection(section)} mm² → ${formatNumber(result.baseAmpacityA, 1)} A/根`
   const xSource: SymbolSource = input.reactanceOhmPerKm === 0.08 ? 'default' : 'input'
   const xSourceDetail = xSource === 'default' ? '默认 0.08 Ω/km' : '输入值'
 
@@ -195,7 +199,7 @@ export function buildCalculationSteps(
       substitution: `= ${formatNumber(ib, 2)} × ${factors} / 1000 = ${formatNumber(result.designPowerKw, 2)} kW`,
       result: `Pjs = ${formatNumber(result.designPowerKw, 2)} kW`,
       symbols: [
-        symbol('负载电流', formatNumber(ib, 2), 'input', {
+        symbol(currentLabel, formatNumber(ib, 2), 'input', {
           symbol: 'Ib',
           unit: 'A',
           inputSymbol: 'Ib',
@@ -236,7 +240,7 @@ export function buildCalculationSteps(
       substitution: `= ${formatNumber(ib, 2)} A`,
       result: `Ib = ${formatNumber(ib, 2)} A`,
       symbols: [
-        symbol('负载电流', formatNumber(ib, 2), 'input', {
+        symbol(currentLabel, formatNumber(ib, 2), 'input', {
           symbol: 'Ib',
           unit: 'A',
           inputSymbol: 'Ib',
@@ -286,7 +290,7 @@ export function buildCalculationSteps(
           symbol: 'η',
           inputSymbol: 'η',
         }),
-        symbol('计算电流', formatNumber(ib, 2), 'calc', { symbol: 'Ib', unit: 'A' }),
+        symbol(currentLabel, formatNumber(ib, 2), 'calc', { symbol: 'Ib', unit: 'A' }),
       ],
     })
   }
@@ -298,17 +302,25 @@ export function buildCalculationSteps(
     soil.applicable
       ? `ks：${soil.table}（直埋），${formatPoints(soil.points)}；${soil.expression}`
       : 'ks：B.52.16（非埋地，不适用）→ 1.00',
-    `kh：${harmonic.table}，h3=${formatNumber(thdPercent, 0)}% → ${harmonic.band}，kh=${formatNumber(harmonic.factor, 2)}${harmonic.neutralBased ? '（按中性线选型）' : ''}`,
+    isDc
+      ? 'kh：直流不适用 → 1.00'
+      : `kh：${harmonic.table}，h3=${formatNumber(thdPercent, 0)}% → ${harmonic.band}，kh=${formatNumber(harmonic.factor, 2)}${harmonic.neutralBased ? '（按中性线选型）' : ''}`,
   ]
 
   steps.push({
     key: 'factors',
     index: 3,
     title: '修正系数',
-    keyValue: `kt / kg / ks / kh = ${formatNumber(kt, 2)} / ${formatNumber(kg, 2)} / ${formatNumber(ks, 2)} / ${formatNumber(kh, 2)}`,
-    formula: 'kt、kg、ks、kh 均为查表值；表列之间按线性插值',
+    keyValue: isDc
+      ? `kt / kg / ks = ${formatNumber(kt, 2)} / ${formatNumber(kg, 2)} / ${formatNumber(ks, 2)}`
+      : `kt / kg / ks / kh = ${formatNumber(kt, 2)} / ${formatNumber(kg, 2)} / ${formatNumber(ks, 2)} / ${formatNumber(kh, 2)}`,
+    formula: isDc
+      ? 'kt、kg、ks 为查表值；kh 直流不适用'
+      : 'kt、kg、ks、kh 均为查表值；表列之间按线性插值',
     substitution: factorLines.join('\n'),
-    result: `kt = ${formatNumber(kt, 2)}；kg = ${formatNumber(kg, 2)}（${result.groupingCount} 根）；ks = ${formatNumber(ks, 2)}；kh = ${formatNumber(kh, 2)}`,
+    result: isDc
+      ? `kt = ${formatNumber(kt, 2)}；kg = ${formatNumber(kg, 2)}（${result.groupingCount} 根）；ks = ${formatNumber(ks, 2)}；kh = 1.00（直流不适用）`
+      : `kt = ${formatNumber(kt, 2)}；kg = ${formatNumber(kg, 2)}（${result.groupingCount} 根）；ks = ${formatNumber(ks, 2)}；kh = ${formatNumber(kh, 2)}`,
     symbols: [
       symbol('温度修正', formatNumber(kt, 2), 'table', {
         symbol: 'kt',
@@ -325,14 +337,25 @@ export function buildCalculationSteps(
         inputSymbol: 'ρ',
         sourceDetail: soil.applicable ? soil.table : '非埋地，不适用',
       }),
-      symbol('谐波修正', formatNumber(kh, 2), 'table', {
-        symbol: 'kh',
-        inputSymbol: 'h3',
-        sourceDetail: harmonic.table,
-      }),
+      ...(isDc
+        ? [
+            symbol('谐波修正', '1.00', 'constant', {
+              symbol: 'kh',
+              sourceDetail: '直流不适用',
+            }),
+          ]
+        : [
+            symbol('谐波修正', formatNumber(kh, 2), 'table', {
+              symbol: 'kh',
+              inputSymbol: 'h3',
+              sourceDetail: harmonic.table,
+            }),
+          ]),
       symbol('每相并联根数', String(n), 'input', { symbol: 'n', inputSymbol: 'n' }),
     ],
-    note: '查表点和插值过程见上方；完整表号见“数据与依据”。',
+    note: isDc
+      ? '查表点和插值过程见上方；DC 下 kh 不适用。'
+      : '查表点和插值过程见上方；完整表号见“数据与依据”。',
   })
 
   // ④ 载流量
@@ -341,8 +364,10 @@ export function buildCalculationSteps(
     index: 4,
     title: '载流量',
     keyValue: `Iz = ${formatNumber(iz, 1)} A`,
-    formula: 'Iz = I_table × kt × kg × ks × kh × n',
-    substitution: `= ${formatNumber(result.baseAmpacityA, 1)} × ${formatNumber(kt, 2)} × ${formatNumber(kg, 2)} × ${formatNumber(ks, 2)} × ${formatNumber(kh, 2)} × ${n} = ${formatNumber(iz, 1)} A`,
+    formula: isDc ? 'Iz = I_table × kt × kg × ks × n' : 'Iz = I_table × kt × kg × ks × kh × n',
+    substitution: isDc
+      ? `= ${formatNumber(result.baseAmpacityA, 1)} × ${formatNumber(kt, 2)} × ${formatNumber(kg, 2)} × ${formatNumber(ks, 2)} × ${n} = ${formatNumber(iz, 1)} A`
+      : `= ${formatNumber(result.baseAmpacityA, 1)} × ${formatNumber(kt, 2)} × ${formatNumber(kg, 2)} × ${formatNumber(ks, 2)} × ${formatNumber(kh, 2)} × ${n} = ${formatNumber(iz, 1)} A`,
     result: `Iz = ${formatNumber(iz, 1)} A ${result.totalAmpacityA >= result.ampacityDesignCurrentA ? '≥' : '<'} Ib = ${formatNumber(result.ampacityDesignCurrentA, 1)} A`,
     symbols: [
       symbol('基准载流量', formatNumber(result.baseAmpacityA, 1), 'table', {
@@ -365,17 +390,23 @@ export function buildCalculationSteps(
         inputSymbol: 'ρ',
         sourceDetail: soil.applicable ? soil.table : '非埋地，不适用',
       }),
-      symbol('谐波修正', formatNumber(kh, 2), 'table', {
-        symbol: 'kh',
-        inputSymbol: 'h3',
-        sourceDetail: harmonic.table,
-      }),
+      ...(isDc
+        ? []
+        : [
+            symbol('谐波修正', formatNumber(kh, 2), 'table', {
+              symbol: 'kh',
+              inputSymbol: 'h3',
+              sourceDetail: harmonic.table,
+            }),
+          ]),
       symbol('每相并联根数', String(n), 'input', { symbol: 'n', inputSymbol: 'n' }),
       symbol('校正载流量', formatNumber(iz, 1), 'calc', { symbol: 'Iz', unit: 'A' }),
     ],
     pass: result.totalAmpacityA >= result.ampacityDesignCurrentA - 1e-6,
     controlling: result.drivers.includes('载流量'),
-    note: `查表：${tableDetail}；载流量裕度 ${formatNumber(result.ampacityMarginPercent, 1)}%。`,
+    note: isDc
+      ? `${tableDetail}；载流量裕度 ${formatNumber(result.ampacityMarginPercent, 1)}%。`
+      : `查表：${tableDetail}；载流量裕度 ${formatNumber(result.ampacityMarginPercent, 1)}%。`,
   })
 
   // ⑤ 电压降
@@ -397,7 +428,7 @@ export function buildCalculationSteps(
     substitution: `R：${resistance.expression}\nΔU ${dropSubstitution}`,
     result: `ΔU = ${formatNumber(result.voltageDropV, 2)} V（${formatNumber(result.voltageDropPercent, 2)} %）`,
     symbols: [
-      symbol('计算电流', formatNumber(ib, 2), 'calc', { symbol: 'Ib', unit: 'A' }),
+      symbol(currentLabel, formatNumber(ib, 2), 'calc', { symbol: 'Ib', unit: 'A' }),
       symbol('线路长度', formatNumber(lengthKm, 3), 'input', {
         symbol: 'L',
         unit: 'km',
@@ -408,12 +439,16 @@ export function buildCalculationSteps(
         unit: 'Ω/km',
         sourceDetail: 'ρθ / S / n',
       }),
-      symbol('线路电抗', formatNumber(result.reactanceMilliohm, 3), xSource, {
-        symbol: 'X',
-        unit: 'Ω/km',
-        inputSymbol: 'X',
-        sourceDetail: xSourceDetail,
-      }),
+      ...(isDc
+        ? []
+        : [
+            symbol('线路电抗', formatNumber(result.reactanceMilliohm, 3), xSource, {
+              symbol: 'X',
+              unit: 'Ω/km',
+              inputSymbol: 'X',
+              sourceDetail: xSourceDetail,
+            }),
+          ]),
       ...(isDc
         ? []
         : [
@@ -429,7 +464,9 @@ export function buildCalculationSteps(
     ],
     pass: result.voltageDropPercent <= input.allowedDropPercent + 1e-9,
     controlling: result.drivers.includes('电压降'),
-    note: 'R、X 单位 Ω/km，L 已由 m 换算为 km；R 的推导见上方。',
+    note: isDc
+      ? 'R 单位 Ω/km，L 已由 m 换算为 km；DC 按正/负两根导体往返 2×。'
+      : 'R、X 单位 Ω/km，L 已由 m 换算为 km；R 的推导见上方。',
   })
 
   // ⑥ 短路热稳定
@@ -467,25 +504,23 @@ export function buildCalculationSteps(
   })
 
   // ⑦ 保护配合
-  const protectionFormula = isFuse ? 'Ib ≤ In ≤ Iz / k3' : 'Ib ≤ In ≤ Iz'
-  const protectionSubstitution =
-    isFuse && result.fuseK3
-      ? `= ${formatNumber(ib, 2)} ≤ ${formatNumber(inA, 0)} ≤ ${formatNumber(iz, 1)} / ${formatNumber(result.fuseK3, 2)} = ${formatNumber(protectionLimit, 1)} A`
-      : `= ${formatNumber(ib, 2)} ≤ ${formatNumber(inA, 0)} ≤ ${formatNumber(iz, 1)} A`
+  const protectionFormula = fuseK3 ? 'Ib ≤ In ≤ Iz / k3' : 'Ib ≤ In ≤ Iz'
+  const protectionSubstitution = fuseK3
+    ? `= ${formatNumber(ib, 2)} ≤ ${formatNumber(inA, 0)} ≤ ${formatNumber(iz, 1)} / ${formatNumber(fuseK3, 2)} = ${formatNumber(protectionLimit, 1)} A`
+    : `= ${formatNumber(ib, 2)} ≤ ${formatNumber(inA, 0)} ≤ ${formatNumber(iz, 1)} A`
 
   steps.push({
     key: 'protection',
     index: 7,
     title: '保护配合',
-    keyValue:
-      isFuse && result.fuseK3
-        ? `In = ${formatNumber(inA, 0)} A ≤ Iz/k3 = ${formatNumber(protectionLimit, 1)} A`
-        : `In = ${formatNumber(inA, 0)} A ≤ Iz = ${formatNumber(iz, 1)} A`,
+    keyValue: fuseK3
+      ? `In = ${formatNumber(inA, 0)} A ≤ Iz/k3 = ${formatNumber(protectionLimit, 1)} A`
+      : `In = ${formatNumber(inA, 0)} A ≤ Iz = ${formatNumber(iz, 1)} A`,
     formula: protectionFormula,
     substitution: protectionSubstitution,
     result: result.protectionPass ? '通过' : '不通过',
     symbols: [
-      symbol('计算电流', formatNumber(ib, 2), 'calc', { symbol: 'Ib', unit: 'A' }),
+      symbol(currentLabel, formatNumber(ib, 2), 'calc', { symbol: 'Ib', unit: 'A' }),
       symbol('保护电器额定电流', formatNumber(inA, 0), breaker.auto ? 'calc' : 'input', {
         symbol: 'In',
         unit: 'A',
@@ -493,9 +528,9 @@ export function buildCalculationSteps(
         sourceDetail: breaker.rule,
       }),
       symbol('校正载流量', formatNumber(iz, 1), 'calc', { symbol: 'Iz', unit: 'A' }),
-      ...(isFuse && result.fuseK3
+      ...(fuseK3
         ? [
-            symbol('熔断器修正系数', formatNumber(result.fuseK3, 2), 'constant', {
+            symbol('熔断器修正系数', formatNumber(fuseK3, 2), 'constant', {
               symbol: 'k3',
               sourceDetail: 'In < 16 A → 1.31；In ≥ 16 A → 1.10',
             }),
@@ -504,7 +539,9 @@ export function buildCalculationSteps(
     ],
     pass: result.protectionPass,
     controlling: result.drivers.includes('保护配合'),
-    note: `${protectionLabel(input.protectionDevice)}；${breaker.rule}${breaker.fuseRule ? `；${breaker.fuseRule}` : ''}。`,
+    note: isDc
+      ? `${protectionLabel(input.protectionDevice)}；${breaker.rule}；DC 保护电器按产品样本复核${isFuse ? '，DC 熔断器不套 AC k3' : ''}。`
+      : `${protectionLabel(input.protectionDevice)}；${breaker.rule}${breaker.fuseRule ? `；${breaker.fuseRule}` : ''}。`,
   })
 
   return steps
@@ -791,6 +828,36 @@ export function buildParameterDocs(): ParameterDoc[] {
       source: '计算',
       editable: '间接',
       basis: 'GB 50054。',
+    },
+    {
+      symbol: 'DC 回路',
+      name: '直流回路类型',
+      meaning: '负荷 / 充电 / 放电 / 整流器 / 母线。',
+      position: '只改电流标签和提示。',
+      impact: '不改变电缆计算，只影响填写口径。',
+      source: '输入',
+      editable: '是',
+      basis: 'YD/T 5040 / GB 51194。',
+    },
+    {
+      symbol: 'DC 制式',
+      name: '导线制式',
+      meaning: '2 线 / 2 线+PE / 正极接地。',
+      position: '电缆标签。',
+      impact: '影响芯数标签，不改变载流量。',
+      source: '输入',
+      editable: '是',
+      basis: '项目接地制式。',
+    },
+    {
+      symbol: 'DC 表',
+      name: '载流量数据源',
+      meaning: '国家标准表 / 厂家 DC 表。',
+      position: 'I_table。',
+      impact: '厂家表覆盖当前组合的 16 个截面值。',
+      source: '输入 / 厂家表',
+      editable: '是',
+      basis: 'GB/T 16895.6 附录 B / 厂家 DC 表。',
     },
   ]
 }
