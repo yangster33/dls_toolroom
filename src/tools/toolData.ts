@@ -18,6 +18,11 @@ import {
   PhWarning,
   PhWaveform,
   PhQrCode,
+  PhLightning,
+  PhBatteryCharging,
+  PhPlugs,
+  PhSnowflake,
+  PhFrameCorners,
 } from '@phosphor-icons/vue'
 
 export interface DocType {
@@ -219,6 +224,59 @@ export const toolConfigs: ToolConfig[] = [
     description: '生成和识别二维码的工具，支持自定义大小和纠错级别',
     icon: PhQrCode,
     tags: ['二维码', '生成', '识别', 'QR Code'],
+    docTypes: ['tao', 'method', 'tech', 'tool'],
+  },
+  {
+    id: 'cable_sizing',
+    name: '电缆选型计算',
+    description: '按载流量、电压降、短路热稳定与保护配合校核低压电缆截面',
+    icon: PhLightning,
+    tags: ['电缆', '导线', '选型', '载流量', '电压降', '短路热稳定', '低压配电'],
+    docTypes: ['tao', 'method', 'tech', 'tool'],
+  },
+  {
+    id: 'battery_sizing',
+    name: '蓄电池容量计算',
+    description: '按负载功率、备电时长、环境温度估算机房铅酸 / 锂电蓄电池容量',
+    icon: PhBatteryCharging,
+    tags: ['蓄电池', 'UPS', '铅酸', '锂电', '安时', '备电时长', '机房'],
+    docTypes: ['tao', 'method', 'tech', 'tool'],
+  },
+  {
+    id: 'dc_power_cabinet',
+    name: '通信直流电源柜选型',
+    description:
+      '按近期负荷、蓄电池均充电流与 N+1 冗余计算整流模块，并给出直流屏柜容量与柜体尺寸建议',
+    icon: PhPlugs,
+    tags: [
+      '通信电源',
+      '直流电源',
+      '电源柜',
+      '整流模块',
+      'N+1',
+      '蓄电池',
+      '均充',
+      '柜体尺寸',
+      'GB51194',
+    ],
+    docTypes: ['tao', 'method', 'tech', 'tool'],
+  },
+  {
+    id: 'hvac_cooling',
+    name: '机房空调制冷量计算',
+    description:
+      '按设备功率、围护结构、人员、照明与新风逐项计算通信机房冷负荷，换算 kW 与市场匹数，并给出 N+1 选型建议',
+    icon: PhSnowflake,
+    tags: ['空调', '制冷量', '冷负荷', '机房', '精密空调', '匹', 'kW', 'N+1'],
+    docTypes: ['tao', 'method', 'tech', 'tool'],
+  },
+  {
+    id: 'sheet_template',
+    name: '图框图签生成',
+    description:
+      'A0~A5 图幅、GB 风格图框与交互式图签设计，支持 JSON Schema、SVG 与 DXF 导出',
+    icon: PhFrameCorners,
+    tags: ['图框', '图签', '标题栏', 'A0', 'A1', 'A2', 'A3', 'A4', 'A5', 'DXF', 'JSON', 'GB/T 14689'],
     docTypes: ['tao', 'method', 'tech', 'tool'],
   },
 ]
