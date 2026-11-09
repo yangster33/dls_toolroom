@@ -605,12 +605,13 @@
           <a class="strip-link" href="#verdict">跳到结论 ↓</a>
         </div>
 
-        <details v-if="result" class="panel calc-panel">
+        <details v-if="result" ref="calcBookRef" class="panel calc-panel">
           <summary>计算书（7 步，点击展开）</summary>
 
           <div class="calc-book">
             <details
               v-for="step in calcSteps"
+              :id="`calc-${step.key}`"
               :key="step.key"
               class="calc-step"
               :class="{ 'is-fail': step.pass === false, 'is-controlling': step.controlling }"
@@ -735,32 +736,71 @@
             <span class="panel-hint">取最大约束</span>
           </div>
 
-          <div class="table-wrap">
-            <table class="check-table">
-              <thead>
-                <tr>
-                  <th>项目</th>
-                  <th>要求</th>
-                  <th>实际</th>
-                  <th>结论</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="check in result.checks" :key="check.key">
-                  <td>
-                    <span class="check-label">{{ check.label }}</span>
-                    <span class="check-note">{{ check.note }}</span>
-                  </td>
-                  <td class="readout">{{ check.required }}</td>
-                  <td class="readout">{{ check.actual }}</td>
-                  <td>
-                    <span class="check-status" :class="check.pass ? 'is-pass' : 'is-fail'">
-                      {{ check.pass ? '通过' : '不通过' }}
+          <div class="check-list">
+            <details
+              v-for="check in checkDetails"
+              :key="check.key"
+              class="check-item"
+              :class="{ 'is-fail': !check.pass, 'is-controlling': check.controlling }"
+            >
+              <summary class="check-item-head">
+                <span class="check-item-label">{{ check.label }}</span>
+                <span class="check-item-key">{{ check.keyValue }}</span>
+                <span v-if="check.controlling" class="check-item-flag">控制</span>
+                <span class="check-status" :class="check.pass ? 'is-pass' : 'is-fail'">
+                  {{ check.pass ? '通过' : '不通过' }}
+                </span>
+              </summary>
+
+              <div class="check-item-body">
+                <p class="check-formula">{{ check.formula }}</p>
+                <p class="check-substitution">{{ check.substitution }}</p>
+                <p class="check-line">
+                  <span class="check-line-label">要求</span>{{ check.required }}
+                </p>
+                <p class="check-line">
+                  <span class="check-line-label">实际</span>{{ check.actual }}
+                </p>
+                <p class="check-line">
+                  <span class="check-line-label">裕度</span>{{ check.margin }}
+                </p>
+
+                <div v-if="check.symbols.length" class="calc-symbols">
+                  <button
+                    v-for="symbol in check.symbols"
+                    :key="`${check.key}-${symbol.symbol}`"
+                    type="button"
+                    class="symbol-chip"
+                    :class="{ 'is-symbol-active': chipActive(symbol) }"
+                    :data-symbol="symbol.inputSymbol"
+                    :title="sourceTitle(symbol)"
+                    @mouseenter="activateSymbol(symbol)"
+                    @mouseleave="activeSymbol = ''"
+                    @focus="activateSymbol(symbol)"
+                    @blur="activeSymbol = ''"
+                  >
+                    <span class="symbol-name">{{ symbol.symbol }}</span>
+                    <span class="symbol-value"
+                      >{{ symbol.value }}{{ symbol.unit ? ` ${symbol.unit}` : '' }}</span
+                    >
+                    <span class="symbol-label">{{ symbol.name }}</span>
+                    <span class="symbol-source" :class="`is-${symbol.source}`">
+                      {{ sourceLabel(symbol.source) }}
                     </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                  </button>
+                </div>
+
+                <p class="check-why">{{ check.why }}</p>
+                <button
+                  v-if="check.stepKey"
+                  type="button"
+                  class="check-link"
+                  @click="openCalcStep(check.stepKey)"
+                >
+                  查看计算书 {{ check.stepLabel }}
+                </button>
+              </div>
+            </details>
           </div>
         </div>
 
@@ -827,7 +867,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 import {
   PhArrowCounterClockwise,
   PhCopy,
@@ -862,6 +902,7 @@ import {
   type CalcSymbol,
   type SymbolSource,
 } from './calculationSteps'
+import { buildCheckDetails } from './checkDetails'
 
 const toolConfig = getToolById('cable_sizing')
 const toast = useToast()
@@ -874,6 +915,18 @@ const result = computed(() => calculateCableSizing({ ...form }))
 const activeSymbol = ref('')
 const parameterDocs = buildParameterDocs()
 const calcSteps = computed(() => (result.value ? buildCalculationSteps(form, result.value) : []))
+const checkDetails = computed(() => (result.value ? buildCheckDetails(form, result.value) : []))
+const calcBookRef = ref<HTMLDetailsElement | null>(null)
+
+function openCalcStep(key?: string) {
+  if (!key) return
+  if (calcBookRef.value) calcBookRef.value.open = true
+  nextTick(() => {
+    const target = document.getElementById(`calc-${key}`)
+    if (target instanceof HTMLDetailsElement) target.open = true
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  })
+}
 
 const methodInfo = computed(
   () =>
@@ -1578,6 +1631,131 @@ async function copyReport() {
 .check-status.is-fail {
   color: var(--color-error);
   background-color: color-mix(in oklab, var(--color-error) 10%, var(--color-base-100));
+}
+
+.check-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.check-item {
+  padding: 0.55rem 0.8rem;
+  border-bottom: 1px dashed color-mix(in oklab, var(--color-base-300) 70%, transparent);
+}
+
+.check-item:last-child {
+  border-bottom: 0;
+}
+
+.check-item.is-fail {
+  background-color: color-mix(in oklab, var(--color-error) 4%, transparent);
+}
+
+.check-item.is-controlling {
+  box-shadow: inset 2px 0 0 var(--color-primary);
+}
+
+.check-item-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.check-item-head::-webkit-details-marker {
+  display: none;
+}
+
+.check-item-head::before {
+  content: '▸';
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.check-item[open] > .check-item-head::before {
+  content: '▾';
+}
+
+.check-item-label {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.check-item-key {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-align: right;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.check-item-flag {
+  flex: 0 0 auto;
+  padding: 0 0.25rem;
+  font-size: 9px;
+  color: var(--color-primary);
+  border: 1px solid color-mix(in oklab, var(--color-primary) 40%, transparent);
+}
+
+.check-item-head .check-status {
+  flex: 0 0 auto;
+}
+
+.check-item-body {
+  padding-top: 0.45rem;
+}
+
+.check-formula,
+.check-substitution {
+  margin: 0.3rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+}
+
+.check-formula {
+  color: var(--color-base-content);
+}
+
+.check-line {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.25rem 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.check-line-label {
+  flex: 0 0 2.5em;
+  color: var(--text-faint);
+}
+
+.check-why {
+  margin: 0.35rem 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.check-link {
+  margin-top: 0.35rem;
+  padding: 0;
+  font-size: 11px;
+  color: var(--color-primary);
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+
+.check-link:hover {
+  text-decoration: underline;
 }
 
 .calc-book {
