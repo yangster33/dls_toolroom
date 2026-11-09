@@ -16,7 +16,7 @@ export type ProfessionKey =
   | 'pipeline'
   | 'other'
 
-export type ActionKey = 'convert' | 'generate' | 'query' | 'export' | 'project'
+export type ActionKey = 'convert' | 'generate' | 'query' | 'export' | 'project' | 'calculate'
 
 export interface Profession {
   key: ProfessionKey
@@ -48,7 +48,7 @@ export const professions: Profession[] = [
     label: '电源',
     short: '电',
     description: '通信电源、负荷与接地计算',
-    planned: ['负荷计算', '蓄电池容量校核', '接地电阻估算'],
+    planned: ['负荷计算', '接地电阻估算'],
   },
   {
     key: 'equipment',
@@ -93,6 +93,7 @@ export const actions: Action[] = [
   { key: 'query', label: '查询' },
   { key: 'export', label: '导出' },
   { key: 'project', label: '项目管理' },
+  { key: 'calculate', label: '计算' },
 ]
 
 export const toolMeta: Record<string, ToolMeta> = {
@@ -118,6 +119,11 @@ export const toolMeta: Record<string, ToolMeta> = {
   earthquake_query: { profession: 'wireless', action: 'query', output: '图表 / CSV' },
   gdacs: { profession: 'wireless', action: 'query', output: '图表 / CSV' },
   qrcode: { profession: 'equipment', action: 'generate', output: '图片' },
+  cable_sizing: { profession: 'power', action: 'calculate', output: '计算书' },
+  battery_sizing: { profession: 'power', action: 'calculate', output: '计算书' },
+  dc_power_cabinet: { profession: 'power', action: 'calculate', output: '计算书' },
+  hvac_cooling: { profession: 'equipment', action: 'calculate', output: '计算书' },
+  sheet_template: { profession: 'other', action: 'generate', output: 'JSON / SVG / DXF' },
 }
 
 export function getProfession(key: ProfessionKey): Profession {
