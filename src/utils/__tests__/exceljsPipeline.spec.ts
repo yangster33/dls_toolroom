@@ -1,7 +1,14 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import * as XLSX from 'xlsx'
 import ExcelJS from 'exceljs'
-import { writeXlsx, collectHeaders, rowsFromObjects, safeSheetName } from '../exceljsPipeline'
+import {
+  autoBorder,
+  BORDER_AUTO_ROW_LIMIT,
+  writeXlsx,
+  collectHeaders,
+  rowsFromObjects,
+  safeSheetName,
+} from '../exceljsPipeline'
 
 /**
  * C4 阶段 3 的验收核心：exceljs 迁移后的产物必须与旧 xlsx 实现**逐格一致**。
@@ -343,6 +350,14 @@ describe('exceljsPipeline · 表名清洗与工具函数', () => {
   it("collectHeaders：按首次出现顺序取并集；rowsFromObjects：undefined 归一为 ''", () => {
     expect(collectHeaders([{ b: 1 }, { a: 2, b: 2 }, { c: 3, a: 4 }])).toEqual(['b', 'a', 'c'])
     expect(rowsFromObjects([{ a: 1, b: undefined }], ['a', 'b'])).toEqual([[1, '']])
+  })
+})
+
+describe('autoBorder（F2 自动边框阈值）', () => {
+  it('阈值内开启，超过阈值关闭', () => {
+    expect(autoBorder(0)).toBe(true)
+    expect(autoBorder(BORDER_AUTO_ROW_LIMIT)).toBe(true)
+    expect(autoBorder(BORDER_AUTO_ROW_LIMIT + 1)).toBe(false)
   })
 })
 

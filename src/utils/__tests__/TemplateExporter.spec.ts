@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 import {
   generateCsv,
   generateXlsx,
@@ -149,6 +150,19 @@ describe('generateXlsx', () => {
       ['甲', '116.4'],
     ])
     expect(ws['!cols']![0]!.wch).toBeGreaterThanOrEqual(10)
+
+    // F2：小表默认带边框（exceljs 读回验证，不能只看 xlsx 的样式标记）。
+    // exceljs 的 load 在 fake timers 下不会 settle，这里临时切回真实计时器。
+    vi.useRealTimers()
+    try {
+      const excelWb = new ExcelJS.Workbook()
+      await excelWb.xlsx.load(await blob.arrayBuffer())
+      const excelWs = excelWb.getWorksheet('模板表')!
+      expect(excelWs.getCell('A1').border?.top?.style).toBe('thin')
+      expect(excelWs.getCell('B2').border?.top?.style).toBe('thin')
+    } finally {
+      vi.useFakeTimers()
+    }
   })
 
   it('默认工作表名为 Sheet1', async () => {

@@ -441,20 +441,19 @@ describe('exportToXlsx：产物与旧 xlsx 实现逐格一致（C4 阶段 3 验�
     }
   })
 
-  it('生产路径关掉了 border：新旧实现都一个边框都没有（与旧产物零差异）', async () => {
+  it('F2：生产路径小表自动开 border，旧实现仍然没有边框', async () => {
     const groups = fixtureGroups()
     await exportToExcel(groups, 'xlsx', defaultOptions)
 
     const wb = new ExcelJS.Workbook()
     await wb.xlsx.load(await exportedBlob().arrayBuffer())
 
-    // 旧实现的边框循环是死代码；生产路径为避免 +50% 耗时也显式关闭 border。
-    // （若将来要修那个老 bug，把 toSheetSpec 的 border 改 true，这条断言会提醒你同步预期）
+    // F2：小表（远低于 2 万行阈值）默认带边框，修复「导出没有边框」的老 bug。
     for (const name of ['点', '线', '面']) {
-      expect(borderedCellCount(wb.getWorksheet(name)!)).toBe(0)
+      expect(borderedCellCount(wb.getWorksheet(name)!)).toBeGreaterThan(0)
     }
 
-    // 旧实现（xlsx 库）同样读法下也拿不到任何边框 —— 这就是迁移前边框是死代码的证据
+    // 旧实现（xlsx 库）同样读法下拿不到任何边框 —— 迁移前边框是死代码的证据
     const legacyWorkbook = new ExcelJS.Workbook()
     await legacyWorkbook.xlsx.load(
       await legacyExportToXlsx(toLegacySheets(groups, defaultOptions)).arrayBuffer(),

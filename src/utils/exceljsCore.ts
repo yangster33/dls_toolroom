@@ -45,6 +45,21 @@ const CELL_BORDER = {
   right: BORDER_STYLE,
 }
 
+/** 自动边框阈值：超过该行数关闭边框，避免大表总耗时 +50% */
+export const BORDER_AUTO_ROW_LIMIT = 20_000
+
+/**
+ * 按行数决定是否加边框。
+ *
+ * F2：旧实现本来就想给导出加边框，只是 xlsx@0.18.5 把样式整体丢弃了。
+ * 迁移到 exceljs 后边框真正生效，但 5 万行 × 9 列实测总耗时 +50%
+ * （1987ms → 2967ms）。因此小/中表默认带边框，超过阈值自动关闭，
+ * 需要强制开启/关闭时由调用方显式传 `border`。
+ */
+export function autoBorder(rowCount: number): boolean {
+  return rowCount <= BORDER_AUTO_ROW_LIMIT
+}
+
 export interface SheetSpec {
   /** 工作表名 */
   name: string
@@ -54,7 +69,7 @@ export interface SheetSpec {
   rows?: readonly unknown[][]
   /** 每列宽度（字符宽）；省略时用 `Math.max(表头长度, 10)`，与旧实现一致 */
   colWidths?: readonly number[]
-  /** 是否给「有内容」的单元格加细边框（旧 xlsx 实现的行为）。默认 false */
+  /** 是否给「有内容」的单元格加细边框。默认 false；导出路径用 `autoBorder()` 决定 */
   border?: boolean
   /**
    * 是否写**默认**列宽（`Math.max(表头长度, 10)`）。

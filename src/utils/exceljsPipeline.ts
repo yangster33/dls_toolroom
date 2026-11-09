@@ -16,6 +16,8 @@ export {
   collectHeaders,
   rowsFromObjects,
   safeSheetName,
+  autoBorder,
+  BORDER_AUTO_ROW_LIMIT,
   type SheetSpec,
 } from './exceljsCore'
 import type { SheetSpec } from './exceljsCore'

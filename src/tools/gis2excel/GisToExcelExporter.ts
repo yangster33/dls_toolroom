@@ -1,7 +1,7 @@
 import type { GisFeature } from './GisFileReader'
 import { maxOf } from '@/utils/arrayUtils'
 import { yieldToUI } from '@/utils/yieldToUI'
-import { writeXlsx, type SheetSpec } from '@/utils/exceljsPipeline'
+import { autoBorder, writeXlsx, type SheetSpec } from '@/utils/exceljsPipeline'
 import type { ProgressCallback } from '@/utils/progress'
 
 /**
@@ -51,9 +51,8 @@ function toSheetSpec(
         20,
       ),
     ],
-    // border 关闭：旧实现的边框从未真正生效，而在 exceljs 里打开它会让
-    // 5万×9 的总耗时 +50%（1987ms → 2967ms）。见实施记录「阶段 3 · 性能实测」。
-    border: false,
+    // F2：小/中表默认带边框；超过阈值自动关闭，避免 5 万行级别导出 +50% 耗时。
+    border: autoBorder(features.length),
   }
 }
 
