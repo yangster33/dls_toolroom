@@ -8,7 +8,7 @@
 |---|---|
 | 审查基线 | `c096944`（2026-10-09 审计） |
 | 台账更新 | 2026-11-09（F1/F2/D4-e2e/D5 合并，E2/E4 关闭，room_layout MVP 完成） |
-| 当前 HEAD | `743a20c`（最后一条代码提交；本台账回填提交见 git log） |
+| 当前 HEAD | `dac3f79`（最后一条代码提交；本台账回填提交见 git log） |
 | 工具数 | 32 个路由（含 5 个选型工具、sheet_template、room_layout） |
 | 测试 | **963 passed / 78 files** |
 | 最近更新 | 2026-11-09 · **D4 / D5 / E2 / E3 / E4 / F1 / F2 / F3 / F4 / D4-e2e / room_layout MVP 完成**；剩余 E1、F5 |
