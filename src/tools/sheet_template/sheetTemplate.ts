@@ -456,10 +456,14 @@ export function gridFromAbsolute(
   height: number,
 ): TitleBlockGrid {
   const merged = mergeCellsByRect(cells)
-  const xs = Array.from(new Set([0, width, ...merged.map((cell) => cell.x), ...merged.map((cell) => cell.x + cell.w)]))
+  const xs = Array.from(
+    new Set([0, width, ...merged.map((cell) => cell.x), ...merged.map((cell) => cell.x + cell.w)]),
+  )
     .filter((value) => value >= 0 && value <= width)
     .sort((a, b) => a - b)
-  const ys = Array.from(new Set([0, height, ...merged.map((cell) => cell.y), ...merged.map((cell) => cell.y + cell.h)]))
+  const ys = Array.from(
+    new Set([0, height, ...merged.map((cell) => cell.y), ...merged.map((cell) => cell.y + cell.h)]),
+  )
     .filter((value) => value >= 0 && value <= height)
     .sort((a, b) => a - b)
   const columns: GridTrack[] = []
@@ -747,7 +751,9 @@ export function autoFitGridColumns(
 ): void {
   const required = grid.columns.map(() => 8)
   for (const cell of grid.cells) {
-    const text = cell.field ? values[cell.field] ?? cell.label ?? '' : cell.label || cell.text || ''
+    const text = cell.field
+      ? (values[cell.field] ?? cell.label ?? '')
+      : cell.label || cell.text || ''
     if (!text) continue
     const textWidth = measureTextWidth(text, fontSize, fontFamily) + 3
     const perColumn = textWidth / Math.max(1, cell.colSpan)
@@ -770,7 +776,9 @@ export function autoFitGridRows(
 ): void {
   const required = grid.rows.map(() => 5)
   for (const cell of grid.cells) {
-    const text = cell.field ? values[cell.field] ?? cell.label ?? '' : cell.label || cell.text || ''
+    const text = cell.field
+      ? (values[cell.field] ?? cell.label ?? '')
+      : cell.label || cell.text || ''
     const lines = Math.max(1, text.split('\n').length)
     const textHeight = lines * fontSize * 1.25 + 2
     const perRow = textHeight / Math.max(1, cell.rowSpan)
@@ -799,91 +807,768 @@ function textStylesFor(size: PaperSize): Record<string, TextStyle> {
 function gbTitleBlockCells(): TitleBlockCell[] {
   const cells: TitleBlockCell[] = [
     // 更改区（上左）
-    { id: 'chg-mark', label: '标记', x: 0, y: 0, w: 14, h: 7, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 'chg-count', label: '处数', x: 14, y: 0, w: 14, h: 7, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 'chg-zone', label: '分区', x: 28, y: 0, w: 14, h: 7, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 'chg-doc', label: '更改文件号', x: 42, y: 0, w: 28, h: 7, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 'chg-sign', label: '签名', x: 70, y: 0, w: 14, h: 7, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 'chg-date', label: '年、月、日', x: 84, y: 0, w: 16, h: 7, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 'chg-mark-v', x: 0, y: 7, w: 14, h: 8, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 'chg-count-v', x: 14, y: 7, w: 14, h: 8, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 'chg-zone-v', x: 28, y: 7, w: 14, h: 8, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 'chg-doc-v', x: 42, y: 7, w: 28, h: 8, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 'chg-sign-v', x: 70, y: 7, w: 14, h: 8, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 'chg-date-v', x: 84, y: 7, w: 16, h: 8, textStyle: 'body', align: 'center', valign: 'middle' },
+    {
+      id: 'chg-mark',
+      label: '标记',
+      x: 0,
+      y: 0,
+      w: 14,
+      h: 7,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'chg-count',
+      label: '处数',
+      x: 14,
+      y: 0,
+      w: 14,
+      h: 7,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'chg-zone',
+      label: '分区',
+      x: 28,
+      y: 0,
+      w: 14,
+      h: 7,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'chg-doc',
+      label: '更改文件号',
+      x: 42,
+      y: 0,
+      w: 28,
+      h: 7,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'chg-sign',
+      label: '签名',
+      x: 70,
+      y: 0,
+      w: 14,
+      h: 7,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'chg-date',
+      label: '年、月、日',
+      x: 84,
+      y: 0,
+      w: 16,
+      h: 7,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'chg-mark-v',
+      x: 0,
+      y: 7,
+      w: 14,
+      h: 8,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'chg-count-v',
+      x: 14,
+      y: 7,
+      w: 14,
+      h: 8,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'chg-zone-v',
+      x: 28,
+      y: 7,
+      w: 14,
+      h: 8,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'chg-doc-v',
+      x: 42,
+      y: 7,
+      w: 28,
+      h: 8,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'chg-sign-v',
+      x: 70,
+      y: 7,
+      w: 14,
+      h: 8,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'chg-date-v',
+      x: 84,
+      y: 7,
+      w: 16,
+      h: 8,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
 
     // 签字区
-    { id: 'sign-design', label: '设计', x: 0, y: 15, w: 20, h: 8, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 'sign-check', label: '审核', x: 20, y: 15, w: 20, h: 8, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 'sign-process', label: '工艺', x: 40, y: 15, w: 20, h: 8, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 'sign-standard', label: '标准化', x: 60, y: 15, w: 20, h: 8, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 'sign-approve', label: '批准', x: 80, y: 15, w: 20, h: 8, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 'sign-design-v', field: 'designer', x: 0, y: 23, w: 20, h: 9, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 'sign-check-v', field: 'checker', x: 20, y: 23, w: 20, h: 9, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 'sign-process-v', field: 'process', x: 40, y: 23, w: 20, h: 9, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 'sign-standard-v', field: 'standardizer', x: 60, y: 23, w: 20, h: 9, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 'sign-approve-v', field: 'approver', x: 80, y: 23, w: 20, h: 9, textStyle: 'body', align: 'center', valign: 'middle' },
+    {
+      id: 'sign-design',
+      label: '设计',
+      x: 0,
+      y: 15,
+      w: 20,
+      h: 8,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'sign-check',
+      label: '审核',
+      x: 20,
+      y: 15,
+      w: 20,
+      h: 8,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'sign-process',
+      label: '工艺',
+      x: 40,
+      y: 15,
+      w: 20,
+      h: 8,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'sign-standard',
+      label: '标准化',
+      x: 60,
+      y: 15,
+      w: 20,
+      h: 8,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'sign-approve',
+      label: '批准',
+      x: 80,
+      y: 15,
+      w: 20,
+      h: 8,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'sign-design-v',
+      field: 'designer',
+      x: 0,
+      y: 23,
+      w: 20,
+      h: 9,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'sign-check-v',
+      field: 'checker',
+      x: 20,
+      y: 23,
+      w: 20,
+      h: 9,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'sign-process-v',
+      field: 'process',
+      x: 40,
+      y: 23,
+      w: 20,
+      h: 9,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'sign-standard-v',
+      field: 'standardizer',
+      x: 60,
+      y: 23,
+      w: 20,
+      h: 9,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'sign-approve-v',
+      field: 'approver',
+      x: 80,
+      y: 23,
+      w: 20,
+      h: 9,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
 
     // 其他区
-    { id: 'material-label', label: '材料', x: 0, y: 32, w: 50, h: 8, textStyle: 'label', align: 'left', valign: 'middle' },
-    { id: 'material-value', field: 'material', x: 0, y: 32, w: 50, h: 8, textStyle: 'body', align: 'right', valign: 'middle' },
-    { id: 'scale-label', label: '比例', x: 50, y: 32, w: 50, h: 8, textStyle: 'label', align: 'left', valign: 'middle' },
-    { id: 'scale-value', field: 'scale', x: 50, y: 32, w: 50, h: 8, textStyle: 'body', align: 'right', valign: 'middle' },
-    { id: 'sheet-total-label', label: '共 张', x: 0, y: 40, w: 25, h: 8, textStyle: 'label', align: 'left', valign: 'middle' },
-    { id: 'sheet-total-value', field: 'sheetTotal', x: 0, y: 40, w: 25, h: 8, textStyle: 'body', align: 'right', valign: 'middle' },
-    { id: 'sheet-no-label', label: '第 张', x: 25, y: 40, w: 25, h: 8, textStyle: 'label', align: 'left', valign: 'middle' },
-    { id: 'sheet-no-value', field: 'sheetNo', x: 25, y: 40, w: 25, h: 8, textStyle: 'body', align: 'right', valign: 'middle' },
-    { id: 'revision-label', label: '版本', x: 50, y: 40, w: 50, h: 8, textStyle: 'label', align: 'left', valign: 'middle' },
-    { id: 'revision-value', field: 'revision', x: 50, y: 40, w: 50, h: 8, textStyle: 'body', align: 'right', valign: 'middle' },
-    { id: 'company-label', label: '单位名称', x: 0, y: 48, w: 20, h: 8, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 'company-value', field: 'company', x: 20, y: 48, w: 80, h: 8, textStyle: 'body', align: 'center', valign: 'middle' },
+    {
+      id: 'material-label',
+      label: '材料',
+      x: 0,
+      y: 32,
+      w: 50,
+      h: 8,
+      textStyle: 'label',
+      align: 'left',
+      valign: 'middle',
+    },
+    {
+      id: 'material-value',
+      field: 'material',
+      x: 0,
+      y: 32,
+      w: 50,
+      h: 8,
+      textStyle: 'body',
+      align: 'right',
+      valign: 'middle',
+    },
+    {
+      id: 'scale-label',
+      label: '比例',
+      x: 50,
+      y: 32,
+      w: 50,
+      h: 8,
+      textStyle: 'label',
+      align: 'left',
+      valign: 'middle',
+    },
+    {
+      id: 'scale-value',
+      field: 'scale',
+      x: 50,
+      y: 32,
+      w: 50,
+      h: 8,
+      textStyle: 'body',
+      align: 'right',
+      valign: 'middle',
+    },
+    {
+      id: 'sheet-total-label',
+      label: '共 张',
+      x: 0,
+      y: 40,
+      w: 25,
+      h: 8,
+      textStyle: 'label',
+      align: 'left',
+      valign: 'middle',
+    },
+    {
+      id: 'sheet-total-value',
+      field: 'sheetTotal',
+      x: 0,
+      y: 40,
+      w: 25,
+      h: 8,
+      textStyle: 'body',
+      align: 'right',
+      valign: 'middle',
+    },
+    {
+      id: 'sheet-no-label',
+      label: '第 张',
+      x: 25,
+      y: 40,
+      w: 25,
+      h: 8,
+      textStyle: 'label',
+      align: 'left',
+      valign: 'middle',
+    },
+    {
+      id: 'sheet-no-value',
+      field: 'sheetNo',
+      x: 25,
+      y: 40,
+      w: 25,
+      h: 8,
+      textStyle: 'body',
+      align: 'right',
+      valign: 'middle',
+    },
+    {
+      id: 'revision-label',
+      label: '版本',
+      x: 50,
+      y: 40,
+      w: 50,
+      h: 8,
+      textStyle: 'label',
+      align: 'left',
+      valign: 'middle',
+    },
+    {
+      id: 'revision-value',
+      field: 'revision',
+      x: 50,
+      y: 40,
+      w: 50,
+      h: 8,
+      textStyle: 'body',
+      align: 'right',
+      valign: 'middle',
+    },
+    {
+      id: 'company-label',
+      label: '单位名称',
+      x: 0,
+      y: 48,
+      w: 20,
+      h: 8,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'company-value',
+      field: 'company',
+      x: 20,
+      y: 48,
+      w: 80,
+      h: 8,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
 
     // 名称及代号区（右侧）
-    { id: 'name-label', label: '名称', x: 100, y: 0, w: 18, h: 10, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 'name-value', field: 'drawingName', x: 118, y: 0, w: 62, h: 10, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 'code-label', label: '代号', x: 100, y: 10, w: 18, h: 10, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 'code-value', field: 'drawingNo', x: 118, y: 10, w: 62, h: 10, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 'project-label', label: '工程名称', x: 100, y: 20, w: 18, h: 10, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 'project-value', field: 'projectName', x: 118, y: 20, w: 62, h: 10, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 'date-label', label: '日期', x: 100, y: 30, w: 18, h: 10, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 'date-value', field: 'date', x: 118, y: 30, w: 62, h: 10, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 'company-right-label', label: '单位', x: 100, y: 40, w: 18, h: 16, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 'company-right-value', field: 'company', x: 118, y: 40, w: 62, h: 16, textStyle: 'body', align: 'center', valign: 'middle' },
+    {
+      id: 'name-label',
+      label: '名称',
+      x: 100,
+      y: 0,
+      w: 18,
+      h: 10,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'name-value',
+      field: 'drawingName',
+      x: 118,
+      y: 0,
+      w: 62,
+      h: 10,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'code-label',
+      label: '代号',
+      x: 100,
+      y: 10,
+      w: 18,
+      h: 10,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'code-value',
+      field: 'drawingNo',
+      x: 118,
+      y: 10,
+      w: 62,
+      h: 10,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'project-label',
+      label: '工程名称',
+      x: 100,
+      y: 20,
+      w: 18,
+      h: 10,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'project-value',
+      field: 'projectName',
+      x: 118,
+      y: 20,
+      w: 62,
+      h: 10,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'date-label',
+      label: '日期',
+      x: 100,
+      y: 30,
+      w: 18,
+      h: 10,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'date-value',
+      field: 'date',
+      x: 118,
+      y: 30,
+      w: 62,
+      h: 10,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'company-right-label',
+      label: '单位',
+      x: 100,
+      y: 40,
+      w: 18,
+      h: 16,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'company-right-value',
+      field: 'company',
+      x: 118,
+      y: 40,
+      w: 62,
+      h: 16,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
   ]
   return cells
 }
 
 function simpleTitleBlockCells(): TitleBlockCell[] {
   return [
-    { id: 's-project-label', label: '工程名称', x: 0, y: 0, w: 30, h: 14, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 's-project-value', field: 'projectName', x: 30, y: 0, w: 150, h: 14, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 's-name-label', label: '图名', x: 0, y: 14, w: 30, h: 14, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 's-name-value', field: 'drawingName', x: 30, y: 14, w: 150, h: 14, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 's-no-label', label: '图号', x: 0, y: 28, w: 30, h: 10, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 's-no-value', field: 'drawingNo', x: 30, y: 28, w: 70, h: 10, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 's-scale-label', label: '比例', x: 100, y: 28, w: 20, h: 10, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 's-scale-value', field: 'scale', x: 120, y: 28, w: 60, h: 10, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 's-date-label', label: '日期', x: 0, y: 38, w: 30, h: 9, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 's-date-value', field: 'date', x: 30, y: 38, w: 70, h: 9, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 's-rev-label', label: '版本', x: 100, y: 38, w: 20, h: 9, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 's-rev-value', field: 'revision', x: 120, y: 38, w: 60, h: 9, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 's-design-label', label: '设计', x: 0, y: 47, w: 20, h: 9, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 's-design-value', field: 'designer', x: 20, y: 47, w: 40, h: 9, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 's-check-label', label: '审核', x: 60, y: 47, w: 20, h: 9, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 's-check-value', field: 'checker', x: 80, y: 47, w: 40, h: 9, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 's-company-label', label: '单位', x: 120, y: 47, w: 20, h: 9, textStyle: 'label', align: 'center', valign: 'middle' },
-    { id: 's-company-value', field: 'company', x: 140, y: 47, w: 40, h: 9, textStyle: 'body', align: 'center', valign: 'middle' },
+    {
+      id: 's-project-label',
+      label: '工程名称',
+      x: 0,
+      y: 0,
+      w: 30,
+      h: 14,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 's-project-value',
+      field: 'projectName',
+      x: 30,
+      y: 0,
+      w: 150,
+      h: 14,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 's-name-label',
+      label: '图名',
+      x: 0,
+      y: 14,
+      w: 30,
+      h: 14,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 's-name-value',
+      field: 'drawingName',
+      x: 30,
+      y: 14,
+      w: 150,
+      h: 14,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 's-no-label',
+      label: '图号',
+      x: 0,
+      y: 28,
+      w: 30,
+      h: 10,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 's-no-value',
+      field: 'drawingNo',
+      x: 30,
+      y: 28,
+      w: 70,
+      h: 10,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 's-scale-label',
+      label: '比例',
+      x: 100,
+      y: 28,
+      w: 20,
+      h: 10,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 's-scale-value',
+      field: 'scale',
+      x: 120,
+      y: 28,
+      w: 60,
+      h: 10,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 's-date-label',
+      label: '日期',
+      x: 0,
+      y: 38,
+      w: 30,
+      h: 9,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 's-date-value',
+      field: 'date',
+      x: 30,
+      y: 38,
+      w: 70,
+      h: 9,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 's-rev-label',
+      label: '版本',
+      x: 100,
+      y: 38,
+      w: 20,
+      h: 9,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 's-rev-value',
+      field: 'revision',
+      x: 120,
+      y: 38,
+      w: 60,
+      h: 9,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 's-design-label',
+      label: '设计',
+      x: 0,
+      y: 47,
+      w: 20,
+      h: 9,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 's-design-value',
+      field: 'designer',
+      x: 20,
+      y: 47,
+      w: 40,
+      h: 9,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 's-check-label',
+      label: '审核',
+      x: 60,
+      y: 47,
+      w: 20,
+      h: 9,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 's-check-value',
+      field: 'checker',
+      x: 80,
+      y: 47,
+      w: 40,
+      h: 9,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 's-company-label',
+      label: '单位',
+      x: 120,
+      y: 47,
+      w: 20,
+      h: 9,
+      textStyle: 'label',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 's-company-value',
+      field: 'company',
+      x: 140,
+      y: 47,
+      w: 40,
+      h: 9,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
   ]
 }
 
 function minimalTitleBlockCells(): TitleBlockCell[] {
   return [
-    { id: 'm-name', field: 'drawingName', x: 0, y: 0, w: 120, h: 20, textStyle: 'title', align: 'left', valign: 'middle' },
-    { id: 'm-no', label: '图号', field: 'drawingNo', x: 120, y: 0, w: 60, h: 20, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 'm-project', field: 'projectName', x: 0, y: 20, w: 120, h: 14, textStyle: 'body', align: 'left', valign: 'middle' },
-    { id: 'm-scale', label: '比例', field: 'scale', x: 120, y: 20, w: 30, h: 14, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 'm-date', label: '日期', field: 'date', x: 150, y: 20, w: 30, h: 14, textStyle: 'body', align: 'center', valign: 'middle' },
-    { id: 'm-company', field: 'company', x: 0, y: 34, w: 180, h: 10, textStyle: 'body', align: 'center', valign: 'middle' },
+    {
+      id: 'm-name',
+      field: 'drawingName',
+      x: 0,
+      y: 0,
+      w: 120,
+      h: 20,
+      textStyle: 'title',
+      align: 'left',
+      valign: 'middle',
+    },
+    {
+      id: 'm-no',
+      label: '图号',
+      field: 'drawingNo',
+      x: 120,
+      y: 0,
+      w: 60,
+      h: 20,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'm-project',
+      field: 'projectName',
+      x: 0,
+      y: 20,
+      w: 120,
+      h: 14,
+      textStyle: 'body',
+      align: 'left',
+      valign: 'middle',
+    },
+    {
+      id: 'm-scale',
+      label: '比例',
+      field: 'scale',
+      x: 120,
+      y: 20,
+      w: 30,
+      h: 14,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'm-date',
+      label: '日期',
+      field: 'date',
+      x: 150,
+      y: 20,
+      w: 30,
+      h: 14,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
+    {
+      id: 'm-company',
+      field: 'company',
+      x: 0,
+      y: 34,
+      w: 180,
+      h: 10,
+      textStyle: 'body',
+      align: 'center',
+      valign: 'middle',
+    },
   ]
 }
 
@@ -896,7 +1581,11 @@ export function createTemplate(
   const margins = defaultMargins(size, 'left')
   const textStyles = textStylesFor(size)
   const cells =
-    kind === 'gb' ? gbTitleBlockCells() : kind === 'simple' ? simpleTitleBlockCells() : minimalTitleBlockCells()
+    kind === 'gb'
+      ? gbTitleBlockCells()
+      : kind === 'simple'
+        ? simpleTitleBlockCells()
+        : minimalTitleBlockCells()
   const grid = gridFromAbsolute(cells, 180, 56)
   return {
     schemaVersion: 1,
@@ -966,7 +1655,10 @@ function resolveTitleBlockRect(template: SheetTemplate, frame: LayoutRect): Layo
   return normalizeRect(x, y, width, height)
 }
 
-function titleBlockScale(template: SheetTemplate, titleBlock: LayoutRect): { sx: number; sy: number } {
+function titleBlockScale(
+  template: SheetTemplate,
+  titleBlock: LayoutRect,
+): { sx: number; sy: number } {
   return {
     sx: template.titleBlock.width > 0 ? Math.min(1, titleBlock.w / template.titleBlock.width) : 1,
     sy: template.titleBlock.height > 0 ? Math.min(1, titleBlock.h / template.titleBlock.height) : 1,
@@ -974,8 +1666,10 @@ function titleBlockScale(template: SheetTemplate, titleBlock: LayoutRect): { sx:
 }
 
 function zoneCount(size: PaperSize, orientation: Orientation): { cols: number; rows: number } {
-  if (size === 'A0' || size === 'A1') return orientation === 'landscape' ? { cols: 8, rows: 6 } : { cols: 6, rows: 8 }
-  if (size === 'A2' || size === 'A3') return orientation === 'landscape' ? { cols: 6, rows: 4 } : { cols: 4, rows: 6 }
+  if (size === 'A0' || size === 'A1')
+    return orientation === 'landscape' ? { cols: 8, rows: 6 } : { cols: 6, rows: 8 }
+  if (size === 'A2' || size === 'A3')
+    return orientation === 'landscape' ? { cols: 6, rows: 4 } : { cols: 4, rows: 6 }
   return orientation === 'landscape' ? { cols: 4, rows: 3 } : { cols: 3, rows: 4 }
 }
 
@@ -1020,27 +1714,167 @@ export function buildSheetLayout(template: SheetTemplate, values: SheetFieldValu
   })
 
   // 纸张外边界（细线）
-  lines.push({ x1: 0, y1: 0, x2: paper.w, y2: 0, width: 0.2, color: template.theme.grid, semanticId: 'paper.border.top', name: '纸张边界', group: 'paper', layer: 'frame' })
-  lines.push({ x1: paper.w, y1: 0, x2: paper.w, y2: paper.h, width: 0.2, color: template.theme.grid, semanticId: 'paper.border.right', name: '纸张边界', group: 'paper', layer: 'frame' })
-  lines.push({ x1: paper.w, y1: paper.h, x2: 0, y2: paper.h, width: 0.2, color: template.theme.grid, semanticId: 'paper.border.bottom', name: '纸张边界', group: 'paper', layer: 'frame' })
-  lines.push({ x1: 0, y1: paper.h, x2: 0, y2: 0, width: 0.2, color: template.theme.grid, semanticId: 'paper.border.left', name: '纸张边界', group: 'paper', layer: 'frame' })
+  lines.push({
+    x1: 0,
+    y1: 0,
+    x2: paper.w,
+    y2: 0,
+    width: 0.2,
+    color: template.theme.grid,
+    semanticId: 'paper.border.top',
+    name: '纸张边界',
+    group: 'paper',
+    layer: 'frame',
+  })
+  lines.push({
+    x1: paper.w,
+    y1: 0,
+    x2: paper.w,
+    y2: paper.h,
+    width: 0.2,
+    color: template.theme.grid,
+    semanticId: 'paper.border.right',
+    name: '纸张边界',
+    group: 'paper',
+    layer: 'frame',
+  })
+  lines.push({
+    x1: paper.w,
+    y1: paper.h,
+    x2: 0,
+    y2: paper.h,
+    width: 0.2,
+    color: template.theme.grid,
+    semanticId: 'paper.border.bottom',
+    name: '纸张边界',
+    group: 'paper',
+    layer: 'frame',
+  })
+  lines.push({
+    x1: 0,
+    y1: paper.h,
+    x2: 0,
+    y2: 0,
+    width: 0.2,
+    color: template.theme.grid,
+    semanticId: 'paper.border.left',
+    name: '纸张边界',
+    group: 'paper',
+    layer: 'frame',
+  })
 
   // 图框
   const fw = Math.max(0.1, template.frame.lineWidth)
-  lines.push({ x1: frame.x, y1: frame.y, x2: frame.x + frame.w, y2: frame.y, width: fw, color: frameColor, semanticId: 'frame.top', name: '图框线', standard: frameStandard, group: 'frame.line', layer: 'frame' })
-  lines.push({ x1: frame.x + frame.w, y1: frame.y, x2: frame.x + frame.w, y2: frame.y + frame.h, width: fw, color: frameColor, semanticId: 'frame.right', name: '图框线', standard: frameStandard, group: 'frame.line', layer: 'frame' })
-  lines.push({ x1: frame.x + frame.w, y1: frame.y + frame.h, x2: frame.x, y2: frame.y + frame.h, width: fw, color: frameColor, semanticId: 'frame.bottom', name: '图框线', standard: frameStandard, group: 'frame.line', layer: 'frame' })
-  lines.push({ x1: frame.x, y1: frame.y + frame.h, x2: frame.x, y2: frame.y, width: fw, color: frameColor, semanticId: 'frame.left', name: '图框线', standard: frameStandard, group: 'frame.line', layer: 'frame' })
+  lines.push({
+    x1: frame.x,
+    y1: frame.y,
+    x2: frame.x + frame.w,
+    y2: frame.y,
+    width: fw,
+    color: frameColor,
+    semanticId: 'frame.top',
+    name: '图框线',
+    standard: frameStandard,
+    group: 'frame.line',
+    layer: 'frame',
+  })
+  lines.push({
+    x1: frame.x + frame.w,
+    y1: frame.y,
+    x2: frame.x + frame.w,
+    y2: frame.y + frame.h,
+    width: fw,
+    color: frameColor,
+    semanticId: 'frame.right',
+    name: '图框线',
+    standard: frameStandard,
+    group: 'frame.line',
+    layer: 'frame',
+  })
+  lines.push({
+    x1: frame.x + frame.w,
+    y1: frame.y + frame.h,
+    x2: frame.x,
+    y2: frame.y + frame.h,
+    width: fw,
+    color: frameColor,
+    semanticId: 'frame.bottom',
+    name: '图框线',
+    standard: frameStandard,
+    group: 'frame.line',
+    layer: 'frame',
+  })
+  lines.push({
+    x1: frame.x,
+    y1: frame.y + frame.h,
+    x2: frame.x,
+    y2: frame.y,
+    width: fw,
+    color: frameColor,
+    semanticId: 'frame.left',
+    name: '图框线',
+    standard: frameStandard,
+    group: 'frame.line',
+    layer: 'frame',
+  })
 
   // 对中符号
   if (template.frame.centeringMarks) {
     const mark = 5
     const cx = frame.x + frame.w / 2
     const cy = frame.y + frame.h / 2
-    lines.push({ x1: cx, y1: 0, x2: cx, y2: mark, width: 0.5, color: frameColor, semanticId: 'symbol.centering.top', name: '对中符号', standard: frameStandard, group: 'symbol.centering', layer: 'symbol' })
-    lines.push({ x1: cx, y1: paper.h - mark, x2: cx, y2: paper.h, width: 0.5, color: frameColor, semanticId: 'symbol.centering.bottom', name: '对中符号', standard: frameStandard, group: 'symbol.centering', layer: 'symbol' })
-    lines.push({ x1: 0, y1: cy, x2: mark, y2: cy, width: 0.5, color: frameColor, semanticId: 'symbol.centering.left', name: '对中符号', standard: frameStandard, group: 'symbol.centering', layer: 'symbol' })
-    lines.push({ x1: paper.w - mark, y1: cy, x2: paper.w, y2: cy, width: 0.5, color: frameColor, semanticId: 'symbol.centering.right', name: '对中符号', standard: frameStandard, group: 'symbol.centering', layer: 'symbol' })
+    lines.push({
+      x1: cx,
+      y1: 0,
+      x2: cx,
+      y2: mark,
+      width: 0.5,
+      color: frameColor,
+      semanticId: 'symbol.centering.top',
+      name: '对中符号',
+      standard: frameStandard,
+      group: 'symbol.centering',
+      layer: 'symbol',
+    })
+    lines.push({
+      x1: cx,
+      y1: paper.h - mark,
+      x2: cx,
+      y2: paper.h,
+      width: 0.5,
+      color: frameColor,
+      semanticId: 'symbol.centering.bottom',
+      name: '对中符号',
+      standard: frameStandard,
+      group: 'symbol.centering',
+      layer: 'symbol',
+    })
+    lines.push({
+      x1: 0,
+      y1: cy,
+      x2: mark,
+      y2: cy,
+      width: 0.5,
+      color: frameColor,
+      semanticId: 'symbol.centering.left',
+      name: '对中符号',
+      standard: frameStandard,
+      group: 'symbol.centering',
+      layer: 'symbol',
+    })
+    lines.push({
+      x1: paper.w - mark,
+      y1: cy,
+      x2: paper.w,
+      y2: cy,
+      width: 0.5,
+      color: frameColor,
+      semanticId: 'symbol.centering.right',
+      name: '对中符号',
+      standard: frameStandard,
+      group: 'symbol.centering',
+      layer: 'symbol',
+    })
   }
 
   // 分区标记
@@ -1051,13 +1885,61 @@ export function buildSheetLayout(template: SheetTemplate, values: SheetFieldValu
     const tick = 4
     for (let i = 1; i < cols; i += 1) {
       const x = frame.x + (frame.w * i) / cols
-      lines.push({ x1: x, y1: frame.y, x2: x, y2: frame.y + tick, width: 0.3, color: muted, semanticId: `zone.tick.top.${i}`, name: '分区标记', standard: frameStandard, group: 'zone.mark', layer: 'frame' })
-      lines.push({ x1: x, y1: frame.y + frame.h - tick, x2: x, y2: frame.y + frame.h, width: 0.3, color: muted, semanticId: `zone.tick.bottom.${i}`, name: '分区标记', standard: frameStandard, group: 'zone.mark', layer: 'frame' })
+      lines.push({
+        x1: x,
+        y1: frame.y,
+        x2: x,
+        y2: frame.y + tick,
+        width: 0.3,
+        color: muted,
+        semanticId: `zone.tick.top.${i}`,
+        name: '分区标记',
+        standard: frameStandard,
+        group: 'zone.mark',
+        layer: 'frame',
+      })
+      lines.push({
+        x1: x,
+        y1: frame.y + frame.h - tick,
+        x2: x,
+        y2: frame.y + frame.h,
+        width: 0.3,
+        color: muted,
+        semanticId: `zone.tick.bottom.${i}`,
+        name: '分区标记',
+        standard: frameStandard,
+        group: 'zone.mark',
+        layer: 'frame',
+      })
     }
     for (let i = 1; i < rows; i += 1) {
       const y = frame.y + (frame.h * i) / rows
-      lines.push({ x1: frame.x, y1: y, x2: frame.x + tick, y2: y, width: 0.3, color: muted, semanticId: `zone.tick.left.${i}`, name: '分区标记', standard: frameStandard, group: 'zone.mark', layer: 'frame' })
-      lines.push({ x1: frame.x + frame.w - tick, y1: y, x2: frame.x + frame.w, y2: y, width: 0.3, color: muted, semanticId: `zone.tick.right.${i}`, name: '分区标记', standard: frameStandard, group: 'zone.mark', layer: 'frame' })
+      lines.push({
+        x1: frame.x,
+        y1: y,
+        x2: frame.x + tick,
+        y2: y,
+        width: 0.3,
+        color: muted,
+        semanticId: `zone.tick.left.${i}`,
+        name: '分区标记',
+        standard: frameStandard,
+        group: 'zone.mark',
+        layer: 'frame',
+      })
+      lines.push({
+        x1: frame.x + frame.w - tick,
+        y1: y,
+        x2: frame.x + frame.w,
+        y2: y,
+        width: 0.3,
+        color: muted,
+        semanticId: `zone.tick.right.${i}`,
+        name: '分区标记',
+        standard: frameStandard,
+        group: 'zone.mark',
+        layer: 'frame',
+      })
     }
     // 分区编号（上/下 1..cols，左/右 A..）
     for (let i = 0; i < cols; i += 1) {
@@ -1130,10 +2012,58 @@ export function buildSheetLayout(template: SheetTemplate, values: SheetFieldValu
   }
 
   // 图签外框
-  lines.push({ x1: titleBlock.x, y1: titleBlock.y, x2: titleBlock.x + titleBlock.w, y2: titleBlock.y, width: 0.5, color: frameColor, semanticId: 'titleBlock.border.top', name: '图签外框', standard: titleStandard, group: 'titleBlock.border', layer: 'title' })
-  lines.push({ x1: titleBlock.x + titleBlock.w, y1: titleBlock.y, x2: titleBlock.x + titleBlock.w, y2: titleBlock.y + titleBlock.h, width: 0.5, color: frameColor, semanticId: 'titleBlock.border.right', name: '图签外框', standard: titleStandard, group: 'titleBlock.border', layer: 'title' })
-  lines.push({ x1: titleBlock.x + titleBlock.w, y1: titleBlock.y + titleBlock.h, x2: titleBlock.x, y2: titleBlock.y + titleBlock.h, width: 0.5, color: frameColor, semanticId: 'titleBlock.border.bottom', name: '图签外框', standard: titleStandard, group: 'titleBlock.border', layer: 'title' })
-  lines.push({ x1: titleBlock.x, y1: titleBlock.y + titleBlock.h, x2: titleBlock.x, y2: titleBlock.y, width: 0.5, color: frameColor, semanticId: 'titleBlock.border.left', name: '图签外框', standard: titleStandard, group: 'titleBlock.border', layer: 'title' })
+  lines.push({
+    x1: titleBlock.x,
+    y1: titleBlock.y,
+    x2: titleBlock.x + titleBlock.w,
+    y2: titleBlock.y,
+    width: 0.5,
+    color: frameColor,
+    semanticId: 'titleBlock.border.top',
+    name: '图签外框',
+    standard: titleStandard,
+    group: 'titleBlock.border',
+    layer: 'title',
+  })
+  lines.push({
+    x1: titleBlock.x + titleBlock.w,
+    y1: titleBlock.y,
+    x2: titleBlock.x + titleBlock.w,
+    y2: titleBlock.y + titleBlock.h,
+    width: 0.5,
+    color: frameColor,
+    semanticId: 'titleBlock.border.right',
+    name: '图签外框',
+    standard: titleStandard,
+    group: 'titleBlock.border',
+    layer: 'title',
+  })
+  lines.push({
+    x1: titleBlock.x + titleBlock.w,
+    y1: titleBlock.y + titleBlock.h,
+    x2: titleBlock.x,
+    y2: titleBlock.y + titleBlock.h,
+    width: 0.5,
+    color: frameColor,
+    semanticId: 'titleBlock.border.bottom',
+    name: '图签外框',
+    standard: titleStandard,
+    group: 'titleBlock.border',
+    layer: 'title',
+  })
+  lines.push({
+    x1: titleBlock.x,
+    y1: titleBlock.y + titleBlock.h,
+    x2: titleBlock.x,
+    y2: titleBlock.y,
+    width: 0.5,
+    color: frameColor,
+    semanticId: 'titleBlock.border.left',
+    name: '图签外框',
+    standard: titleStandard,
+    group: 'titleBlock.border',
+    layer: 'title',
+  })
 
   for (const cell of resolveTitleBlockCells(template)) {
     const x = titleBlock.x + cell.x * sx
@@ -1142,12 +2072,61 @@ export function buildSheetLayout(template: SheetTemplate, values: SheetFieldValu
     const h = cell.h * sy
     const border = cell.border !== false
     if (border) {
-      lines.push({ x1: x, y1: y, x2: x + w, y2: y, width: 0.3, color: frameColor, semanticId: `titleBlock.cell.${cell.id}.border.top`, name: '单元格边框', standard: titleStandard, group: 'titleBlock.cellBorder', layer: 'title' })
-      lines.push({ x1: x + w, y1: y, x2: x + w, y2: y + h, width: 0.3, color: frameColor, semanticId: `titleBlock.cell.${cell.id}.border.right`, name: '单元格边框', standard: titleStandard, group: 'titleBlock.cellBorder', layer: 'title' })
-      lines.push({ x1: x + w, y1: y + h, x2: x, y2: y + h, width: 0.3, color: frameColor, semanticId: `titleBlock.cell.${cell.id}.border.bottom`, name: '单元格边框', standard: titleStandard, group: 'titleBlock.cellBorder', layer: 'title' })
-      lines.push({ x1: x, y1: y + h, x2: x, y2: y, width: 0.3, color: frameColor, semanticId: `titleBlock.cell.${cell.id}.border.left`, name: '单元格边框', standard: titleStandard, group: 'titleBlock.cellBorder', layer: 'title' })
+      lines.push({
+        x1: x,
+        y1: y,
+        x2: x + w,
+        y2: y,
+        width: 0.3,
+        color: frameColor,
+        semanticId: `titleBlock.cell.${cell.id}.border.top`,
+        name: '单元格边框',
+        standard: titleStandard,
+        group: 'titleBlock.cellBorder',
+        layer: 'title',
+      })
+      lines.push({
+        x1: x + w,
+        y1: y,
+        x2: x + w,
+        y2: y + h,
+        width: 0.3,
+        color: frameColor,
+        semanticId: `titleBlock.cell.${cell.id}.border.right`,
+        name: '单元格边框',
+        standard: titleStandard,
+        group: 'titleBlock.cellBorder',
+        layer: 'title',
+      })
+      lines.push({
+        x1: x + w,
+        y1: y + h,
+        x2: x,
+        y2: y + h,
+        width: 0.3,
+        color: frameColor,
+        semanticId: `titleBlock.cell.${cell.id}.border.bottom`,
+        name: '单元格边框',
+        standard: titleStandard,
+        group: 'titleBlock.cellBorder',
+        layer: 'title',
+      })
+      lines.push({
+        x1: x,
+        y1: y + h,
+        x2: x,
+        y2: y,
+        width: 0.3,
+        color: frameColor,
+        semanticId: `titleBlock.cell.${cell.id}.border.left`,
+        name: '单元格边框',
+        standard: titleStandard,
+        group: 'titleBlock.cellBorder',
+        layer: 'title',
+      })
     }
-    const style = template.styles.textStyles[cell.textStyle ?? 'body'] ?? template.styles.textStyles.body!
+    const style =
+      template.styles.textStyles[cell.textStyle ?? 'body'] ?? template.styles.textStyles.body!
     const fontSize = (cell.fontSize ?? style.fontSize) * textScale
     const bold = cell.bold ?? style.bold
     const align = cell.align ?? 'center'
@@ -1177,7 +2156,9 @@ export function buildSheetLayout(template: SheetTemplate, values: SheetFieldValu
       labelTextWidth > w - 3 && labelTextWidth > 0
         ? Math.max(1.8, (baseLabelFont * (w - 3)) / labelTextWidth)
         : baseLabelFont
-    const labelWidth = cell.label ? measureTextWidth(cell.label, labelFont, template.styles.fontFamily) : 0
+    const labelWidth = cell.label
+      ? measureTextWidth(cell.label, labelFont, template.styles.fontFamily)
+      : 0
     const valueWidth = measureTextWidth(value, fontSize, template.styles.fontFamily)
     const inlineLabelAnchor: TextAlign = labelAnchor === valueAnchor ? 'left' : labelAnchor
     const inlineValueAnchor: TextAlign = labelAnchor === valueAnchor ? 'right' : valueAnchor
@@ -1340,7 +2321,12 @@ export function measureTextWidth(text: string, fontSize: number, fontFamily = ''
   return units * fontSize
 }
 
-export function wrapText(text: string, fontSize: number, maxWidth: number, fontFamily = ''): string[] {
+export function wrapText(
+  text: string,
+  fontSize: number,
+  maxWidth: number,
+  fontFamily = '',
+): string[] {
   if (!text) return []
   const lines: string[] = []
   for (const paragraph of text.split('\n')) {
@@ -1359,7 +2345,10 @@ export function wrapText(text: string, fontSize: number, maxWidth: number, fontF
   return lines.length ? lines : ['']
 }
 
-export function validateTemplate(template: SheetTemplate, values?: SheetFieldValues): ValidationIssue[] {
+export function validateTemplate(
+  template: SheetTemplate,
+  values?: SheetFieldValues,
+): ValidationIssue[] {
   const issues: ValidationIssue[] = []
   const dims = template.paper
   if (dims.width <= 0 || dims.height <= 0) {
@@ -1395,13 +2384,27 @@ export function validateTemplate(template: SheetTemplate, values?: SheetFieldVal
       issues.push({ severity: 'error', message: `单元格 ID 重复：${cell.id}`, cellId: cell.id })
     }
     ids.add(cell.id)
-    if (cell.x < -0.01 || cell.y < -0.01 || cell.x + cell.w > template.titleBlock.width + 0.01 || cell.y + cell.h > template.titleBlock.height + 0.01) {
-      issues.push({ severity: 'warning', message: `单元格“${cell.label ?? cell.id}”超出图签范围`, cellId: cell.id })
+    if (
+      cell.x < -0.01 ||
+      cell.y < -0.01 ||
+      cell.x + cell.w > template.titleBlock.width + 0.01 ||
+      cell.y + cell.h > template.titleBlock.height + 0.01
+    ) {
+      issues.push({
+        severity: 'warning',
+        message: `单元格“${cell.label ?? cell.id}”超出图签范围`,
+        cellId: cell.id,
+      })
     }
     if (cell.w <= 0 || cell.h <= 0) {
-      issues.push({ severity: 'error', message: `单元格“${cell.label ?? cell.id}”宽高必须大于 0`, cellId: cell.id })
+      issues.push({
+        severity: 'error',
+        message: `单元格“${cell.label ?? cell.id}”宽高必须大于 0`,
+        cellId: cell.id,
+      })
     }
-    const style = template.styles.textStyles[cell.textStyle ?? 'body'] ?? template.styles.textStyles.body!
+    const style =
+      template.styles.textStyles[cell.textStyle ?? 'body'] ?? template.styles.textStyles.body!
     if (style.fontSize < minFont - 0.01) {
       issues.push({
         severity: 'warning',
@@ -1409,9 +2412,13 @@ export function validateTemplate(template: SheetTemplate, values?: SheetFieldVal
         cellId: cell.id,
       })
     }
-    const text = cell.field ? values?.[cell.field] ?? '' : cell.text ?? ''
+    const text = cell.field ? (values?.[cell.field] ?? '') : (cell.text ?? '')
     if (text && measureTextWidth(text, style.fontSize, template.styles.fontFamily) > cell.w - 2) {
-      issues.push({ severity: 'warning', message: `单元格“${cell.label ?? cell.id}”文字可能溢出`, cellId: cell.id })
+      issues.push({
+        severity: 'warning',
+        message: `单元格“${cell.label ?? cell.id}”文字可能溢出`,
+        cellId: cell.id,
+      })
     }
   }
   if (template.titleBlock.layoutMode === 'grid') {
@@ -1436,11 +2443,24 @@ export function validateTemplate(template: SheetTemplate, values?: SheetFieldVal
         })
       }
       for (const cell of grid.cells) {
-        if (cell.row < 0 || cell.col < 0 || cell.row + cell.rowSpan > grid.rows.length || cell.col + cell.colSpan > grid.columns.length) {
-          issues.push({ severity: 'warning', message: `网格单元格“${cell.label ?? cell.id}”超出网格范围`, cellId: cell.id })
+        if (
+          cell.row < 0 ||
+          cell.col < 0 ||
+          cell.row + cell.rowSpan > grid.rows.length ||
+          cell.col + cell.colSpan > grid.columns.length
+        ) {
+          issues.push({
+            severity: 'warning',
+            message: `网格单元格“${cell.label ?? cell.id}”超出网格范围`,
+            cellId: cell.id,
+          })
         }
         if (cell.rowSpan <= 0 || cell.colSpan <= 0) {
-          issues.push({ severity: 'error', message: `网格单元格“${cell.label ?? cell.id}”行列跨度必须大于 0`, cellId: cell.id })
+          issues.push({
+            severity: 'error',
+            message: `网格单元格“${cell.label ?? cell.id}”行列跨度必须大于 0`,
+            cellId: cell.id,
+          })
         }
       }
       for (let i = 0; i < grid.cells.length; i += 1) {
@@ -1470,6 +2490,11 @@ export function cloneTemplate(template: SheetTemplate): SheetTemplate {
   return JSON.parse(JSON.stringify(template)) as SheetTemplate
 }
 
-export function formatPaper(size: PaperSize, orientation: Orientation, width: number, height: number): string {
+export function formatPaper(
+  size: PaperSize,
+  orientation: Orientation,
+  width: number,
+  height: number,
+): string {
   return `${size} ${orientation === 'landscape' ? '横版' : '竖版'} ${width}×${height}mm`
 }

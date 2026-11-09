@@ -108,14 +108,14 @@ export function sheetToSvg(
 }
 
 /** 生成带交互命中信息的 SVG（用于编辑器/预览）。 */
-export function sheetToInteractiveSvg(
-  template: SheetTemplate,
-  values: SheetFieldValues,
-): string {
+export function sheetToInteractiveSvg(template: SheetTemplate, values: SheetFieldValues): string {
   const svg = sheetToSvg(template, values)
   return svg.replace(
     '<g id="sheet-text"',
-    `<g id="sheet-cells" fill="none" stroke="transparent" pointer-events="all">${buildSheetLayout(template, values)
+    `<g id="sheet-cells" fill="none" stroke="transparent" pointer-events="all">${buildSheetLayout(
+      template,
+      values,
+    )
       .cells.map(
         (cell) =>
           `<rect data-cell-id="${escapeXml(cell.id)}" x="${cell.x}" y="${cell.y}" width="${cell.w}" height="${cell.h}" fill="transparent" stroke="transparent"/>`,

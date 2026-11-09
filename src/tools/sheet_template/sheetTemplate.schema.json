@@ -4,11 +4,7 @@
   "title": "SheetDocument",
   "description": "图框 / 图签模板与字段值",
   "type": "object",
-  "required": [
-    "schemaVersion",
-    "template",
-    "values"
-  ],
+  "required": ["schemaVersion", "template", "values"],
   "properties": {
     "schemaVersion": {
       "const": 1
@@ -66,10 +62,7 @@
           "$ref": "#/$defs/margins"
         },
         "bindingEdge": {
-          "enum": [
-            "left",
-            "right"
-          ]
+          "enum": ["left", "right"]
         },
         "frame": {
           "$ref": "#/$defs/frame"
@@ -88,29 +81,13 @@
     },
     "paper": {
       "type": "object",
-      "required": [
-        "size",
-        "orientation",
-        "width",
-        "height"
-      ],
+      "required": ["size", "orientation", "width", "height"],
       "properties": {
         "size": {
-          "enum": [
-            "A0",
-            "A1",
-            "A2",
-            "A3",
-            "A4",
-            "A5",
-            "custom"
-          ]
+          "enum": ["A0", "A1", "A2", "A3", "A4", "A5", "custom"]
         },
         "orientation": {
-          "enum": [
-            "landscape",
-            "portrait"
-          ]
+          "enum": ["landscape", "portrait"]
         },
         "width": {
           "type": "number",
@@ -125,13 +102,7 @@
     },
     "margins": {
       "type": "object",
-      "required": [
-        "binding",
-        "top",
-        "right",
-        "bottom",
-        "left"
-      ],
+      "required": ["binding", "top", "right", "bottom", "left"],
       "properties": {
         "binding": {
           "type": "number",
@@ -194,12 +165,7 @@
     },
     "titleBlock": {
       "type": "object",
-      "required": [
-        "width",
-        "height",
-        "position",
-        "cells"
-      ],
+      "required": ["width", "height", "position", "cells"],
       "properties": {
         "width": {
           "type": "number",
@@ -210,18 +176,10 @@
           "exclusiveMinimum": 0
         },
         "position": {
-          "enum": [
-            "bottom-right",
-            "bottom-left",
-            "top-right",
-            "top-left"
-          ]
+          "enum": ["bottom-right", "bottom-left", "top-right", "top-left"]
         },
         "layoutMode": {
-          "enum": [
-            "absolute",
-            "grid"
-          ]
+          "enum": ["absolute", "grid"]
         },
         "grid": {
           "$ref": "#/$defs/grid"
@@ -237,13 +195,7 @@
     },
     "cell": {
       "type": "object",
-      "required": [
-        "id",
-        "x",
-        "y",
-        "w",
-        "h"
-      ],
+      "required": ["id", "x", "y", "w", "h"],
       "properties": {
         "id": {
           "type": "string",
@@ -276,32 +228,16 @@
           "type": "string"
         },
         "align": {
-          "enum": [
-            "left",
-            "center",
-            "right"
-          ]
+          "enum": ["left", "center", "right"]
         },
         "valign": {
-          "enum": [
-            "top",
-            "middle",
-            "bottom"
-          ]
+          "enum": ["top", "middle", "bottom"]
         },
         "labelAlign": {
-          "enum": [
-            "left",
-            "center",
-            "right"
-          ]
+          "enum": ["left", "center", "right"]
         },
         "valueAlign": {
-          "enum": [
-            "left",
-            "center",
-            "right"
-          ]
+          "enum": ["left", "center", "right"]
         },
         "border": {
           "type": "boolean"
@@ -337,11 +273,7 @@
     },
     "grid": {
       "type": "object",
-      "required": [
-        "columns",
-        "rows",
-        "cells"
-      ],
+      "required": ["columns", "rows", "cells"],
       "properties": {
         "columns": {
           "type": "array",
@@ -366,10 +298,7 @@
     },
     "gridTrack": {
       "type": "object",
-      "required": [
-        "id",
-        "size"
-      ],
+      "required": ["id", "size"],
       "properties": {
         "id": {
           "type": "string",
@@ -395,13 +324,7 @@
     },
     "gridCell": {
       "type": "object",
-      "required": [
-        "id",
-        "row",
-        "col",
-        "rowSpan",
-        "colSpan"
-      ],
+      "required": ["id", "row", "col", "rowSpan", "colSpan"],
       "properties": {
         "id": {
           "type": "string",
@@ -436,32 +359,16 @@
           "type": "string"
         },
         "align": {
-          "enum": [
-            "left",
-            "center",
-            "right"
-          ]
+          "enum": ["left", "center", "right"]
         },
         "valign": {
-          "enum": [
-            "top",
-            "middle",
-            "bottom"
-          ]
+          "enum": ["top", "middle", "bottom"]
         },
         "labelAlign": {
-          "enum": [
-            "left",
-            "center",
-            "right"
-          ]
+          "enum": ["left", "center", "right"]
         },
         "valueAlign": {
-          "enum": [
-            "left",
-            "center",
-            "right"
-          ]
+          "enum": ["left", "center", "right"]
         },
         "border": {
           "type": "boolean"
@@ -481,10 +388,7 @@
     },
     "styles": {
       "type": "object",
-      "required": [
-        "fontFamily",
-        "textStyles"
-      ],
+      "required": ["fontFamily", "textStyles"],
       "properties": {
         "fontFamily": {
           "type": "string"
@@ -500,12 +404,7 @@
     },
     "textStyle": {
       "type": "object",
-      "required": [
-        "fontSize",
-        "lineHeight",
-        "bold",
-        "widthFactor"
-      ],
+      "required": ["fontSize", "lineHeight", "bold", "widthFactor"],
       "properties": {
         "fontSize": {
           "type": "number",
@@ -530,15 +429,7 @@
     },
     "theme": {
       "type": "object",
-      "required": [
-        "paper",
-        "ink",
-        "muted",
-        "frame",
-        "titleBlock",
-        "accent",
-        "grid"
-      ],
+      "required": ["paper", "ink", "muted", "frame", "titleBlock", "accent", "grid"],
       "properties": {
         "paper": {
           "type": "string"
@@ -572,10 +463,7 @@
     },
     "customField": {
       "type": "object",
-      "required": [
-        "key",
-        "label"
-      ],
+      "required": ["key", "label"],
       "properties": {
         "key": {
           "type": "string",

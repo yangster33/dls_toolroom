@@ -23,7 +23,17 @@ export const SHEET_TEMPLATE_SCHEMA = {
   $defs: {
     template: {
       type: 'object',
-      required: ['schemaVersion', 'id', 'name', 'paper', 'margins', 'frame', 'titleBlock', 'styles', 'theme'],
+      required: [
+        'schemaVersion',
+        'id',
+        'name',
+        'paper',
+        'margins',
+        'frame',
+        'titleBlock',
+        'styles',
+        'theme',
+      ],
       properties: {
         schemaVersion: { const: 1 },
         id: { type: 'string', minLength: 1 },
@@ -64,7 +74,14 @@ export const SHEET_TEMPLATE_SCHEMA = {
     },
     frame: {
       type: 'object',
-      required: ['lineWidth', 'innerOffset', 'centeringMarks', 'zoneMarking', 'zoneColumns', 'zoneRows'],
+      required: [
+        'lineWidth',
+        'innerOffset',
+        'centeringMarks',
+        'zoneMarking',
+        'zoneColumns',
+        'zoneRows',
+      ],
       properties: {
         lineWidth: { type: 'number', exclusiveMinimum: 0 },
         innerOffset: { type: 'number', minimum: 0 },

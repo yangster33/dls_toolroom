@@ -29,7 +29,10 @@ const TEXT_LAYER = 'SHEET-TEXT'
 const STYLE_TITLE = 'SHEET-TITLE'
 const STYLE_BODY = 'SHEET-BODY'
 
-function isInsideTitleBlock(line: LayoutLine, tb: { x: number; y: number; w: number; h: number }): boolean {
+function isInsideTitleBlock(
+  line: LayoutLine,
+  tb: { x: number; y: number; w: number; h: number },
+): boolean {
   const minX = Math.min(line.x1, line.x2)
   const maxX = Math.max(line.x1, line.x2)
   const minY = Math.min(line.y1, line.y2)
@@ -105,13 +108,18 @@ export function sheetToDxf(
 
   for (const text of layout.texts) {
     if (!isGroupVisible(options.viewState, text.group)) continue
-    const entity = dxf.addText(point3d(text.x, flipY(text.y)), dxfTextHeight(text, options), text.text, {
-      layerName: TEXT_LAYER,
-      colorNumber: 7,
-      horizontalAlignment: horizontalAlignment(text),
-      verticalAlignment: verticalAlignment(text),
-      secondAlignmentPoint: point3d(text.x, flipY(text.y)),
-    })
+    const entity = dxf.addText(
+      point3d(text.x, flipY(text.y)),
+      dxfTextHeight(text, options),
+      text.text,
+      {
+        layerName: TEXT_LAYER,
+        colorNumber: 7,
+        horizontalAlignment: horizontalAlignment(text),
+        verticalAlignment: verticalAlignment(text),
+        secondAlignmentPoint: point3d(text.x, flipY(text.y)),
+      },
+    )
     entity.textStyle = text.bold || text.fontSize >= 7 ? STYLE_TITLE : STYLE_BODY
   }
 

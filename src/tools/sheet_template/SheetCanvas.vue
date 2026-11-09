@@ -11,7 +11,13 @@
       @pointerup="onPointerUp"
       @pointercancel="onPointerUp"
     >
-      <rect :x="0" :y="0" :width="layout.paper.w" :height="layout.paper.h" :fill="template.theme.paper" />
+      <rect
+        :x="0"
+        :y="0"
+        :width="layout.paper.w"
+        :height="layout.paper.h"
+        :fill="template.theme.paper"
+      />
 
       <g v-if="showGrid" opacity="0.55" pointer-events="none">
         <line
@@ -52,7 +58,17 @@
           :data-group="shape.group"
           :data-layer="shape.layer"
           :data-value="shapeValue(shape)"
-          @pointerenter="onElementEnter($event, shape.semanticId, shape.name, shape.standard, shape.group, shape.layer, shapeValue(shape))"
+          @pointerenter="
+            onElementEnter(
+              $event,
+              shape.semanticId,
+              shape.name,
+              shape.standard,
+              shape.group,
+              shape.layer,
+              shapeValue(shape),
+            )
+          "
           @pointermove="onElementMove"
           @pointerleave="scheduleHide"
         />
@@ -99,7 +115,17 @@
           :data-group="line.group"
           :data-layer="line.layer"
           :data-value="lineValue(line)"
-          @pointerenter="onElementEnter($event, line.semanticId, line.name, line.standard, line.group, line.layer, lineValue(line))"
+          @pointerenter="
+            onElementEnter(
+              $event,
+              line.semanticId,
+              line.name,
+              line.standard,
+              line.group,
+              line.layer,
+              lineValue(line),
+            )
+          "
           @pointermove="onElementMove"
           @pointerleave="scheduleHide"
         />
@@ -124,7 +150,17 @@
           data-layer="title"
           :data-value="cellValue(cell)"
           @pointerdown.stop.prevent="onCellPointerDown($event, cell.id, 'move')"
-          @pointerenter="onElementEnter($event, `titleBlock.cell.${cell.id}`, '单元格', 'GB/T 10609.1-2008', 'titleBlock.cell', 'title', cellValue(cell))"
+          @pointerenter="
+            onElementEnter(
+              $event,
+              `titleBlock.cell.${cell.id}`,
+              '单元格',
+              'GB/T 10609.1-2008',
+              'titleBlock.cell',
+              'title',
+              cellValue(cell),
+            )
+          "
           @pointermove="onElementMove"
           @pointerleave="scheduleHide"
         />
@@ -138,7 +174,9 @@
           :y="text.y"
           :font-size="text.fontSize"
           :fill="text.color"
-          :text-anchor="text.anchor === 'left' ? 'start' : text.anchor === 'right' ? 'end' : 'middle'"
+          :text-anchor="
+            text.anchor === 'left' ? 'start' : text.anchor === 'right' ? 'end' : 'middle'
+          "
           :dominant-baseline="baselineAttr(text.baseline)"
           :font-weight="text.bold ? 700 : 400"
           :font-family="template.styles.fontFamily"
@@ -149,7 +187,17 @@
           :data-layer="text.layer"
           :data-value="textValue(text)"
           style="cursor: help"
-          @pointerenter="onElementEnter($event, text.semanticId, text.name, text.standard, text.group, text.layer, textValue(text))"
+          @pointerenter="
+            onElementEnter(
+              $event,
+              text.semanticId,
+              text.name,
+              text.standard,
+              text.group,
+              text.layer,
+              textValue(text),
+            )
+          "
           @pointermove="onElementMove"
           @pointerleave="scheduleHide"
           @pointerdown.stop.prevent="onTextPointerDown($event, text)"
@@ -197,11 +245,7 @@
       <div v-if="hovered.value" class="tooltip-value">{{ hovered.value }}</div>
       <div class="tooltip-actions">
         <label v-if="hovered.group" class="tooltip-toggle">
-          <input
-            type="checkbox"
-            :checked="groupVisible(hovered.group)"
-            @change="onTooltipToggle"
-          />
+          <input type="checkbox" :checked="groupVisible(hovered.group)" @change="onTooltipToggle" />
           显示此类
         </label>
         <button type="button" class="tooltip-btn" @click="closeTooltip">关闭</button>
@@ -259,12 +303,18 @@ interface HoverState {
 
 const svgRef = ref<SVGSVGElement | null>(null)
 const layout = computed(() => buildSheetLayout(props.template, props.values))
-const selectedCell = computed(() =>
-  layout.value.cells.find((cell) => cell.id === props.selectedCellId) ?? null,
+const selectedCell = computed(
+  () => layout.value.cells.find((cell) => cell.id === props.selectedCellId) ?? null,
 )
-const visibleShapes = computed(() => layout.value.shapes.filter((shape) => isGroupVisible(props.viewState, shape.group)))
-const visibleLines = computed(() => layout.value.lines.filter((line) => isGroupVisible(props.viewState, line.group)))
-const visibleTexts = computed(() => layout.value.texts.filter((text) => isGroupVisible(props.viewState, text.group)))
+const visibleShapes = computed(() =>
+  layout.value.shapes.filter((shape) => isGroupVisible(props.viewState, shape.group)),
+)
+const visibleLines = computed(() =>
+  layout.value.lines.filter((line) => isGroupVisible(props.viewState, line.group)),
+)
+const visibleTexts = computed(() =>
+  layout.value.texts.filter((text) => isGroupVisible(props.viewState, text.group)),
+)
 const viewBox = computed(() => {
   if (props.cropToTitleBlock) {
     const tb = layout.value.titleBlock
@@ -485,7 +535,7 @@ onBeforeUnmount(() => {
   position: relative;
   margin: 0 auto;
   background: #fff;
-  box-shadow: 0 10px 36px rgb(15 23 42 / 0.10);
+  box-shadow: 0 10px 36px rgb(15 23 42 / 0.1);
   border: 1px solid var(--color-base-300, #d7dde3);
   border-radius: 4px;
   overflow: hidden;

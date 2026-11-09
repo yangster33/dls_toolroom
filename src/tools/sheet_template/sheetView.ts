@@ -24,7 +24,12 @@ export const VIEW_TREE: ViewGroup[] = [
     children: [
       { id: 'paper', label: '纸张边界', defaultVisible: true },
       { id: 'frame.line', label: '图框线', defaultVisible: true },
-      { id: 'frame.binding', label: '装订边参考区', defaultVisible: false, description: '视图辅助，不是国标图线' },
+      {
+        id: 'frame.binding',
+        label: '装订边参考区',
+        defaultVisible: false,
+        description: '视图辅助，不是国标图线',
+      },
       { id: 'symbol.centering', label: '对中符号', defaultVisible: true },
       { id: 'zone.mark', label: '分区标记', defaultVisible: true },
       { id: 'zone.number', label: '分区编号', defaultVisible: true },

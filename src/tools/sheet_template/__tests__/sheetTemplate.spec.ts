@@ -63,8 +63,20 @@ describe('paper sizes', () => {
   })
 
   it('default margins use 25mm binding and 10/5mm other edges', () => {
-    expect(defaultMargins('A2', 'left')).toMatchObject({ binding: 25, left: 25, right: 10, top: 10, bottom: 10 })
-    expect(defaultMargins('A4', 'left')).toMatchObject({ binding: 25, left: 25, right: 5, top: 5, bottom: 5 })
+    expect(defaultMargins('A2', 'left')).toMatchObject({
+      binding: 25,
+      left: 25,
+      right: 10,
+      top: 10,
+      bottom: 10,
+    })
+    expect(defaultMargins('A4', 'left')).toMatchObject({
+      binding: 25,
+      left: 25,
+      right: 5,
+      top: 5,
+      bottom: 5,
+    })
     expect(defaultMargins('A4', 'right')).toMatchObject({ left: 5, right: 25 })
   })
 
@@ -85,8 +97,12 @@ describe('sheet layout', () => {
     expect(layout.frame.y).toBe(10)
     expect(layout.frame.w).toBe(559)
     expect(layout.frame.h).toBe(400)
-    expect(layout.titleBlock.x + layout.titleBlock.w).toBeLessThanOrEqual(layout.frame.x + layout.frame.w + 0.001)
-    expect(layout.titleBlock.y + layout.titleBlock.h).toBeLessThanOrEqual(layout.frame.y + layout.frame.h + 0.001)
+    expect(layout.titleBlock.x + layout.titleBlock.w).toBeLessThanOrEqual(
+      layout.frame.x + layout.frame.w + 0.001,
+    )
+    expect(layout.titleBlock.y + layout.titleBlock.h).toBeLessThanOrEqual(
+      layout.frame.y + layout.frame.h + 0.001,
+    )
     expect(layout.cells.length).toBeGreaterThan(30)
   })
 
@@ -139,7 +155,9 @@ describe('validation', () => {
     const cell = template.titleBlock.cells.find((item) => item.id === 's-project-value')!
     cell.w = 5
     const issues = validateTemplate(template, createDefaultValues())
-    expect(issues.some((issue) => issue.cellId === cell.id && issue.message.includes('溢出'))).toBe(true)
+    expect(issues.some((issue) => issue.cellId === cell.id && issue.message.includes('溢出'))).toBe(
+      true,
+    )
   })
 })
 
@@ -225,7 +243,9 @@ describe('semantic view', () => {
   it('tags frame, symbols and title block elements', () => {
     const doc = createDefaultDocument('gb')
     const layout = buildSheetLayout(doc.template, doc.values)
-    expect(layout.lines.some((line) => line.semanticId === 'frame.top' && line.group === 'frame.line')).toBe(true)
+    expect(
+      layout.lines.some((line) => line.semanticId === 'frame.top' && line.group === 'frame.line'),
+    ).toBe(true)
     expect(layout.lines.some((line) => line.group === 'symbol.centering')).toBe(true)
     expect(layout.texts.some((text) => text.group === 'titleBlock.value')).toBe(true)
   })
@@ -288,7 +308,9 @@ describe('exports', () => {
     cell!.fontSize = 9
     cell!.bold = false
     const layout = buildSheetLayout(template, createDefaultValues())
-    const value = layout.texts.find((text) => text.semanticId === `titleBlock.cell.${cell!.id}.value`)
+    const value = layout.texts.find(
+      (text) => text.semanticId === `titleBlock.cell.${cell!.id}.value`,
+    )
     expect(value?.fontSize).toBeCloseTo(9)
     expect(value?.bold).toBe(false)
   })
