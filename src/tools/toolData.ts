@@ -23,6 +23,7 @@ import {
   PhPlugs,
   PhSnowflake,
   PhFrameCorners,
+  PhBlueprint,
 } from '@phosphor-icons/vue'
 
 export interface DocType {
@@ -273,10 +274,31 @@ export const toolConfigs: ToolConfig[] = [
   {
     id: 'sheet_template',
     name: '图框图签生成',
-    description:
-      'A0~A5 图幅、GB 风格图框与交互式图签设计，支持 JSON Schema、SVG 与 DXF 导出',
+    description: 'A0~A5 图幅、GB 风格图框与交互式图签设计，支持 JSON Schema、SVG 与 DXF 导出',
     icon: PhFrameCorners,
-    tags: ['图框', '图签', '标题栏', 'A0', 'A1', 'A2', 'A3', 'A4', 'A5', 'DXF', 'JSON', 'GB/T 14689'],
+    tags: [
+      '图框',
+      '图签',
+      '标题栏',
+      'A0',
+      'A1',
+      'A2',
+      'A3',
+      'A4',
+      'A5',
+      'DXF',
+      'JSON',
+      'GB/T 14689',
+    ],
+    docTypes: ['tao', 'method', 'tech', 'tool'],
+  },
+  {
+    id: 'room_layout',
+    name: '机房平面图生成',
+    description:
+      '按房间尺寸、机柜与电源/电池/空调数量生成 Top 3 平面方案，支持走线架、线缆、SVG/PNG/JSON 导出',
+    icon: PhBlueprint,
+    tags: ['机房', '平面图', '布局', '机柜', '走线架', '线缆', 'SVG', '施工图', 'GB 50174'],
     docTypes: ['tao', 'method', 'tech', 'tool'],
   },
 ]

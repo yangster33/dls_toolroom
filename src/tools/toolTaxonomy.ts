@@ -124,6 +124,7 @@ export const toolMeta: Record<string, ToolMeta> = {
   dc_power_cabinet: { profession: 'power', action: 'calculate', output: '计算书' },
   hvac_cooling: { profession: 'equipment', action: 'calculate', output: '计算书' },
   sheet_template: { profession: 'other', action: 'generate', output: 'JSON / SVG / DXF' },
+  room_layout: { profession: 'equipment', action: 'generate', output: 'SVG / PNG / JSON' },
 }
 
 export function getProfession(key: ProfessionKey): Profession {
