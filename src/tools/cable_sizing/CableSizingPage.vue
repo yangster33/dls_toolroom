@@ -464,15 +464,17 @@
           <summary>计算书（7 步，点击展开）</summary>
 
           <div class="calc-book">
-            <article
+            <details
               v-for="step in calcSteps"
               :key="step.key"
               class="calc-step"
-              :class="{ 'is-fail': step.pass === false }"
+              :class="{ 'is-fail': step.pass === false, 'is-controlling': step.controlling }"
             >
-              <header class="calc-step-head">
+              <summary class="calc-step-head">
                 <span class="calc-step-no">{{ step.index }}</span>
-                <h3>{{ step.title }}</h3>
+                <span class="calc-step-title">{{ step.title }}</span>
+                <span class="calc-step-key">{{ step.keyValue }}</span>
+                <span v-if="step.controlling" class="calc-step-flag">控制</span>
                 <span
                   v-if="step.pass !== undefined"
                   class="check-status"
@@ -480,35 +482,41 @@
                 >
                   {{ step.pass ? '通过' : '不通过' }}
                 </span>
-              </header>
+              </summary>
 
-              <p class="calc-formula">{{ step.formula }}</p>
-              <p class="calc-substitution">{{ step.substitution }}</p>
-              <p class="calc-result">{{ step.result }}</p>
+              <div class="calc-step-body">
+                <p class="calc-formula">{{ step.formula }}</p>
+                <p class="calc-substitution">{{ step.substitution }}</p>
+                <p class="calc-result">{{ step.result }}</p>
 
-              <div v-if="step.symbols.length" class="calc-symbols">
-                <button
-                  v-for="symbol in step.symbols"
-                  :key="`${step.key}-${symbol.symbol}`"
-                  type="button"
-                  class="symbol-chip"
-                  :class="{ 'is-symbol-active': chipActive(symbol) }"
-                  :data-symbol="symbol.inputSymbol"
-                  @mouseenter="activateSymbol(symbol)"
-                  @mouseleave="activeSymbol = ''"
-                  @focus="activateSymbol(symbol)"
-                  @blur="activeSymbol = ''"
-                >
-                  <span class="symbol-name">{{ symbol.symbol }}</span>
-                  <span class="symbol-value"
-                    >{{ symbol.value }}{{ symbol.unit ? ` ${symbol.unit}` : '' }}</span
+                <div v-if="step.symbols.length" class="calc-symbols">
+                  <button
+                    v-for="symbol in step.symbols"
+                    :key="`${step.key}-${symbol.symbol}`"
+                    type="button"
+                    class="symbol-chip"
+                    :class="{ 'is-symbol-active': chipActive(symbol) }"
+                    :data-symbol="symbol.inputSymbol"
+                    :title="sourceTitle(symbol)"
+                    @mouseenter="activateSymbol(symbol)"
+                    @mouseleave="activeSymbol = ''"
+                    @focus="activateSymbol(symbol)"
+                    @blur="activeSymbol = ''"
                   >
-                  <span class="symbol-label">{{ symbol.name }}</span>
-                </button>
-              </div>
+                    <span class="symbol-name">{{ symbol.symbol }}</span>
+                    <span class="symbol-value"
+                      >{{ symbol.value }}{{ symbol.unit ? ` ${symbol.unit}` : '' }}</span
+                    >
+                    <span class="symbol-label">{{ symbol.name }}</span>
+                    <span class="symbol-source" :class="`is-${symbol.source}`">
+                      {{ sourceLabel(symbol.source) }}
+                    </span>
+                  </button>
+                </div>
 
-              <p v-if="step.note" class="calc-step-note">{{ step.note }}</p>
-            </article>
+                <p v-if="step.note" class="calc-step-note">{{ step.note }}</p>
+              </div>
+            </details>
           </div>
         </details>
 
@@ -642,6 +650,8 @@
               <th>含义</th>
               <th>在计算中的位置</th>
               <th>影响方向</th>
+              <th>来源</th>
+              <th>可修改</th>
               <th>依据</th>
             </tr>
           </thead>
@@ -652,6 +662,8 @@
               <td>{{ doc.meaning }}</td>
               <td>{{ doc.position }}</td>
               <td>{{ doc.impact }}</td>
+              <td>{{ doc.source }}</td>
+              <td>{{ doc.editable }}</td>
               <td>{{ doc.basis }}</td>
             </tr>
           </tbody>
@@ -686,7 +698,12 @@ import {
   formatSection,
   type CableSizingInput,
 } from './cableSizing'
-import { buildCalculationSteps, buildParameterDocs, type CalcSymbol } from './calculationSteps'
+import {
+  buildCalculationSteps,
+  buildParameterDocs,
+  type CalcSymbol,
+  type SymbolSource,
+} from './calculationSteps'
 
 const toolConfig = getToolById('cable_sizing')
 const toast = useToast()
@@ -783,6 +800,23 @@ function chipActive(symbol: CalcSymbol): boolean {
     activeSymbol.value === symbol.symbol ||
     (symbol.inputSymbol !== undefined && activeSymbol.value === symbol.inputSymbol)
   )
+}
+
+const SOURCE_LABELS: Record<SymbolSource, string> = {
+  input: '输入',
+  table: '查表',
+  calc: '计算',
+  constant: '常数',
+  default: '默认',
+}
+
+function sourceLabel(source: SymbolSource): string {
+  return SOURCE_LABELS[source]
+}
+
+function sourceTitle(symbol: CalcSymbol): string {
+  const detail = symbol.sourceDetail ? ` · ${symbol.sourceDetail}` : ''
+  return `${symbol.name}：${sourceLabel(symbol.source)}${detail}`
 }
 
 function resetForm() {
@@ -1275,7 +1309,7 @@ async function copyReport() {
   padding: 0;
 }
 
-.calc-panel summary,
+.calc-panel > summary,
 .source-panel summary {
   padding: 0.55rem 0.8rem;
   font-size: 12px;
@@ -1330,20 +1364,63 @@ async function copyReport() {
   background-color: color-mix(in oklab, var(--color-error) 4%, transparent);
 }
 
+.calc-step.is-controlling {
+  box-shadow: inset 2px 0 0 var(--color-primary);
+}
+
 .calc-step-head {
   display: flex;
   align-items: center;
   gap: 0.45rem;
+  cursor: pointer;
+  list-style: none;
 }
 
-.calc-step-head h3 {
-  margin: 0;
+.calc-step-head::-webkit-details-marker {
+  display: none;
+}
+
+.calc-step-head::before {
+  content: '▸';
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.calc-step[open] > .calc-step-head::before {
+  content: '▾';
+}
+
+.calc-step-title {
+  flex: 0 0 auto;
   font-size: 12px;
   font-weight: 600;
 }
 
+.calc-step-key {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-align: right;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.calc-step-flag {
+  flex: 0 0 auto;
+  padding: 0 0.25rem;
+  font-size: 9px;
+  color: var(--color-primary);
+  border: 1px solid color-mix(in oklab, var(--color-primary) 40%, transparent);
+}
+
 .calc-step-head .check-status {
-  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.calc-step-body {
+  padding-top: 0.5rem;
 }
 
 .calc-step-no {
@@ -1400,6 +1477,7 @@ async function copyReport() {
 
 .symbol-chip {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 0.3rem;
   padding: 0.18rem 0.42rem;
@@ -1439,6 +1517,35 @@ async function copyReport() {
   color: var(--text-faint);
 }
 
+.symbol-source {
+  padding: 0 0.2rem;
+  font-size: 9px;
+  line-height: 1.4;
+  white-space: nowrap;
+  border: 1px solid currentColor;
+}
+
+.symbol-source.is-input {
+  color: var(--color-primary);
+}
+
+.symbol-source.is-table {
+  color: var(--text-muted);
+}
+
+.symbol-source.is-calc {
+  color: var(--color-success);
+}
+
+.symbol-source.is-constant {
+  color: var(--color-warning);
+}
+
+.symbol-source.is-default {
+  color: var(--text-faint);
+  border-style: dashed;
+}
+
 .param-panel {
   margin-top: 1rem;
 }
@@ -1454,6 +1561,7 @@ async function copyReport() {
 
 .param-table {
   width: 100%;
+  min-width: 960px;
   border-collapse: collapse;
   font-size: 10.5px;
 }

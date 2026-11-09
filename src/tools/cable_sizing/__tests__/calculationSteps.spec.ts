@@ -29,12 +29,24 @@ describe('buildCalculationSteps', () => {
     ])
     expect(steps[0]?.substitution).toContain('30.00 × 0.80')
     expect(steps[1]?.formula).toContain('√3')
+    expect(steps[2]?.substitution).toContain('B.52.14')
+    expect(steps[2]?.substitution).toContain('B.52.17')
+    expect(steps[2]?.substitution).toContain('B.52.16')
+    expect(steps[2]?.substitution).toContain('E.52.1')
     expect(steps[3]?.substitution).toContain('89.0')
     expect(steps[3]?.result).toContain('85.4')
+    expect(steps[3]?.note).toContain('查表')
     expect(steps[3]?.note).toContain('裕度')
+    expect(steps[4]?.substitution).toContain('ρθ')
+    expect(steps[4]?.substitution).toContain('0.02198')
     expect(steps[5]?.substitution).toContain('13.27')
     expect(steps[5]?.note).toContain('耐受')
     expect(steps[6]?.pass).toBe(true)
+    expect(steps[6]?.note).toContain('最小标准壳架')
+    expect(steps.every((step) => step.keyValue.length > 0)).toBe(true)
+    expect(steps.flatMap((step) => step.symbols).every((symbol) => symbol.source.length > 0)).toBe(
+      true,
+    )
   })
 
   it('单相不出现 √3', () => {
