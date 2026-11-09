@@ -2,7 +2,7 @@
 
 > 分支：`maint/tool-23-cable-sizing`
 > 日期：2026-11-09
-> 状态：已实施（2026-11-09，待评审）
+> 状态：已实施（2026-11-09，已提交）
 
 ## 1. 目标
 
@@ -154,10 +154,24 @@ src/tools/cable_sizing/
 
 - `npm run type-check`：通过
 - `npm run lint:check`：oxlint 0 / eslint 0
-- `npx vitest run`：**972 passed / 78 files**（cable_sizing 20 条）
+- `npx vitest run`：**990 passed / 80 files**（cable_sizing 38 条）
 - `npm run build-only`：通过
 - 页面截图：默认工况与“D 直埋 + 40% 谐波 + 3 回路 × 2 根并联 + 启动校核”均正常
 
 未实施（按 §4 延后）：基础表逐格重转录、2 根负载导体表、埋深修正、单芯/多芯、桥架分层、选择性。
 
 其他：顺手修了 `src/tools/earthquake_query/__tests__/earthquakeChart.spec.ts` 的预存 oxlint 错误（`no-unsafe-optional-chaining`），否则 lint 门禁无法通过。
+
+### 后续提交
+
+| 提交 | 内容 |
+|---|---|
+| `58e6a8c` | 修正 earthquakeChart 预存 lint 错误 |
+| `fbee2a2` | 口径调整：成束分表、并联计入、埋地/谐波/熔断器/启动校核 |
+| `d34433f` | UI 透明化方案（docs） |
+| `15a36c0` | 逐步计算书、符号联动、状态徽标修复 |
+| `5900152` | 计算显示与可追溯方案（docs） |
+| `0724a94` | 视口优先：吸顶速览 + 折叠计算书 |
+| `8332357` | 计算书逐步折叠 + 来源标签 + 查表/插值/电阻推导 |
+
+直流供电设计不在本 plan 范围，作为下一轮调研处理。

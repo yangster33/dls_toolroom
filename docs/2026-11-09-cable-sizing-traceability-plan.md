@@ -288,6 +288,7 @@ export interface CalcStep {
 - 计算书 7 步均增加 `keyValue` 和 `source`；第 ③ 步改为逐项显示表号、基准温度、插值点、结果；第 ⑤ 步增加 ρθ 与 R 的推导；第 ④ 步显示 I_table 表号；第 ⑦ 步显示自动匹配/熔断器规则。
 - 步骤改为嵌套 `<details>`：外层计算书默认折叠，展开后 7 行摘要，点开某步才显示完整推导；`drivers` 对应步骤加“控制”标记。
 - 符号 chip 增加来源标签（输入/查表/计算/常数/默认），`sourceDetail` 放在 `title` 提示中；参数说明表增加“来源 / 可修改”两列。
-- 测试：新增 `traceability.spec.ts` 12 条；`calculationSteps.spec.ts` 补关键值/来源/表号断言；cable_sizing 合计 38 条。
+- 测试：新增 `traceability.spec.ts` 12 条；`calculationSteps.spec.ts` 补关键值/来源/表号断言；cable_sizing 合计 38 条；全量 **990 passed / 80 files**。
+- 提交：`8332357`。
 - 验证：`type-check`、`lint:check`、`vitest`、`build-only` 通过；截图见 `test-results/trace-steps.png`、`trace-factors.png`、`trace-params.png`。
 - 未做：交流/直流差异、高级参数覆盖、厂家载流量表。

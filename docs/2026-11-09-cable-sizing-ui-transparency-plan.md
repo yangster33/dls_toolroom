@@ -191,3 +191,6 @@ export interface ParameterDoc {
 - 计算书展开后仍为 7 步，无“结论”步骤；步骤标题为 负荷 / 电流 / 修正 / 载流量 / 压降 / 热稳定 / 保护。
 
 验收：`type-check`、`lint:check`、`vitest`、`build-only` 通过；截图见 `test-results/viewport-top.png`、`viewport-900.png`、`book-open-top.png`。
+
+- 提交：`0724a94`；后续可追溯调整为 `8332357`（见 `docs/2026-11-09-cable-sizing-traceability-plan.md`）。
+- 当前全量测试：**990 passed / 80 files**（cable_sizing 38 条）。
