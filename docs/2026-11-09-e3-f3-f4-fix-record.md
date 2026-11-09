@@ -115,6 +115,6 @@ matrixToRows(matrix, onProgress?, signal?)
 
 - **E1**：`vercel.json` 裸 IP + HTTP，需 Vercel 控制台；
 - **E2 / E4**：确认后关闭台账；
-- **F1**：部署侧 CSP `worker-src 'self'`；
-- **F2**：xlsx 导出边框，产品决策；
+- ~~**F1**：部署侧 CSP `worker-src 'self'`~~ —— ✅ 2026-11-09 已由 `cfee896` 完成；
+- ~~**F2**：xlsx 导出边框，产品决策~~ —— ✅ 2026-11-09 已由 `28f7196` 完成；
 - **F5**：togeojson 嵌套 MultiGeometry 上游限制。

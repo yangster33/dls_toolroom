@@ -219,8 +219,8 @@
 **最终门禁**：type-check 0 / oxlint 0·0 / eslint 0 / prettier 全符合 / vitest **775 passed·57 files** / `npm run build` 全链路通过 / playwright **dev 8 passed · preview 7 passed**（worker-pipeline 断言 worker 模块响应 200）。
 
 **仍未做（需要你决策/外部条件）**：
-- 部署侧确认 **CSP 允许 `worker-src 'self'`**（阶段 4 引入的新硬需求；没有 CSP 则无影响，有的话被拦会自动降级，但 Worker 就白设了）
-- xlsx 导出无边框的老 bug：把 `toSheetSpec`/`generateXlsx` 的 `border: false` 改 `true` 即可打开，代价是大表总耗时 +50%（1987ms → 2967ms @5万×9）
+- ~~部署侧确认 **CSP 允许 `worker-src 'self'`**（阶段 4 引入的新硬需求；没有 CSP 则无影响，有的话被拦会自动降级，但 Worker 就白设了）~~ —— ✅ 2026-11-09 已由 **F1** 完成（`cfee896`，vercel + nginx snippet）
+- ~~xlsx 导出无边框的老 bug：把 `toSheetSpec`/`generateXlsx` 的 `border: false` 改 `true` 即可打开，代价是大表总耗时 +50%（1987ms → 2967ms @5万×9）~~ —— ✅ 2026-11-09 已由 **F2** 完成（`28f7196`，≤2 万行自动开，超过自动关）
 - D 档（D1~D4）与 E 档（E1~E4）未动
 - ~~`elevations_batch`/`GeocodeCommon`/`distance_sensor` 三页仍是页内 `XLSX.read`（取消只能停在它之后的校验阶段）；根治要把页内解析也统一走 `filePipeline.parse`~~ —— ✅ 2026-11-09 已由 **F3** 完成（`5d761a5`）
 

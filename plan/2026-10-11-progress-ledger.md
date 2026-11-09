@@ -7,11 +7,11 @@
 | 属性 | 值 |
 |---|---|
 | 审查基线 | `c096944`（2026-10-09 审计） |
-| 台账更新 | 2026-11-09（E3 浏览量双计 / F3 三页解析 Worker 化 / F4 GeoJSON 强引用 完成） |
-| 当前 HEAD | `5d761a5`（最后一条代码提交；本台账回填提交见 git log） |
-| 工具数 | 26 个路由（预渲染 sitemap；`feat/sizing-sheet-tools` 分支另有 5 个新工具待审） |
-| 测试 | **884 passed / 71 files**（master；含 5 个新工具的分支为 948） |
-| 最近更新 | 2026-11-09 · **D4 / E3 / F3 / F4 完成**；剩余 E1/E2/E4、F1/F2/F5 |
+| 台账更新 | 2026-11-09（F1 CSP / F2 边框 / D4 e2e / D5 拆分 完成） |
+| 当前 HEAD | `e8554ff`（最后一条代码提交；本台账回填提交见 git log） |
+| 工具数 | 26 个路由（预渲染 sitemap；`feat/sizing-sheet-tools` 分支另有 5 个新工具 + D5 待审） |
+| 测试 | **887 passed / 72 files**（master；含 5 个新工具与 D5 的分支为 948） |
+| 最近更新 | 2026-11-09 · **D4 / D5 / E3 / F3 / F4 / F1 / F2 / D4-e2e 完成**；剩余 E1/E2/E4、F5 |
 
 ---
 
@@ -105,7 +105,7 @@
 | `oxlint` | 0 / 0 | ✅ 0 / 0 |
 | `eslint` | ❌ 133 errors | ✅ **0** |
 | `prettier --check` | ❌ 216 files 不符 | ✅ 全符合 |
-| `vitest` | 524 / 35 files | ✅ **884 / 71 files**（master；分支 948） |
+| `vitest` | 524 / 35 files | ✅ **887 / 72 files**（master；分支 948） |
 | `playwright`（生产构建） | 未验证 | ✅ 6 passed / 1 flaky → C4 后 **dev 8 passed · preview 7 passed**（新增 worker 链路用例，断言 worker 模块响应 200） |
 | 产物一致性（C4 新增项） | — | 4 处导出与旧实现**逐格一致**（黄金参考内联在 spec 里，另有变异验证） |
 | 主线程阻塞（C4 新增项） | — | 5 万行导入 **~1900ms → 几十 ms**（Node 基准 + e2e 证真实加载） |
@@ -121,7 +121,18 @@
 | **F3** | `elevations_batch` / `distance_sensor` / `GeocodeCommon` 的 XLSX 解析改走 `filePipeline.parse`；新增 `matrixToRows` 通用行整形 | `matrixToRows` 5 条 |
 | **F4** | `GeoFeature` 删除 `feature: GeoJSON.Feature` 及两处赋值，消除大文件强引用 | parseKML 结果不含 `feature`（1 条） |
 
-门禁：type-check 0 / oxlint 0·0 / eslint 0 / prettier 全符合 / vitest **884 passed · 71 files** / `build-only` 成功。
+门禁：type-check 0 / oxlint 0·0 / eslint 0 / prettier 全符合 / vitest **887 passed · 72 files** / `build-only` 成功。
+
+### 2026-11-09 · F1 / F2 / D4 e2e / D5（提交 `28f7196` / `cfee896` / `e8554ff` / 分支 `8ce26e1`）
+
+依据 [`../docs/2026-11-09-f1-f2-e2e-d5-fix-record.md`](../docs/2026-11-09-f1-f2-e2e-d5-fix-record.md)。
+
+| 项 | 改动 | 提交 |
+|---|---|---|
+| **F2** | `autoBorder()`：≤ 20000 行带边框，超过自动关闭；`TemplateExporter` / `GisToExcelExporter` 接入 | `28f7196` |
+| **F1** | `vercel.json` 与 nginx snippet 增加 CSP，强制 `worker-src 'self'`；新增部署配置测试 | `cfee896` |
+| **D4 e2e** | KML 查看器（上传/图层树/显隐/测距/采点）与 Geocode（CSV/XLSX 导入 + Worker 断言） | `e8554ff` |
+| **D5** | `SheetTemplatePage.vue` 3484 → **1161 行**；样式抽 `SheetTemplatePage.css`，逻辑拆 `useSheetEditor` / `useSheetGrid` / `useSheetExport` / `useSheetStatus` / `sheetTemplateUi`；新增页面 e2e | 分支 `8ce26e1`（待合并） |
 
 ---
 
@@ -180,6 +191,7 @@
 | D2 | P3-2 | 5 份文件名模板 / 4 份花括号校验 / 3 份 `sanitizeFilename` → 各 1 份 | −400 行 | ✅ `fce7aec` |
 | D3 | P3-3 | 删 12 个零引用依赖 + 850 行死代码 | 依赖体积 | ✅ `75fda16` |
 | D4 | P3-5 | 拆 `GanttChartPage.vue`(1623) / `KmlViewerPage.vue`(1157) / `GeocodeCommon.vue`(983) | 1 周 | ✅ `1d73d5a`（Gantt）+ `c66de9c`（KmlViewer / Geocode） |
+| D5 | P3-5 | 拆 `SheetTemplatePage.vue`(3484) | 2 天 | ✅ 分支 `8ce26e1`（3484 → 1161，待合并） |
 
 #### D3 执行明细（2026-10-15，提交 `75fda16` + `2485d1f`）
 
@@ -289,8 +301,8 @@
 
 | # | 编号 | 问题 | 需要什么 | 状态 |
 |---|---|---|---|---|
-| F1 | — | **部署侧 CSP 需允许 `worker-src 'self'`**（阶段 4 引入的新硬需求）。没有 CSP 则无影响；有的话 Worker 被拦 → 自动降级主线程，功能不坏但 Worker 白设 | 部署侧确认 | ⬜ |
-| F2 | — | xlsx 导出**没有边框**（老 bug：xlsx@0.18.5 会静默丢弃所有单元格样式，连官方 `add_style` 也落不了盘）。改 `toSheetSpec`/`generateXlsx` 的 `border: false` → `true` 即可打开，代价是大表总耗时 **+50%**（5万×9：1987→2967ms） | 产品决策 | ⬜ |
+| F1 | — | **部署侧 CSP 需允许 `worker-src 'self'`**（阶段 4 引入的新硬需求）。没有 CSP 则无影响；有的话 Worker 被拦 → 自动降级主线程，功能不坏但 Worker 白设 | 部署侧确认 | ✅ `cfee896`（vercel + nginx snippet） |
+| F2 | — | xlsx 导出**没有边框**（老 bug：xlsx@0.18.5 会静默丢弃所有单元格样式，连官方 `add_style` 也落不了盘）。改 `toSheetSpec`/`generateXlsx` 的 `border: false` → `true` 即可打开，代价是大表总耗时 **+50%**（5万×9：1987→2967ms） | 产品决策 | ✅ `28f7196`（≤2 万行自动开，超过自动关） |
 | F3 | — | `elevations_batch` / `GeocodeCommon` / `distance_sensor` 三页仍是**页内** `XLSX.read + sheet_to_json`（不走 `filePipeline.parse`），所以取消只能停在它之后的校验阶段。**D1 已完成 reader 侧收敛，但页内解析是另一个入口**，需把这三页的解析也统一走 `filePipeline.parse` | 排期 | ✅ `5d761a5`（新增 `matrixToRows`） |
 | F4 | — | `geoDataService` 的要素强引用原始 GeoJSON 对象（`feature` 字段），大文件内存放大 | 排期 | ✅ `5d761a5`（删除 `feature` 字段与赋值） |
 | F5 | — | togeojson 对「MultiGeometry 里再嵌套 MultiGeometry」只返回最后一个几何（库局限，已用一条用例钉住，等库修好把期望 1 改成 2） | 跟上游 | ⬜ |
