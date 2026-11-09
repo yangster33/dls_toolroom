@@ -469,13 +469,12 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, reactive } from 'vue'
-import * as XLSX from 'xlsx'
 import { exportTemplate, exportData } from '@/utils/TemplateExporter'
 import type { ProgressCallback } from '@/utils/progress'
 import { logger } from '@/utils/logger'
 import { getToolById } from '../toolData'
 import { parseCSV } from '@/utils/CsvParser'
-import { yieldToUI } from '@/utils/yieldToUI'
+import { filePipeline } from '@/utils/filePipelineClient'
 import ErrorDialog from '@/components/common/ErrorDialog.vue'
 import ProgressModal from '@/components/common/ProgressModal.vue'
 import { useProgressTimer } from '@/composables/useProgressTimer'
@@ -651,35 +650,26 @@ const onFileUpload = async (event: Event) => {
   importAbort.value = controller
   beginIo('正在导入数据...')
   try {
-    // 先画进度文案并让出一帧：XLSX.read / sheet_to_json 是同步阻塞，
-    // 否则进度会冻结在 0% 整个解析阶段（C4 阶段 2 整改）。
-    ioProgress.percent = 10
-    ioProgress.message = '正在解析表格...'
-    ioTimer.update(10)
-    await yieldToUI()
-
     let rows: Record<string, string | number>[]
     let columns: string[]
 
     // 根据文件扩展名选择解析方式
     if (file.name.toLowerCase().endsWith('.xlsx')) {
-      // 解析 XLSX 文件
-      const arrayBuffer = await file.arrayBuffer()
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' })
-      const sheetNames = workbook.SheetNames || []
-      if (sheetNames.length === 0) {
-        throw new Error('Excel 文件中没有工作表')
-      }
-      const firstSheetName = sheetNames[0] as string
-      const worksheet = workbook.Sheets[firstSheetName]
-      if (!worksheet) {
-        throw new Error('无法读取工作表内容')
-      }
-      // header:1 拿二维数组，列数/列名从**表头行**推。
+      // F3：XLSX 解析搬到 filePipeline（Worker 优先），取消可 terminate；
+      // 解析 0→30、行整形 30→100 映射到同一个进度条。
+      const matrix = await filePipeline.parse(
+        file,
+        (percent, message) => ioReporter(10 + Math.round(percent * 0.2), message),
+        controller.signal,
+      )
+      // header:1 的二维数组，列数/列名从**表头行**推。
       // 不能用默认的对象模式：它不给空单元格建 key，第一条数据的
       // data2 三列为空时会被误判成 3 列（同站址）。（审计 C1 / P1-6）
-      const aoa = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][]
-      const parsed = await aoaToTemplateRows(aoa, ioReporter, controller.signal)
+      const parsed = await aoaToTemplateRows(
+        matrix.rawData,
+        (percent, message) => ioReporter(30 + Math.round(percent * 0.7), message),
+        controller.signal,
+      )
       // 取消后行整形可能刚好跑完：此时整份丢弃，不写校验结果
       if (controller.signal.aborted) return
       rows = parsed.rows

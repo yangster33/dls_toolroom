@@ -305,10 +305,10 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
-import * as XLSX from 'xlsx'
 import { exportData, exportTemplate } from '@/utils/TemplateExporter'
 import { parseCSV } from '@/utils/CsvParser'
-import { yieldToUI } from '@/utils/yieldToUI'
+import { filePipeline } from '@/utils/filePipelineClient'
+import { matrixToRows } from '@/utils/templateMatrix'
 import { logger } from '@/utils/logger'
 import { getToolById } from '../toolData'
 import { ELEVATION_HEADERS } from './TemplateExporter'
@@ -460,29 +460,23 @@ const onFileUpload = async (event: Event) => {
   importAbort.value = controller
   beginPipeline('正在导入模板...')
   try {
-    // 先画进度文案并让出一帧：XLSX.read / sheet_to_json 是同步阻塞，
-    // 否则进度会冻结在 0% 整个解析阶段（C4 阶段 2 整改）。
-    pipelineProgress.percent = 10
-    pipelineProgress.message = '正在解析表格...'
-    pipelineTimer.update(10)
-    await yieldToUI()
-
     let rows: Record<string, string | number>[]
 
     if (file.name.toLowerCase().endsWith('.xlsx')) {
-      const arrayBuffer = await file.arrayBuffer()
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' })
-      const sheetNames = workbook.SheetNames || []
-      if (sheetNames.length === 0) {
-        throw new Error('Excel文件中没有工作表')
-      }
-      const firstSheetName = sheetNames[0] as string
-      const worksheet = workbook.Sheets[firstSheetName]
-      if (!worksheet) {
-        throw new Error('无法读取工作表内容')
-      }
-      const jsonData = XLSX.utils.sheet_to_json(worksheet)
-      rows = jsonData as Record<string, string | number>[]
+      // F3：XLSX 解析搬到 filePipeline（Worker 优先），取消可 terminate；
+      // 解析 0→30、行整形 30→100 映射到同一个进度条。
+      const matrix = await filePipeline.parse(
+        file,
+        (percent, message) => pipelineReporter(10 + Math.round(percent * 0.2), message),
+        controller.signal,
+      )
+      const parsed = await matrixToRows(
+        matrix,
+        (percent, message) => pipelineReporter(30 + Math.round(percent * 0.7), message),
+        controller.signal,
+      )
+      if (controller.signal.aborted) return
+      rows = parsed.rows
     } else {
       const text = await file.text()
       const cleanText = text.replace(/^\uFEFF/, '')

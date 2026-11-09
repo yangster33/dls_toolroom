@@ -5,7 +5,7 @@ import DlsComment from '../DlsComment.vue'
 /**
  * 审计报告 B2 的组件级回归测试。
  *
- * DlsComment 在 onMounted 里发起三个同源请求，响应回来后直接写 ref。
+ * DlsComment 在 onMounted 里发起评论/统计两个同源请求，响应回来后直接写 ref。
  * 若用户在请求进行中离开页面，回调仍会往已卸载的组件写状态。
  * 修复方式：onUnmounted 置 disposed = true，所有响应处理前先检查。
  *
@@ -21,7 +21,7 @@ function makeDeferredFetch() {
     resolveComments = resolve
   })
 
-  const fetchMock = vi.fn((input: RequestInfo | URL) => {
+  const fetchMock = vi.fn((input: RequestInfo | URL, _init?: RequestInit) => {
     const url = typeof input === 'string' ? input : String(input)
     if (url.startsWith('/api/comments')) {
       return Promise.resolve({ json: () => commentsJson })
@@ -82,6 +82,22 @@ describe('DlsComment 卸载后不再改状态（审计 B2）', () => {
     await flushPromises()
 
     expect(state.comments).toHaveLength(0)
+  })
+
+  it('挂载时只读统计，不再 POST /view（E3 浏览量双计）', async () => {
+    const { fetchMock } = makeDeferredFetch()
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount(DlsComment, { props: { pageKey: 'demo' } })
+    await flushPromises()
+
+    const viewPosts = fetchMock.mock.calls.filter(([input, init]) => {
+      const url = typeof input === 'string' ? input : String(input)
+      return url.endsWith('/view') && init?.method === 'POST'
+    })
+    expect(viewPosts).toHaveLength(0)
+
+    wrapper.unmount()
   })
 
   it('反复挂载/卸载不会把迟到的响应写进任何一次实例', async () => {

@@ -44,7 +44,13 @@ export interface GeoFeature {
   type: 'Point' | 'LineString' | 'Polygon'
   coordinates: number[] | number[][] | number[][][]
   properties: Record<string, unknown>
-  feature: GeoJSON.Feature
+  /**
+   * F4：不再持有原始 `GeoJSON.Feature`。
+   *
+   * 旧实现把 togeojson 的整个 feature 挂在每个拆分子要素上，大文件下
+   * 同一份几何/属性会被长期强引用，内存放大 2 倍以上。分析链路只需要
+   * `coordinates` / `properties`，因此这里只保留这两份派生数据。
+   */
 }
 
 /** 展开后的「原子单几何」：coordinates 形状与 type 严格对应 */
@@ -386,7 +392,6 @@ export async function parseKML(file: File, onProgress?: ProgressCallback): Promi
           type: atom.type,
           coordinates: atom.coordinates,
           properties: feature.properties || {},
-          feature,
         })
       })
 
@@ -507,7 +512,6 @@ export async function parseKMZ(file: File, onProgress?: ProgressCallback): Promi
           type: atom.type,
           coordinates: atom.coordinates,
           properties: feature.properties || {},
-          feature,
         })
       })
 

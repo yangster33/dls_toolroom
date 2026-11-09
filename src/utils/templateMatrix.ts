@@ -11,6 +11,7 @@
  */
 import * as XLSX from 'xlsx'
 import { yieldToUI } from './yieldToUI'
+import { throwIfAborted } from './abort'
 import type { ProgressCallback } from './progress'
 
 export interface TemplateMatrix {
@@ -60,4 +61,59 @@ export async function parseTemplateMatrix(
   onProgress?.(30, '表格解析完成')
 
   return { rawData, fileHeaders }
+}
+
+export interface TemplateRows {
+  columns: string[]
+  rows: Record<string, string | number>[]
+}
+
+/** 整行皆空 → 认为是没有内容的行，跳过（与 XLSX 对象模式的行为一致） */
+function isBlankRow(raw: readonly CellValue[] | undefined): boolean {
+  if (!raw) return true
+  return raw.every((v) => v === undefined || v === null || String(v).trim() === '')
+}
+
+/** 行整形让出粒度：按批而非逐行 */
+const ROW_YIELD_INTERVAL = 500
+
+/**
+ * `parseTemplateMatrix` 的二维矩阵 → 行对象数组。
+ *
+ * 用于不在 `TemplateReader` 内、但仍需要对象行的页面导入（高程批量、地址查询）。
+ * 列数与列名一律从表头行推断，空单元格补 ''，避免 `sheet_to_json` 对象模式
+ * 「首行空单元格不建 key」导致列数误判（审计 C1 / P1-6）。
+ */
+export async function matrixToRows(
+  matrix: TemplateMatrix,
+  onProgress?: ProgressCallback,
+  signal?: AbortSignal,
+): Promise<TemplateRows> {
+  const columns = matrix.fileHeaders
+  const body = matrix.rawData.slice(1)
+  const total = body.length
+  const rows: Record<string, string | number>[] = []
+
+  for (let i = 0; i < total; i++) {
+    if (i % ROW_YIELD_INTERVAL === 0) {
+      await yieldToUI()
+      throwIfAborted(signal)
+    }
+
+    const percent = total > 0 ? Math.round((i / total) * 100) : 100
+    onProgress?.(Math.min(99, percent), `正在整理第 ${i + 1} 行...`)
+
+    const raw = body[i]
+    if (isBlankRow(raw)) continue
+
+    const row: Record<string, string | number> = {}
+    columns.forEach((column, index) => {
+      // 空单元格也补 ''，保证每行 key 集合与表头完全一致
+      row[column] = (raw?.[index] ?? '') as string | number
+    })
+    rows.push(row)
+  }
+
+  onProgress?.(100, '整理完成')
+  return { columns, rows }
 }

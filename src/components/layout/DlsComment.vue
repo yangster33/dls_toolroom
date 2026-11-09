@@ -328,16 +328,6 @@ const fetchStats = async () => {
   }
 }
 
-const incrementView = async () => {
-  try {
-    await fetch(`/api/page-stats/${props.pageKey}/view`, { method: 'POST' })
-    if (disposed) return
-    stats.value.view_count++
-  } catch (error) {
-    logger.error('Failed to increment view:', error)
-  }
-}
-
 // ── 提交 ────────────────────────────────────────
 const handleSubmit = async () => {
   if (!validate()) return
@@ -391,7 +381,8 @@ const handleSubmit = async () => {
 onMounted(() => {
   fetchComments()
   fetchStats()
-  incrementView()
+  // E3：浏览量统一由 router.afterEach 上报，组件不再重复 POST /view。
+  // 这里只读统计，避免同一页浏览被计两次。
 })
 
 // 组件卸载后，进行中的 fetch 返回时不得再写 ref（审计 B2）。

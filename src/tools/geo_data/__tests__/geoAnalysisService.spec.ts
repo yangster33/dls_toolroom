@@ -22,7 +22,6 @@ function point(name: string, coordinates: [number, number]): PointFeature {
     type: 'Point',
     coordinates,
     properties: {},
-    feature: { type: 'Feature', geometry: { type: 'Point', coordinates }, properties: {} },
   }
 }
 
@@ -33,7 +32,6 @@ function line(name: string, coordinates: [number, number][]): LineFeature {
     type: 'LineString',
     coordinates,
     properties: {},
-    feature: { type: 'Feature', geometry: { type: 'LineString', coordinates }, properties: {} },
   }
 }
 
@@ -44,7 +42,6 @@ function polygon(name: string, coordinates: [number, number][][]): PolygonFeatur
     type: 'Polygon',
     coordinates,
     properties: {},
-    feature: { type: 'Feature', geometry: { type: 'Polygon', coordinates }, properties: {} },
   }
 }
 

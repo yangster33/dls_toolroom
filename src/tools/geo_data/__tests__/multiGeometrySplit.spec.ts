@@ -40,6 +40,15 @@ const KML_MULTILINESTRING = `<?xml version="1.0" encoding="UTF-8"?>
 </kml>`
 
 describe('parseKML - Multi* 拆分（P0-4）', () => {
+  it('解析结果不再持有原始 GeoJSON.Feature（F4 内存放大）', async () => {
+    const result = await parseKML(fileFromString(KML_MULTIPOINT))
+
+    expect(result.success).toBe(true)
+    for (const feature of result.features) {
+      expect(Object.prototype.hasOwnProperty.call(feature, 'feature')).toBe(false)
+    }
+  })
+
   it('MultiPoint 拆成 3 个独立 Point 要素，每个 coordinates 是 [lng,lat]', async () => {
     const result = await parseKML(fileFromString(KML_MULTIPOINT))
 
