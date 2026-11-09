@@ -99,7 +99,7 @@ interface CheckDetail {
 - 增加“查看计算书第 X 步”按钮，打开计算书并展开对应步骤。
 - 测试：新增 `checkDetails.spec.ts` 7 条；cable_sizing 合计 52 条；全量 **1004 passed / 81 files**。
 - 截图：`test-results/check-summary.png`、`check-harmonic.png`、`check-ampacity.png`、`check-jump.png`。
-- 提交：待提交（提交后回填）。
+- 提交：`ed45caf`。
 
 ## 5. 不做
 
