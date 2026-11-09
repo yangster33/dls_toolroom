@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>测试图层</name>
+    <Folder>
+      <name>机房</name>
+      <Placemark>
+        <name>站点 A</name>
+        <description>测试点位 A</description>
+        <Point><coordinates>116.4,39.9,0</coordinates></Point>
+      </Placemark>
+      <Placemark>
+        <name>站点 B</name>
+        <description>测试点位 B</description>
+        <Point><coordinates>116.5,40.0,0</coordinates></Point>
+      </Placemark>
+    </Folder>
+  </Document>
+</kml>
