@@ -166,11 +166,11 @@ const breadcrumbItems = computed(() => {
   display: none;
 }
 
-:global(html[data-theme='lantu']) .brand-mark-light {
+:global(html[data-mode='dark']) .brand-mark-light {
   display: none;
 }
 
-:global(html[data-theme='lantu']) .brand-mark-dark {
+:global(html[data-mode='dark']) .brand-mark-dark {
   display: block;
 }
 

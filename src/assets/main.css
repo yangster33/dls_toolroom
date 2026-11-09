@@ -1,16 +1,16 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
-/* 只保留两套自有主题：白图 / 蓝图。不再暴露 daisyUI 官方主题，
+/* 只保留自有主题：四套视觉家族 × 明暗模式。不再暴露 daisyUI 官方主题，
    否则站点气质会随用户切换而整体漂移。 */
 @plugin 'daisyui' {
   themes: false;
   logs: false;
 }
 
-/* ---------- 白图：施工白图纸 ---------- */
+/* ---------- 工程 · 白图：施工白图纸 ---------- */
 @plugin 'daisyui/theme' {
-  name: 'baitu';
+  name: 'gongcheng-light';
   default: true;
   prefersdark: false;
   color-scheme: light;
@@ -48,9 +48,9 @@
   --noise: 0;
 }
 
-/* ---------- 蓝图：晒图纸 ---------- */
+/* ---------- 工程 · 蓝图：晒图纸 ---------- */
 @plugin 'daisyui/theme' {
-  name: 'lantu';
+  name: 'gongcheng-dark';
   default: false;
   prefersdark: false;
   color-scheme: dark;
@@ -88,9 +88,249 @@
   --noise: 0;
 }
 
+/* ---------- 地形 · 地形纸：等高线地形图 ---------- */
+@plugin 'daisyui/theme' {
+  name: 'dixing-light';
+  default: false;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-base-100: oklch(0.949 0.016 84);
+  --color-base-200: oklch(0.918 0.021 84);
+  --color-base-300: oklch(0.846 0.027 82);
+  --color-base-content: oklch(0.268 0.018 62);
+
+  --color-primary: oklch(0.49 0.087 63);
+  --color-primary-content: oklch(1 0 0);
+  --color-secondary: oklch(0.49 0.06 216);
+  --color-secondary-content: oklch(1 0 0);
+  --color-accent: oklch(0.745 0.145 68);
+  --color-accent-content: oklch(0.23 0.02 62);
+  --color-neutral: oklch(0.33 0.021 66);
+  --color-neutral-content: oklch(0.93 0.018 84);
+
+  --color-info: oklch(0.52 0.08 218);
+  --color-info-content: oklch(1 0 0);
+  --color-success: oklch(0.48 0.08 148);
+  --color-success-content: oklch(1 0 0);
+  --color-warning: oklch(0.52 0.12 68);
+  --color-warning-content: oklch(1 0 0);
+  --color-error: oklch(0.52 0.15 28);
+  --color-error-content: oklch(1 0 0);
+
+  --radius-selector: 0.125rem;
+  --radius-field: 0.125rem;
+  --radius-box: 0.125rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* ---------- 地形 · 夜航图 ---------- */
+@plugin 'daisyui/theme' {
+  name: 'dixing-dark';
+  default: false;
+  prefersdark: false;
+  color-scheme: dark;
+
+  --color-base-100: oklch(0.19 0.019 156);
+  --color-base-200: oklch(0.225 0.022 156);
+  --color-base-300: oklch(0.305 0.027 156);
+  --color-base-content: oklch(0.905 0.018 122);
+
+  --color-primary: oklch(0.785 0.125 145);
+  --color-primary-content: oklch(0.18 0.018 156);
+  --color-secondary: oklch(0.72 0.08 218);
+  --color-secondary-content: oklch(0.18 0.018 156);
+  --color-accent: oklch(0.815 0.14 82);
+  --color-accent-content: oklch(0.18 0.018 82);
+  --color-neutral: oklch(0.285 0.024 156);
+  --color-neutral-content: oklch(0.87 0.02 128);
+
+  --color-info: oklch(0.72 0.09 210);
+  --color-info-content: oklch(0.18 0.018 156);
+  --color-success: oklch(0.76 0.12 150);
+  --color-success-content: oklch(0.18 0.018 156);
+  --color-warning: oklch(0.815 0.135 82);
+  --color-warning-content: oklch(0.18 0.018 82);
+  --color-error: oklch(0.69 0.15 28);
+  --color-error-content: oklch(0.18 0.018 28);
+
+  --radius-selector: 0.125rem;
+  --radius-field: 0.125rem;
+  --radius-box: 0.125rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* ---------- CAD · 布局白：图纸空间 ---------- */
+@plugin 'daisyui/theme' {
+  name: 'cad-light';
+  default: false;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-base-100: oklch(0.985 0.002 250);
+  --color-base-200: oklch(0.956 0.004 250);
+  --color-base-300: oklch(0.878 0.007 250);
+  --color-base-content: oklch(0.248 0.008 250);
+
+  --color-primary: oklch(0.5 0.105 224);
+  --color-primary-content: oklch(1 0 0);
+  --color-secondary: oklch(0.5 0.16 330);
+  --color-secondary-content: oklch(1 0 0);
+  --color-accent: oklch(0.64 0.14 88);
+  --color-accent-content: oklch(0.2 0.01 250);
+  --color-neutral: oklch(0.35 0.008 250);
+  --color-neutral-content: oklch(0.95 0.003 250);
+
+  --color-info: oklch(0.53 0.1 230);
+  --color-info-content: oklch(1 0 0);
+  --color-success: oklch(0.48 0.09 150);
+  --color-success-content: oklch(1 0 0);
+  --color-warning: oklch(0.54 0.13 82);
+  --color-warning-content: oklch(1 0 0);
+  --color-error: oklch(0.52 0.16 27);
+  --color-error-content: oklch(1 0 0);
+
+  --radius-selector: 0;
+  --radius-field: 0;
+  --radius-box: 0;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* ---------- CAD · 模型黑：模型空间 ---------- */
+@plugin 'daisyui/theme' {
+  name: 'cad-dark';
+  default: false;
+  prefersdark: false;
+  color-scheme: dark;
+
+  --color-base-100: oklch(0.255 0.003 250);
+  --color-base-200: oklch(0.218 0.003 250);
+  --color-base-300: oklch(0.335 0.005 250);
+  --color-base-content: oklch(0.92 0.004 250);
+
+  --color-primary: oklch(0.81 0.115 205);
+  --color-primary-content: oklch(0.2 0.005 250);
+  --color-secondary: oklch(0.76 0.155 330);
+  --color-secondary-content: oklch(0.2 0.005 250);
+  --color-accent: oklch(0.89 0.15 95);
+  --color-accent-content: oklch(0.2 0.005 250);
+  --color-neutral: oklch(0.315 0.005 250);
+  --color-neutral-content: oklch(0.9 0.004 250);
+
+  --color-info: oklch(0.78 0.1 220);
+  --color-info-content: oklch(0.2 0.005 250);
+  --color-success: oklch(0.79 0.14 150);
+  --color-success-content: oklch(0.2 0.005 250);
+  --color-warning: oklch(0.85 0.14 88);
+  --color-warning-content: oklch(0.2 0.005 250);
+  --color-error: oklch(0.72 0.16 27);
+  --color-error-content: oklch(0.2 0.005 250);
+
+  --radius-selector: 0;
+  --radius-field: 0;
+  --radius-box: 0;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* ---------- 仪表 · 仪表白 ---------- */
+@plugin 'daisyui/theme' {
+  name: 'yibiao-light';
+  default: false;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-base-100: oklch(0.976 0.004 200);
+  --color-base-200: oklch(0.947 0.006 200);
+  --color-base-300: oklch(0.872 0.011 200);
+  --color-base-content: oklch(0.242 0.014 218);
+
+  --color-primary: oklch(0.47 0.075 205);
+  --color-primary-content: oklch(1 0 0);
+  --color-secondary: oklch(0.48 0.06 255);
+  --color-secondary-content: oklch(1 0 0);
+  --color-accent: oklch(0.68 0.145 58);
+  --color-accent-content: oklch(0.2 0.014 218);
+  --color-neutral: oklch(0.305 0.014 218);
+  --color-neutral-content: oklch(0.95 0.005 200);
+
+  --color-info: oklch(0.52 0.09 210);
+  --color-info-content: oklch(1 0 0);
+  --color-success: oklch(0.48 0.085 158);
+  --color-success-content: oklch(1 0 0);
+  --color-warning: oklch(0.54 0.13 62);
+  --color-warning-content: oklch(1 0 0);
+  --color-error: oklch(0.53 0.16 28);
+  --color-error-content: oklch(1 0 0);
+
+  --radius-selector: 0.125rem;
+  --radius-field: 0.125rem;
+  --radius-box: 0.125rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* ---------- 仪表 · 荧光黑：示波器 ---------- */
+@plugin 'daisyui/theme' {
+  name: 'yibiao-dark';
+  default: false;
+  prefersdark: false;
+  color-scheme: dark;
+
+  --color-base-100: oklch(0.162 0.009 222);
+  --color-base-200: oklch(0.202 0.011 222);
+  --color-base-300: oklch(0.292 0.015 222);
+  --color-base-content: oklch(0.89 0.014 190);
+
+  --color-primary: oklch(0.81 0.12 198);
+  --color-primary-content: oklch(0.16 0.009 222);
+  --color-secondary: oklch(0.72 0.1 255);
+  --color-secondary-content: oklch(0.16 0.009 222);
+  --color-accent: oklch(0.845 0.15 82);
+  --color-accent-content: oklch(0.16 0.009 82);
+  --color-neutral: oklch(0.27 0.013 222);
+  --color-neutral-content: oklch(0.86 0.014 190);
+
+  --color-info: oklch(0.78 0.1 210);
+  --color-info-content: oklch(0.16 0.009 222);
+  --color-success: oklch(0.79 0.15 155);
+  --color-success-content: oklch(0.16 0.009 222);
+  --color-warning: oklch(0.85 0.14 82);
+  --color-warning-content: oklch(0.16 0.009 82);
+  --color-error: oklch(0.71 0.16 28);
+  --color-error-content: oklch(0.16 0.009 28);
+
+  --radius-selector: 0.125rem;
+  --radius-field: 0.125rem;
+  --radius-box: 0.125rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
 /* ---------- 可读性阶梯 ----------
-   次要文字不再逐处写死 color-mix 百分比：白纸底要 ≥62% 才够 4.5:1，
-   蓝晒底 54% 就够。收成两个 token，两套主题各调一次即可。
+   次要文字不再逐处写死 color-mix 百分比。默认按明暗给一组安全值，
+   深浅差异大的家族再单独微调。
    accent 保留荧光笔亮度做填充，文字另用 accent-ink（白底黄字只有 1.7:1）。 */
 :root,
 [data-theme] {
@@ -99,13 +339,87 @@
   /* 控件/按钮描边，需 ≥3:1 */
   --line-strong: color-mix(in oklab, var(--color-base-content) 50%, transparent);
   --accent-ink: oklch(0.52 0.14 86);
+
+  /* 图纸网格：家族可覆盖格距与线密度 */
+  --grid-fine: 32px;
+  --grid-major: 160px;
+  --grid-fine-mix: 45%;
+  --grid-major-mix: 80%;
+
+  /* 浏览器地址栏颜色（meta theme-color） */
+  --browser-theme-color: #f5f4ed;
 }
 
-[data-theme='lantu'] {
+[data-mode='dark'] {
   --text-faint: color-mix(in oklab, var(--color-base-content) 54%, transparent);
   --text-muted: color-mix(in oklab, var(--color-base-content) 58%, transparent);
   --line-strong: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+}
+
+[data-theme='gongcheng-dark'] {
   --accent-ink: oklch(0.787 0.1407 87.26);
+  --browser-theme-color: #1d2736;
+}
+
+[data-theme='dixing-light'] {
+  --text-faint: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  --text-muted: color-mix(in oklab, var(--color-base-content) 70%, transparent);
+  --line-strong: color-mix(in oklab, var(--color-base-content) 54%, transparent);
+  --accent-ink: oklch(0.47 0.11 62);
+  --grid-fine: 40px;
+  --grid-major: 200px;
+  --grid-fine-mix: 38%;
+  --grid-major-mix: 72%;
+  --browser-theme-color: #f2ecdd;
+}
+
+[data-theme='dixing-dark'] {
+  --accent-ink: oklch(0.815 0.14 82);
+  --grid-fine: 40px;
+  --grid-major: 200px;
+  --grid-fine-mix: 34%;
+  --grid-major-mix: 66%;
+  --browser-theme-color: #131f19;
+}
+
+[data-theme='cad-light'] {
+  --text-faint: color-mix(in oklab, var(--color-base-content) 63%, transparent);
+  --accent-ink: oklch(0.5 0.12 80);
+  --grid-fine: 10px;
+  --grid-major: 50px;
+  --grid-fine-mix: 26%;
+  --grid-major-mix: 55%;
+  --browser-theme-color: #fafafb;
+}
+
+[data-theme='cad-dark'] {
+  --text-faint: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+  --text-muted: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+  --line-strong: color-mix(in oklab, var(--color-base-content) 46%, transparent);
+  --accent-ink: oklch(0.89 0.15 95);
+  --grid-fine: 10px;
+  --grid-major: 50px;
+  --grid-fine-mix: 22%;
+  --grid-major-mix: 46%;
+  --browser-theme-color: #292929;
+}
+
+[data-theme='yibiao-light'] {
+  --accent-ink: oklch(0.5 0.13 55);
+  --grid-fine: 24px;
+  --grid-major: 120px;
+  --grid-fine-mix: 32%;
+  --grid-major-mix: 62%;
+  --browser-theme-color: #f4f7f7;
+}
+
+[data-theme='yibiao-dark'] {
+  --accent-ink: oklch(0.845 0.15 82);
+  --grid-fine: 24px;
+  --grid-major: 120px;
+  --grid-fine-mix: 28%;
+  --grid-major-mix: 56%;
+  --browser-theme-color: #0d1215;
 }
 
 @theme {
@@ -117,6 +431,18 @@
   --font-drawing: 'FangSong', 'FangSong_GB2312', STFangsong, 'Songti SC', serif;
 
   --animate-fade-in: fade-in 0.18s ease-out both;
+}
+
+/* ---------- 家族字体语言 ----------
+   工程用长仿宋；地形回到地图/志书的宋体；CAD 与仪表用等宽字，
+   让标题和读数更像图签、屏幕标签。 */
+[data-theme^='dixing-'] {
+  --font-drawing: 'Songti SC', 'SimSun', 'Noto Serif SC', STSong, serif;
+}
+
+[data-theme^='cad-'],
+[data-theme^='yibiao-'] {
+  --font-drawing: var(--font-mono);
 }
 
 @keyframes fade-in {
@@ -183,35 +509,54 @@
 
 /* ---------- 图纸语言 ---------- */
 
-/* 图纸网格底：32px 细格 + 160px 粗格 */
+/* 图纸网格底：细格 + 粗格。格距与线密度由主题家族决定。 */
 .paper-grid {
   background-color: var(--color-base-100);
   background-image:
     linear-gradient(
       to right,
-      color-mix(in oklab, var(--color-base-300) 45%, transparent) 1px,
+      color-mix(in oklab, var(--color-base-300) var(--grid-fine-mix), transparent) 1px,
       transparent 1px
     ),
     linear-gradient(
       to bottom,
-      color-mix(in oklab, var(--color-base-300) 45%, transparent) 1px,
+      color-mix(in oklab, var(--color-base-300) var(--grid-fine-mix), transparent) 1px,
       transparent 1px
     ),
     linear-gradient(
       to right,
-      color-mix(in oklab, var(--color-base-300) 80%, transparent) 1px,
+      color-mix(in oklab, var(--color-base-300) var(--grid-major-mix), transparent) 1px,
       transparent 1px
     ),
     linear-gradient(
       to bottom,
-      color-mix(in oklab, var(--color-base-300) 80%, transparent) 1px,
+      color-mix(in oklab, var(--color-base-300) var(--grid-major-mix), transparent) 1px,
       transparent 1px
     );
   background-size:
-    32px 32px,
-    32px 32px,
-    160px 160px,
-    160px 160px;
+    var(--grid-fine) var(--grid-fine),
+    var(--grid-fine) var(--grid-fine),
+    var(--grid-major) var(--grid-major),
+    var(--grid-major) var(--grid-major);
+}
+
+/* 仪表家族：主图区叠一层极淡的横向扫描线，区分于地形家族 */
+[data-theme^='yibiao-'] .paper-grid {
+  position: relative;
+}
+
+[data-theme^='yibiao-'] .paper-grid::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--color-base-content) 6%, transparent) 0 1px,
+    transparent 1px 4px
+  );
+  opacity: 0.4;
 }
 
 /* 图框：外层实线图框，四角刻度表示图幅边界 */

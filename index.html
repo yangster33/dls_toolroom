@@ -6,29 +6,58 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/brand/png/favicon-32.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/brand/png/logo-app-180.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#16588C" />
+    <meta name="theme-color" content="#F5F4ED" />
     <script>
-      // 首屏前应用主题，避免白图/蓝图切换时闪烁
+      // 首屏前应用主题，避免主题 / 明暗切换时闪烁
       ;(function () {
         try {
+          var families = ['gongcheng', 'dixing', 'cad', 'yibiao']
           var legacy = {
-            light: 'baitu',
-            winter: 'baitu',
-            corporate: 'baitu',
-            business: 'baitu',
-            dark: 'lantu',
-            night: 'lantu',
-            dracula: 'lantu',
-            forest: 'lantu',
+            baitu: 'gongcheng-light',
+            lantu: 'gongcheng-dark',
+            light: 'gongcheng-light',
+            winter: 'gongcheng-light',
+            corporate: 'gongcheng-light',
+            business: 'gongcheng-light',
+            dark: 'gongcheng-dark',
+            night: 'gongcheng-dark',
+            dracula: 'gongcheng-dark',
+            forest: 'gongcheng-dark',
           }
-          var saved = localStorage.getItem('dls_toolroom_theme')
-          if (saved && legacy[saved]) saved = legacy[saved]
-          if (saved !== 'baitu' && saved !== 'lantu') {
-            saved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'lantu' : 'baitu'
+          var family = localStorage.getItem('dls_toolroom_family')
+          var mode = localStorage.getItem('dls_toolroom_mode')
+          var old = localStorage.getItem('dls_toolroom_theme')
+
+          if (old && legacy[old]) {
+            var pair = legacy[old].split('-')
+            if (!family || families.indexOf(family) === -1) family = pair[0]
+            if (!mode) mode = pair[1]
           }
-          document.documentElement.setAttribute('data-theme', saved)
+
+          if (!family || families.indexOf(family) === -1) family = 'gongcheng'
+          if (mode !== 'light' && mode !== 'dark' && mode !== 'system') mode = 'system'
+
+          var dark =
+            mode === 'dark' ||
+            (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          var resolved = dark ? 'dark' : 'light'
+          var root = document.documentElement
+          root.setAttribute('data-theme', family + '-' + resolved)
+          root.setAttribute('data-mode', resolved)
+
+          var chromeColor = {
+            gongcheng: { light: '#f5f4ed', dark: '#1d2736' },
+            dixing: { light: '#f2ecdd', dark: '#131f19' },
+            cad: { light: '#fafafb', dark: '#292929' },
+            yibiao: { light: '#f4f7f7', dark: '#0d1215' },
+          }
+          var meta = document.querySelector('meta[name="theme-color"]')
+          if (meta && chromeColor[family]) {
+            meta.setAttribute('content', chromeColor[family][resolved])
+          }
         } catch (e) {
-          document.documentElement.setAttribute('data-theme', 'baitu')
+          document.documentElement.setAttribute('data-theme', 'gongcheng-light')
+          document.documentElement.setAttribute('data-mode', 'light')
         }
       })()
     </script>

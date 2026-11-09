@@ -892,11 +892,9 @@ function applyTheme() {
   const wrapper = ganttContainer.value.querySelector('.gantt') as HTMLElement
   if (!wrapper) return
 
-  // 两套图纸主题都跟随当前主色，不再按 dark/light 硬编码
-  wrapper.style.setProperty('--gv-bar-background', 'var(--color-primary)')
-  wrapper.style.setProperty('--gv-bar-border', 'var(--color-primary)')
+  // 任务条颜色由任务自身决定；这里只同步依赖主题的周末高亮
   wrapper.style.setProperty(
-    '--gv-weekend-highlight-color',
+    '--g-weekend-highlight-color',
     'color-mix(in oklab, var(--color-base-content) 5%, transparent)',
   )
 }
@@ -999,8 +997,8 @@ onUnmounted(() => {
 
 /* 进度条拖拽手柄 */
 .gantt-container-wrapper .gantt .handle {
-  fill: #fff;
-  stroke: #999;
+  fill: var(--color-base-100);
+  stroke: var(--line-strong);
 }
 
 /* popup 按钮样式 */
