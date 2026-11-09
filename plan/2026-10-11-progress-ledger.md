@@ -7,11 +7,11 @@
 | 属性 | 值 |
 |---|---|
 | 审查基线 | `c096944`（2026-10-09 审计） |
-| 台账更新 | 2026-11-09（F1 CSP / F2 边框 / D4 e2e / D5 拆分 完成） |
-| 当前 HEAD | `8adc8e3`（最后一条代码提交；本台账回填提交见 git log） |
-| 工具数 | 26 个路由（预渲染 sitemap；`feat/sizing-sheet-tools` 分支另有 5 个新工具 + D5 待审） |
-| 测试 | **887 passed / 72 files**（master；含 5 个新工具与 D5 的分支为 948） |
-| 最近更新 | 2026-11-09 · **D4 / D5 / E3 / F3 / F4 / F1 / F2 / D4-e2e 完成**；剩余 E1/E2/E4、F5 |
+| 台账更新 | 2026-11-09（F1/F2/D4-e2e/D5 合并，E2/E4 关闭，room_layout MVP 完成） |
+| 当前 HEAD | `743a20c`（最后一条代码提交；本台账回填提交见 git log） |
+| 工具数 | 32 个路由（含 5 个选型工具、sheet_template、room_layout） |
+| 测试 | **963 passed / 78 files** |
+| 最近更新 | 2026-11-09 · **D4 / D5 / E2 / E3 / E4 / F1 / F2 / F3 / F4 / D4-e2e / room_layout MVP 完成**；剩余 E1、F5 |
 
 ---
 
@@ -105,7 +105,7 @@
 | `oxlint` | 0 / 0 | ✅ 0 / 0 |
 | `eslint` | ❌ 133 errors | ✅ **0** |
 | `prettier --check` | ❌ 216 files 不符 | ✅ 全符合 |
-| `vitest` | 524 / 35 files | ✅ **887 / 72 files**（master；分支 948） |
+| `vitest` | 524 / 35 files | ✅ **963 / 78 files** |
 | `playwright`（生产构建） | 未验证 | ✅ 6 passed / 1 flaky → C4 后 **dev 8 passed · preview 7 passed**（新增 worker 链路用例，断言 worker 模块响应 200） |
 | 产物一致性（C4 新增项） | — | 4 处导出与旧实现**逐格一致**（黄金参考内联在 spec 里，另有变异验证） |
 | 主线程阻塞（C4 新增项） | — | 5 万行导入 **~1900ms → 几十 ms**（Node 基准 + e2e 证真实加载） |
@@ -132,7 +132,18 @@
 | **F2** | `autoBorder()`：≤ 20000 行带边框，超过自动关闭；`TemplateExporter` / `GisToExcelExporter` 接入 | `28f7196` |
 | **F1** | `vercel.json` 与 nginx snippet 增加 CSP，强制 `worker-src 'self'`；新增部署配置测试 | `cfee896` |
 | **D4 e2e** | KML 查看器（上传/图层树/显隐/测距/采点）与 Geocode（CSV/XLSX 导入 + Worker 断言） | `e8554ff` |
-| **D5** | `SheetTemplatePage.vue` 3484 → **1161 行**；样式抽 `SheetTemplatePage.css`，逻辑拆 `useSheetEditor` / `useSheetGrid` / `useSheetExport` / `useSheetStatus` / `sheetTemplateUi`；新增页面 e2e | 分支 `8ce26e1`（待合并） |
+| **D5** | `SheetTemplatePage.vue` 3484 → **1161 行**；样式抽 `SheetTemplatePage.css`，逻辑拆 `useSheetEditor` / `useSheetGrid` / `useSheetExport` / `useSheetStatus` / `sheetTemplateUi`；新增页面 e2e | 分支 `8ce26e1`（已合并） |
+
+### 2026-11-09 · room_layout MVP（提交 `743a20c`）
+
+依据 [`../docs/2026-11-09-room-layout-mvp.md`](../docs/2026-11-09-room-layout-mvp.md)。
+
+- 矩形/L 形房间、横向机柜列、电源/电池/空调、柱网、馈线窗；
+- 主干 + 分支走线架，AC/DC/光纤/信号四类曼哈顿束路由；
+- 多起点模拟退火，输出 Top 3；同 seed 可复现；
+- 分层 SVG / PNG / JSON 导出；
+- 新增 5 条生成器单测 + 1 条 Playwright e2e；
+- 全量测试 **963 passed / 78 files**。
 
 ---
 
@@ -293,9 +304,9 @@
 | # | 编号 | 问题 | 需要什么 | 状态 |
 |---|---|---|---|---|
 | E1 | P2-16 | `vercel.json` 裸 IP + 明文 HTTP 传输评论 PII | Vercel 控制台 | ⬜ |
-| E2 | P1-8 | README 写"无需后端"，实际 6 处 `/api/*` 调用。**主标语已被工作区那版重写解决**，仍缺「哪些功能依赖后端 + 后端不可用时的降级行为」章节 | 文档更新 | ◐ 部分 |
+| E2 | P1-8 | README 写"无需后端"，实际 6 处 `/api/*` 调用。**主标语已被工作区那版重写解决**，仍缺「哪些功能依赖后端 + 后端不可用时的降级行为」章节 | 文档更新 | ✅ 已补：README「隐私边界」列明可选 `/api` 功能与遮蔽方式 |
 | E3 | — | 浏览量双计（`router:85` + `DlsComment:332`） | 决定保留哪一端 | ✅ `5d761a5`（保留 router） |
-| E4 | — | lefthook 未装，git hook 从未生效。**现象复核（2026-10-15）**：D3/D1 共 6 次提交，每次都打印 `Can't find lefthook in PATH`（与 stage2 计划 §六.3 记录一致）——钩子确实从未跑过 | 确认是否故意 | ⬜ |
+| E4 | — | lefthook 未装，git hook 从未生效。**现象复核（2026-10-15）**：D3/D1 共 6 次提交，每次都打印 `Can't find lefthook in PATH`（与 stage2 计划 §六.3 记录一致）——钩子确实从未跑过 | 确认是否故意 | ✅ 关闭：仓库已无 lefthook 配置，属过期项 |
 
 ### F 档 · C4 期间新发现（2026-10-12）
 
