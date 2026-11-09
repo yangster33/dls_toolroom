@@ -36,7 +36,7 @@ type SymbolSizeFn = (value: unknown, params?: unknown) => number
 
 function getSymbolSize(option: EChartsOption | null): SymbolSizeFn {
   expect(option).not.toBeNull()
-  const series = (option?.series as { symbolSize?: unknown }[])[0]
+  const series = (option!.series as { symbolSize?: unknown }[])[0]
   expect(typeof series?.symbolSize).toBe('function')
   return series?.symbolSize as SymbolSizeFn
 }
