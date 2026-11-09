@@ -293,7 +293,7 @@ export function buildCalculationSteps(
       { symbol: 'Iz', name: '校正载流量', value: formatNumber(iz, 1), unit: 'A' },
     ],
     pass: result.totalAmpacityA >= result.ampacityDesignCurrentA - 1e-6,
-    note: `所选截面 ${formatSection(section)} mm²，基准载流量 ${formatNumber(result.baseAmpacityA, 1)} A/根。`,
+    note: `所选截面 ${formatSection(section)} mm²，基准载流量 ${formatNumber(result.baseAmpacityA, 1)} A/根；载流量裕度 ${formatNumber(result.ampacityMarginPercent, 1)}%。`,
   })
 
   // ⑤ 电压降
@@ -383,7 +383,7 @@ export function buildCalculationSteps(
       },
     ],
     pass: section * n >= result.shortCircuitMinSection - 1e-6,
-    note: 'k 按导体/绝缘取值：铜/PVC 115、铜/XLPE 143、铝/PVC 76、铝/XLPE 94。',
+    note: `热稳定耐受 ${formatNumber(result.shortCircuitWithstandKa, 1)} kA；k 按导体/绝缘取值：铜/PVC 115、铜/XLPE 143、铝/PVC 76、铝/XLPE 94。`,
   })
 
   // ⑦ 保护配合
@@ -422,19 +422,6 @@ export function buildCalculationSteps(
     ],
     pass: result.protectionPass,
     note: `保护电器：${protectionLabel(input.protectionDevice)}。`,
-  })
-
-  // ⑧ 结论
-  steps.push({
-    key: 'conclusion',
-    index: 8,
-    title: '结论',
-    formula: 'S = max(S_载流量, S_电压降, S_热稳定, S_机械强度, S_保护配合)',
-    substitution: `控制项：${result.drivers.join(' / ') || '—'}`,
-    result: `S = ${formatSection(section)} mm²；${result.cableLabel}`,
-    symbols: [{ symbol: 'S', name: '推荐截面', value: formatSection(section), unit: 'mm²' }],
-    pass: result.overallPass,
-    note: result.overallPass ? '各项校核通过。' : '存在未通过项，当前方案需调整。',
   })
 
   return steps

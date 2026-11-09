@@ -1,5 +1,5 @@
 <template>
-  <div class="tool-detail-view h-full">
+  <div class="tool-detail-view h-full" :class="`tool-detail-${toolId}`">
     <div v-if="tool" class="tool-content">
       <DlsMainLayout
         v-if="toolComponent"
@@ -159,6 +159,11 @@ const toolNav = computed(() => {
 <style scoped>
 .tool-detail-view {
   overflow-y: auto;
+}
+
+/* 电缆选型页用 window 滚动 + sticky 速览条，避免内部滚动容器吞掉 sticky */
+.tool-detail-cable_sizing {
+  overflow-y: visible;
 }
 
 .tool-content {

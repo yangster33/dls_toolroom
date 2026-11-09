@@ -451,96 +451,17 @@
       </div>
 
       <aside class="output-column">
-        <div v-if="result" class="verdict" :class="result.overallPass ? 'is-pass' : 'is-review'">
-          <div class="verdict-top">
-            <span class="verdict-kicker">推荐方案 / PRELIMINARY</span>
-            <span class="verdict-stamp">{{ result.overallPass ? 'PASS' : 'REVIEW' }}</span>
-          </div>
-
-          <div class="verdict-main">
-            <span class="verdict-section">{{ formatSection(result.selectedSection) }}</span>
-            <span class="verdict-unit">mm² / 相</span>
-          </div>
-
-          <p class="verdict-spec">{{ result.cableLabel }}</p>
-          <p class="verdict-sub">
-            {{ result.parallelCables > 1 ? `${result.parallelCables} 根/相并联` : '单根敷设' }} · 由
-            {{ result.drivers.join(' / ') }} 控制
-          </p>
-
-          <p class="verdict-why">{{ verdictWhy }}</p>
-
-          <div class="verdict-metrics">
-            <div>
-              <span>计算电流</span>
-              <strong>{{ result.designCurrentA.toFixed(1) }} A</strong>
-            </div>
-            <div>
-              <span>校正载流量</span>
-              <strong>{{ result.totalAmpacityA.toFixed(1) }} A</strong>
-            </div>
-            <div>
-              <span>电压降</span>
-              <strong>{{ result.voltageDropPercent.toFixed(2) }} %</strong>
-            </div>
-            <div>
-              <span>热稳定最小截面</span>
-              <strong>{{ formatSection(result.shortCircuitMinSection) }} mm²</strong>
-            </div>
-            <div>
-              <span>载流量裕度</span>
-              <strong>{{ result.ampacityMarginPercent.toFixed(1) }} %</strong>
-            </div>
-            <div>
-              <span>热稳定耐受</span>
-              <strong>{{ result.shortCircuitWithstandKa.toFixed(1) }} kA</strong>
-            </div>
-          </div>
+        <div v-if="result" class="result-strip">
+          <span class="strip-section">{{ formatSection(result.selectedSection) }} mm² / 相</span>
+          <span class="check-status" :class="result.overallPass ? 'is-pass' : 'is-fail'">
+            {{ result.overallPass ? 'PASS' : 'REVIEW' }}
+          </span>
+          <span class="strip-driver">由 {{ result.drivers.join(' / ') }} 控制</span>
+          <a class="strip-link" href="#verdict">跳到结论 ↓</a>
         </div>
 
-        <div v-else class="panel empty-result">
-          <PhWarningCircle aria-hidden="true" />
-          <p>请输入有效的系统电压、负荷功率或电流、线路长度后查看选型结果。</p>
-        </div>
-
-        <div v-if="result" class="panel check-panel">
-          <div class="panel-head compact">
-            <span class="panel-no">✓</span>
-            <h2>校核明细</h2>
-            <span class="panel-hint">取最大约束</span>
-          </div>
-
-          <div class="table-wrap">
-            <table class="check-table">
-              <thead>
-                <tr>
-                  <th>项目</th>
-                  <th>要求</th>
-                  <th>实际</th>
-                  <th>结论</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="check in result.checks" :key="check.key">
-                  <td>
-                    <span class="check-label">{{ check.label }}</span>
-                    <span class="check-note">{{ check.note }}</span>
-                  </td>
-                  <td class="readout">{{ check.required }}</td>
-                  <td class="readout">{{ check.actual }}</td>
-                  <td>
-                    <span class="check-status" :class="check.pass ? 'is-pass' : 'is-fail'">
-                      {{ check.pass ? '通过' : '不通过' }}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <details v-if="result" class="panel calc-panel" open>
-          <summary>计算书（逐步推导）</summary>
+        <details v-if="result" class="panel calc-panel">
+          <summary>计算书（7 步，点击展开）</summary>
 
           <div class="calc-book">
             <article
@@ -591,6 +512,55 @@
           </div>
         </details>
 
+        <div
+          v-if="result"
+          id="verdict"
+          class="verdict"
+          :class="result.overallPass ? 'is-pass' : 'is-review'"
+        >
+          <div class="verdict-top">
+            <span class="verdict-kicker">推荐方案 / PRELIMINARY</span>
+            <span class="verdict-stamp">{{ result.overallPass ? 'PASS' : 'REVIEW' }}</span>
+          </div>
+
+          <div class="verdict-main">
+            <span class="verdict-section">{{ formatSection(result.selectedSection) }}</span>
+            <span class="verdict-unit">mm² / 相</span>
+          </div>
+
+          <p class="verdict-spec">{{ result.cableLabel }}</p>
+          <p class="verdict-sub">
+            {{ result.parallelCables > 1 ? `${result.parallelCables} 根/相并联` : '单根敷设' }} · 由
+            {{ result.drivers.join(' / ') }} 控制
+          </p>
+
+          <p class="verdict-why">{{ verdictWhy }}</p>
+
+          <div class="verdict-metrics">
+            <div>
+              <span>计算电流</span>
+              <strong>{{ result.designCurrentA.toFixed(1) }} A</strong>
+            </div>
+            <div>
+              <span>校正载流量</span>
+              <strong>{{ result.totalAmpacityA.toFixed(1) }} A</strong>
+            </div>
+            <div>
+              <span>电压降</span>
+              <strong>{{ result.voltageDropPercent.toFixed(2) }} %</strong>
+            </div>
+            <div>
+              <span>热稳定最小截面</span>
+              <strong>{{ formatSection(result.shortCircuitMinSection) }} mm²</strong>
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="panel empty-result">
+          <PhWarningCircle aria-hidden="true" />
+          <p>请输入有效的系统电压、负荷功率或电流、线路长度后查看选型结果。</p>
+        </div>
+
         <div v-if="result && result.warnings.length" class="warning-box">
           <p class="warning-title">
             <PhWarningCircle weight="fill" aria-hidden="true" />
@@ -599,6 +569,42 @@
           <ul>
             <li v-for="(warning, index) in result.warnings" :key="index">{{ warning }}</li>
           </ul>
+        </div>
+
+        <div v-if="result" class="panel check-panel">
+          <div class="panel-head compact">
+            <span class="panel-no">✓</span>
+            <h2>校核明细</h2>
+            <span class="panel-hint">取最大约束</span>
+          </div>
+
+          <div class="table-wrap">
+            <table class="check-table">
+              <thead>
+                <tr>
+                  <th>项目</th>
+                  <th>要求</th>
+                  <th>实际</th>
+                  <th>结论</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="check in result.checks" :key="check.key">
+                  <td>
+                    <span class="check-label">{{ check.label }}</span>
+                    <span class="check-note">{{ check.note }}</span>
+                  </td>
+                  <td class="readout">{{ check.required }}</td>
+                  <td class="readout">{{ check.actual }}</td>
+                  <td>
+                    <span class="check-status" :class="check.pass ? 'is-pass' : 'is-fail'">
+                      {{ check.pass ? '通过' : '不通过' }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <details class="panel source-panel">
@@ -1032,6 +1038,47 @@ async function copyReport() {
   color: var(--color-primary);
   background-color: color-mix(in oklab, var(--color-primary) 8%, var(--color-base-100));
   box-shadow: inset 0 -2px 0 var(--color-primary);
+}
+
+.result-strip {
+  position: sticky;
+  top: 4.5rem;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-base-300);
+  background-color: var(--color-base-100);
+  box-shadow: 0 2px 6px color-mix(in oklab, var(--color-base-content) 8%, transparent);
+}
+
+.strip-section {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.strip-driver {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.strip-link {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--color-primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.strip-link:hover {
+  text-decoration: underline;
+}
+
+#verdict {
+  scroll-margin-top: 8rem;
 }
 
 .verdict {

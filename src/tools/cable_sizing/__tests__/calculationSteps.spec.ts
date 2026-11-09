@@ -17,7 +17,7 @@ describe('buildCalculationSteps', () => {
   it('默认三相工况生成八步，并包含关键代入值', () => {
     const { steps } = stepsFor()
 
-    expect(steps).toHaveLength(8)
+    expect(steps).toHaveLength(7)
     expect(steps.map((step) => step.key)).toEqual([
       'load',
       'current',
@@ -26,15 +26,15 @@ describe('buildCalculationSteps', () => {
       'voltage-drop',
       'thermal',
       'protection',
-      'conclusion',
     ])
     expect(steps[0]?.substitution).toContain('30.00 × 0.80')
     expect(steps[1]?.formula).toContain('√3')
     expect(steps[3]?.substitution).toContain('89.0')
     expect(steps[3]?.result).toContain('85.4')
+    expect(steps[3]?.note).toContain('裕度')
     expect(steps[5]?.substitution).toContain('13.27')
+    expect(steps[5]?.note).toContain('耐受')
     expect(steps[6]?.pass).toBe(true)
-    expect(steps[7]?.result).toContain('16')
   })
 
   it('单相不出现 √3', () => {
