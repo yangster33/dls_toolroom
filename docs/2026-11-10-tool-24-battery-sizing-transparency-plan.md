@@ -2,7 +2,7 @@
 
 > 分支：`maint/tool-24-battery-sizing`
 > 日期：2026-11-10
-> 状态：待实施
+> 状态：已实施（2026-11-10，提交见 §13）
 > 范围：只改展示层与数据描述，不改电池容量计算模型
 
 ## 1. 现状
@@ -76,16 +76,22 @@ endVoltage = seriesCells × endVoltagePerCell
 - 锂电：
   - `DOD`、`SOH`、`tempDerating` 由输入/厂家数据；
   - `Kt` 为温度降额。
-- 关键值：`Kt = 1.05`、`K = 0.42`、`α = 0.006`；
+- 关键值：`Kt = 1.000`、`η_ah = 0.42`、`α = 0.01`；
 - 来源：`查表 / 输入 / 厂家数据`。
+- 修正（实施时）：`K` 是设计余量，容量系数写作 `η_ah`，避免与 `K` 混用；容量系数是**直接输入**，
+  计算书只给出查表建议值并在偏差 > 0.02 时提示方向（见 §13）。
 
 ### ⑤ 所需容量
 
 铅酸（安时法）：
 
 ```text
-Q = K × I × T / (Kt × temperatureFactor)
+Q = K × I × T / (η_ah × Kt)        Kt = 1 + α × (t − 25)
 ```
+
+> 修正（实施时）：原稿写成 `Q = K × I × T / (Kt × temperatureFactor)`，把温度算了两遍；
+> 实际引擎为 `Q = K·I·T / (η_ah·Kt)`（`batterySizing.ts`）。其中 `K` 是设计余量
+> `designMargin`（1.25），`η_ah` 是容量系数 `capacityCoefficient`（0.42），两者不是同一个量。
 
 锂电（能量法）：
 
@@ -175,6 +181,11 @@ K = 0.42（查表，备电 2h）
 - 容量由 `requiredAh`、`minAhByCRate`、`powerCheck`、`parallel` 中的最大约束决定；
 - 在 `BatterySizingResult` 增加 `drivers: string[]`，例如 `['安时容量']`、`['放电倍率']`、`['恒功率']`；
 - 校核卡用 `drivers.includes(label)` 标记“控制”。
+
+> 修正（实施时）：`powerCheck` 与 `parallel` 不决定容量——铅酸容量只由安时法结果决定，并联组数是
+> 派生值，恒功率只做校核；锂电只取 `max(Q, Q_min,C)`。故 `drivers` 实际只有 `['安时容量']`、
+> `['能量容量']`、`['放电倍率']` 三种取值，否则控制标记会误导。温度降额行只对锂电存在，
+> 铅酸的温度影响折进 `Kt`，由「容量系数 / 温度」行表达。
 
 ## 6. 来源与数据
 
@@ -270,3 +281,35 @@ export interface BatteryCheckDetail {
 - 容量系数、α、温度降额依赖电池厂家数据，内置表只能作初选；
 - 铅酸与锂电公式不同，计算书必须按类型分支显示，避免把锂电的 DOD/SOH 套到铅酸；
 - 多组并联的均流、保护选择性不在本工具范围，结果页要明确。
+
+## 13. 实施记录（2026-11-10）
+
+分支 `maint/tool-24-battery-sizing`。实施前先 `git rebase master`：分支原先切在 `9f37ec1`，落后 17 个
+提交（工具 23 的计算书/可追溯改造），`CalcSymbol`、`CheckDetail`、`ParameterDoc` 等当时都不存在。
+
+| # | 提交 | 内容 |
+|---|---|---|
+| 1 | `b91354e` | 结果增加 `drivers` 与 `endVoltagePerCellActual`；导出容量系数表、标准序列上限、终止电压范围；新增 `traceability.ts` |
+| 2 | `711b9a8` | 新增 `calculationSteps.ts`（铅酸 8 步 / 锂电 6 步 + 参数说明）与 `checkDetails.ts`（铅酸 5 条 / 锂电 3 条） |
+| 3 | `1bca474` | 页面：吸顶速览、折叠计算书、校核卡、参数说明、符号联动；`ToolDetailView` 为 `battery_sizing` 打开 window 滚动 |
+| 4 | `8018615` | 三个 spec：`batterySizing` 14 条、`calculationSteps` 11 条、`checkDetails` 8 条 |
+
+决策：
+
+1. 容量系数只读提示，不改计算模型：`η_ah` 仍是直接输入，计算书按备电时长给典型表建议值
+   （复用 `capacityCoefficientForHours`），偏差 > 0.02 时提示方向。
+2. 计算书默认折叠；1440×900 首屏为速览条 + 结论卡 + 校核摘要。
+3. 样式先按工具 23 复制（约 400 行 scoped CSS），公共抽取留到工具 25 开工时统一处理。
+
+与计划的差异：
+
+- 铅酸公式改为 `Q = K·I·T / (η_ah·Kt)`，不再重复计入温度；
+- `drivers` 只保留真实控制项（安时容量 / 能量容量 / 放电倍率），未采用计划里的四候选最大约束；
+- 「温度降额」校核只对锂电存在；铅酸用新增的「容量系数 / 温度」行表达 α 与 Kt；
+- 终止电压显示改用限幅后的 `endVoltagePerCellActual`；旧页面显示 `form` 原值，输入 2.0 V 时会与计算不一致。
+
+验证：`type-check`、`lint:check`、`test:unit`（1036 passed / 84 files）、`build-only` 全绿；1440×900 截图
+确认速览吸顶、计算书折叠/展开、校核卡跳转与锂电 6 步分支。
+
+未做（沿用 §11）：不改容量模型；不做多厂家电池库；不做接线/熔断器选型；不做在线 SOH 评估。
+
