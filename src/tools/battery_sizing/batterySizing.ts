@@ -65,6 +65,8 @@ export interface BatterySizingResult {
   configuredAh: number
   configuredEnergyKwh: number
   estimatedRuntimeMinutes: number
+  /** 参与计算的单体终止电压（已限幅到 1.5~1.9 V） */
+  endVoltagePerCellActual: number
   alpha: number
   temperatureFactor: number
   capacityCoefficient: number
@@ -75,18 +77,20 @@ export interface BatterySizingResult {
   requiredEnergyKwh: number
   cRate: number
   minAhByCRate: number
+  /** 控制容量结果的约束，如 ['安时容量']、['放电倍率'] */
+  drivers: string[]
   checks: CheckResult[]
   warnings: string[]
   overallPass: boolean
 }
 
 export const STANDARD_AH: ReadonlyArray<number> = [
-  7, 9, 12, 17, 24, 26, 33, 38, 40, 50, 55, 65, 75, 80, 90, 100, 120, 134, 150, 200, 230, 250,
-  280, 300, 314, 400, 500, 600, 800, 1000, 1200, 1500, 2000, 3000,
+  7, 9, 12, 17, 24, 26, 33, 38, 40, 50, 55, 65, 75, 80, 90, 100, 120, 134, 150, 200, 230, 250, 280,
+  300, 314, 400, 500, 600, 800, 1000, 1200, 1500, 2000, 3000,
 ]
 
 /** 常用 VRLA 放电容量系数的典型值（10h 额定容量为 1.0），正式设计请查标准表/厂家表。 */
-const CAPACITY_COEFFICIENT_TABLE: ReadonlyArray<readonly [number, number]> = [
+export const CAPACITY_COEFFICIENT_TABLE: ReadonlyArray<readonly [number, number]> = [
   [0.5, 0.42],
   [1, 0.52],
   [2, 0.61],
@@ -98,7 +102,14 @@ const CAPACITY_COEFFICIENT_TABLE: ReadonlyArray<readonly [number, number]> = [
   [10, 1.0],
 ]
 
-const MAX_UNIT_AH = 1000
+export const MAX_UNIT_AH = 1000
+
+/** 单体终止电压的允许范围（V/单体），超出按边界取值。 */
+export const END_VOLTAGE_PER_CELL_MIN = 1.5
+export const END_VOLTAGE_PER_CELL_MAX = 1.9
+
+/** 12 V 电池块内含的 2 V 单体数。 */
+export const CELLS_PER_12V_UNIT = 6
 
 export function createDefaultInput(): BatterySizingInput {
   return {
@@ -200,14 +211,19 @@ export function calculateBatterySizing(input: BatterySizingInput): BatterySizing
   let seriesUnits = 0
   let seriesCells = 0
   let endVoltageActual = 0
+  let endVoltagePerCellActual = 0
 
   if (isLeadAcid) {
     const cellVoltage = input.cellVoltage === 2 ? 2 : 12
     seriesUnits = Math.max(1, Math.round(dcVoltage / cellVoltage))
     dcVoltageActual = seriesUnits * cellVoltage
-    seriesCells = seriesUnits * (cellVoltage === 12 ? 6 : 1)
-    endVoltageActual =
-      seriesCells * clamp(Number(input.endVoltagePerCell) || 1.75, 1.5, 1.9)
+    seriesCells = seriesUnits * (cellVoltage === 12 ? CELLS_PER_12V_UNIT : 1)
+    endVoltagePerCellActual = clamp(
+      Number(input.endVoltagePerCell) || 1.75,
+      END_VOLTAGE_PER_CELL_MIN,
+      END_VOLTAGE_PER_CELL_MAX,
+    )
+    endVoltageActual = seriesCells * endVoltagePerCellActual
     if (seriesUnits < 1) return null
   }
 
@@ -230,6 +246,7 @@ export function calculateBatterySizing(input: BatterySizingInput): BatterySizing
   let requiredEnergyKwh = 0
   let cRate = 0
   let minAhByCRate = 0
+  const drivers: string[] = []
   const checks: CheckResult[] = []
 
   if (isLeadAcid) {
@@ -238,12 +255,12 @@ export function calculateBatterySizing(input: BatterySizingInput): BatterySizing
     capacityCoefficient = clamp(Number(input.capacityCoefficient), 0.1, 1.2)
 
     requiredAh =
-      (designMargin * dischargeCurrentA * backupHours) /
-      (capacityCoefficient * temperatureFactor)
+      (designMargin * dischargeCurrentA * backupHours) / (capacityCoefficient * temperatureFactor)
 
     parallelStrings = Math.max(1, Math.ceil(requiredAh / MAX_UNIT_AH))
     unitAh = nextStandardAh(requiredAh / parallelStrings)
     configuredAh = unitAh * parallelStrings
+    cRate = configuredAh > 0 ? dischargeCurrentA / configuredAh : 0
 
     requiredWPerCell =
       (loadPowerKw * 1000 * designMargin) / (seriesCells * efficiency * lineEfficiency)
@@ -253,13 +270,16 @@ export function calculateBatterySizing(input: BatterySizingInput): BatterySizing
     estimatedRuntimeMinutes =
       requiredAh > 0 ? backupMinutes * (configuredAh / requiredAh) : backupMinutes
 
+    // 铅酸：容量只由安时法结果决定；并联组数是派生值，恒功率只做校核。
+    drivers.push('安时容量')
+
     checks.push({
       key: 'capacity',
       label: '安时容量',
       required: `Q ≥ ${formatNumber(requiredAh, 1)} Ah`,
       actual: `${formatNumber(configuredAh, 0)} Ah（${formatNumber(unitAh, 0)} Ah × ${parallelStrings} 组）`,
       pass: configuredAh >= requiredAh - 1e-6,
-      note: `K=${formatNumber(designMargin, 2)}，η=${formatNumber(capacityCoefficient, 2)}，kt=${formatNumber(temperatureFactor, 2)}`,
+      note: `K=${formatNumber(designMargin, 2)}（设计余量），η=${formatNumber(capacityCoefficient, 2)}（容量系数），Kt=${formatNumber(temperatureFactor, 2)}（温度）`,
     })
 
     checks.push({
@@ -274,8 +294,11 @@ export function calculateBatterySizing(input: BatterySizingInput): BatterySizing
     checks.push({
       key: 'voltage',
       label: '终止电压',
-      required: dcMinVoltage > 0 ? `≥ UPS 最低直流输入 ${formatNumber(dcMinVoltage, 0)} V` : '未设置最低直流输入',
-      actual: `${formatNumber(endVoltageActual, 0)} V（${formatNumber(input.endVoltagePerCell, 2)} V/单体）`,
+      required:
+        dcMinVoltage > 0
+          ? `≥ UPS 最低直流输入 ${formatNumber(dcMinVoltage, 0)} V`
+          : '未设置最低直流输入',
+      actual: `${formatNumber(endVoltageActual, 0)} V（${formatNumber(endVoltagePerCellActual, 2)} V/单体）`,
       pass: dcMinVoltage <= 0 || endVoltageActual >= dcMinVoltage - 1e-6,
       note: '按电池组终止电压与 UPS 直流输入下限比较',
     })
@@ -301,7 +324,9 @@ export function calculateBatterySizing(input: BatterySizingInput): BatterySizing
       )
     }
     if (manufacturerWPerCell <= 0) {
-      warnings.push('未输入厂家 W/单体，当前结果仅为安时法初选；正式选型应查对应备电时长和终止电压的恒功率表。')
+      warnings.push(
+        '未输入厂家 W/单体，当前结果仅为安时法初选；正式选型应查对应备电时长和终止电压的恒功率表。',
+      )
     }
     if (ambientTempC < 5) {
       warnings.push(
@@ -346,6 +371,9 @@ export function calculateBatterySizing(input: BatterySizingInput): BatterySizing
       (configuredEnergyKwh * dod * soh * tempDerating * efficiency * lineEfficiency * 60) /
       loadPowerKw
 
+    // 锂电：容量取能量法与倍率下限的较大者。
+    drivers.push(minAhByCRate > requiredAh ? '放电倍率' : '能量容量')
+
     checks.push({
       key: 'energy',
       label: '能量容量',
@@ -373,7 +401,9 @@ export function calculateBatterySizing(input: BatterySizingInput): BatterySizing
       note: '低温容量下降；高温加速老化并增加热失控风险',
     })
 
-    warnings.push('锂电按能量法计算，不能套用铅酸温度系数 α；最终容量应以厂家放电曲线和 BMS 限值为准。')
+    warnings.push(
+      '锂电按能量法计算，不能套用铅酸温度系数 α；最终容量应以厂家放电曲线和 BMS 限值为准。',
+    )
     if (ambientTempC < 0) {
       warnings.push('环境温度低于 0 ℃，多数锂电禁止充电，需配置加热或降低充电电流。')
     }
@@ -412,6 +442,7 @@ export function calculateBatterySizing(input: BatterySizingInput): BatterySizing
     configuredAh,
     configuredEnergyKwh,
     estimatedRuntimeMinutes,
+    endVoltagePerCellActual,
     alpha,
     temperatureFactor,
     capacityCoefficient,
@@ -422,6 +453,7 @@ export function calculateBatterySizing(input: BatterySizingInput): BatterySizing
     requiredEnergyKwh,
     cRate,
     minAhByCRate,
+    drivers,
     checks,
     warnings,
     overallPass,
