@@ -6,13 +6,15 @@
     </span>
     <span class="unit-field-control">
       <input
-        v-model.number="model"
+        :value="text"
         type="number"
         class="input input-bordered input-sm w-full readout"
         :min="min"
         :max="max"
         :step="step ?? 'any'"
         :disabled="disabled"
+        @input="handleInput"
+        @blur="handleBlur"
       />
       <span v-if="unit" class="unit-field-unit">{{ unit }}</span>
     </span>
@@ -20,6 +22,8 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue'
+
 const model = defineModel<number>({ required: true })
 
 withDefaults(
@@ -41,6 +45,41 @@ withDefaults(
     disabled: false,
   },
 )
+
+/**
+ * 输入框显示值与模型解耦：清空输入框时不把空字符串写进模型。
+ * 否则计算层 `Number('')` 会得到 0，短路电流被清空会变成 0 kA、热稳定直接判“通过”。
+ * 失焦时若仍为空，回填模型里的上一次有效值（刚打开页面时就是默认值）。
+ */
+const text = ref(formatValue(model.value))
+
+watch(
+  () => model.value,
+  (value) => {
+    const next = formatValue(value)
+    if (text.value === '' || Number(next) !== Number(text.value)) text.value = next
+  },
+)
+
+function formatValue(value: number | null | undefined): string {
+  return value === null || value === undefined ? '' : String(value)
+}
+
+function handleInput(event: Event) {
+  const input = event.target as HTMLInputElement
+  text.value = input.value
+  if (input.value === '') return
+  const value = Number(input.value)
+  if (!Number.isFinite(value)) return
+  model.value = value
+}
+
+function handleBlur(event: Event) {
+  if (text.value !== '') return
+  const input = event.target as HTMLInputElement
+  text.value = formatValue(model.value)
+  input.value = text.value
+}
 </script>
 
 <style scoped>

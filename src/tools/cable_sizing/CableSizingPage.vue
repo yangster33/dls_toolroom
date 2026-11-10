@@ -139,7 +139,7 @@
               unit="kW"
               :min="0"
               :step="0.1"
-              hint="设备额定有功功率"
+              hint="电机为轴功率"
             />
             <UnitField
               v-else
@@ -186,7 +186,7 @@
               :min="0.1"
               :max="1"
               :step="0.01"
-              hint="电机 / 电源效率"
+              hint="P 为轴功率时填，否则 1.00"
             />
 
             <UnitField
@@ -198,7 +198,7 @@
               :min="0.1"
               :max="1"
               :step="0.05"
-              hint="满载取 1.00"
+              hint="单台 / 单回路取 1.00"
             />
           </div>
         </section>
@@ -614,7 +614,7 @@
               :id="`calc-${step.key}`"
               :key="step.key"
               class="calc-step"
-              :class="{ 'is-fail': step.pass === false, 'is-controlling': step.controlling }"
+              :class="{ 'is-fail': step.pass === false }"
             >
               <summary class="calc-step-head">
                 <span class="calc-step-no">{{ step.index }}</span>
@@ -741,7 +741,7 @@
               v-for="check in checkDetails"
               :key="check.key"
               class="check-item"
-              :class="{ 'is-fail': !check.pass, 'is-controlling': check.controlling }"
+              :class="{ 'is-fail': !check.pass }"
             >
               <summary class="check-item-head">
                 <span class="check-item-label">{{ check.label }}</span>
@@ -826,6 +826,11 @@
               短路热稳定：S ≥ Isc·√t / k；k 按铜/PVC 115、铜/XLPE 143、铝/PVC 76、铝/XLPE 94 取值。
             </li>
             <li>保护配合：MCB/MCCB 按 In ≤ Iz；熔断器 gG 按 In ≤ Iz / k3（k3 = 1.31 / 1.10）。</li>
+            <li>
+              负荷换算：Pjs = P × Kd；Kd 为用电设备组经验系数，单台设备 / 单回路线取 1.00。效率 η
+              仅用于把电机轴功率换算成输入电流，电缆选型标准（GB/T 16895.5/.6、GB 50054、GB
+              50217）不要求该参数。
+            </li>
             <li>机械强度：铜芯固定敷设最小 1.5 mm²；铝芯固定敷设最小 10 mm²。</li>
           </ul>
         </details>
@@ -1651,10 +1656,6 @@ async function copyReport() {
   background-color: color-mix(in oklab, var(--color-error) 4%, transparent);
 }
 
-.check-item.is-controlling {
-  box-shadow: inset 2px 0 0 var(--color-primary);
-}
-
 .check-item-head {
   display: flex;
   align-items: center;
@@ -1774,10 +1775,6 @@ async function copyReport() {
 
 .calc-step.is-fail {
   background-color: color-mix(in oklab, var(--color-error) 4%, transparent);
-}
-
-.calc-step.is-controlling {
-  box-shadow: inset 2px 0 0 var(--color-primary);
 }
 
 .calc-step-head {
