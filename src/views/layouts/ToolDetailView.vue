@@ -161,8 +161,9 @@ const toolNav = computed(() => {
   overflow-y: auto;
 }
 
-/* 电缆选型页用 window 滚动 + sticky 速览条，避免内部滚动容器吞掉 sticky */
-.tool-detail-cable_sizing {
+/* 电缆 / 蓄电池选型页用 window 滚动 + sticky 速览条，避免内部滚动容器吞掉 sticky */
+.tool-detail-cable_sizing,
+.tool-detail-battery_sizing {
   overflow-y: visible;
 }
 

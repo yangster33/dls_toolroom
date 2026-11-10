@@ -29,8 +29,12 @@
     <div class="notice">
       <PhInfo weight="fill" aria-hidden="true" />
       <p>
-        铅酸按 <span class="readout">GB 51194-2016</span> 安时法初选，再用厂家恒功率表复核；锂电按能量法叠加
-        DOD、SOH、温度降额与倍率校核。<span class="readout">GB 50174-2017</span>
+        铅酸按
+        <span class="readout">GB 51194-2016</span>
+        安时法初选，再用厂家恒功率表复核；锂电按能量法叠加 DOD、SOH、温度降额与倍率校核。<span
+          class="readout"
+          >GB 50174-2017</span
+        >
         只规定最少备用时间，不规定容量算法。结果用于方案初选，施工图应由注册电气工程师复核。
       </p>
     </div>
@@ -99,6 +103,8 @@
                 :min="0"
                 :step="1"
                 hint="铭牌视在功率"
+                data-symbol="S"
+                :class="{ 'is-symbol-active': isActive('S') }"
               />
               <UnitField
                 v-model="form.loadRate"
@@ -107,6 +113,8 @@
                 :max="1"
                 :step="0.05"
                 hint="0.8 = 80%"
+                data-symbol="K_load"
+                :class="{ 'is-symbol-active': isActive('K_load') }"
               />
               <UnitField
                 v-model="form.powerFactor"
@@ -115,6 +123,8 @@
                 :max="1"
                 :step="0.01"
                 hint="UPS 负载功率因数"
+                data-symbol="cosφ"
+                :class="{ 'is-symbol-active': isActive('cosφ') }"
               />
             </template>
             <UnitField
@@ -125,6 +135,8 @@
               :min="0"
               :step="0.1"
               hint="实际负载功率"
+              data-symbol="P"
+              :class="{ 'is-symbol-active': isActive('P') }"
             />
 
             <UnitField
@@ -134,6 +146,8 @@
               :min="1"
               :step="1"
               hint="UPS 电池后备时间"
+              data-symbol="T"
+              :class="{ 'is-symbol-active': isActive('T') }"
             />
             <UnitField
               v-model="form.ambientTempC"
@@ -143,6 +157,8 @@
               :max="60"
               :step="1"
               hint="按电池室最不利温度"
+              data-symbol="t"
+              :class="{ 'is-symbol-active': isActive('t') }"
             />
             <UnitField
               v-model="form.efficiency"
@@ -151,6 +167,8 @@
               :max="1"
               :step="0.01"
               hint="高频机约 0.94~0.96"
+              data-symbol="η"
+              :class="{ 'is-symbol-active': isActive('η') }"
             />
             <UnitField
               v-model="form.lineEfficiency"
@@ -159,6 +177,8 @@
               :max="1"
               :step="0.01"
               hint="直流线路与变换损耗"
+              data-symbol="η_line"
+              :class="{ 'is-symbol-active': isActive('η_line') }"
             />
           </div>
         </section>
@@ -178,6 +198,8 @@
               :min="12"
               :step="1"
               hint="UPS 直流母线电压"
+              data-symbol="U"
+              :class="{ 'is-symbol-active': isActive('U') }"
             />
             <UnitField
               v-model="form.designMargin"
@@ -186,10 +208,16 @@
               :max="2"
               :step="0.01"
               :hint="form.batteryType === 'lead-acid' ? 'GB 51194 取 1.25' : '常取 1.1~1.2'"
+              data-symbol="K"
+              :class="{ 'is-symbol-active': isActive('K') }"
             />
 
             <template v-if="form.batteryType === 'lead-acid'">
-              <label class="field">
+              <label
+                class="field"
+                data-symbol="cellVoltage"
+                :class="{ 'is-symbol-active': isActive('cellVoltage') }"
+              >
                 <span class="field-label">
                   单体规格
                   <span class="field-hint">串联单元</span>
@@ -208,6 +236,8 @@
                 :max="1.9"
                 :step="0.01"
                 hint="常取 1.75~1.80"
+                data-symbol="U_end,cell"
+                :class="{ 'is-symbol-active': isActive('U_end,cell') }"
               />
               <UnitField
                 v-model="form.dcMinVoltage"
@@ -216,6 +246,8 @@
                 :min="0"
                 :step="1"
                 hint="0 = 暂不校核"
+                data-symbol="U_min"
+                :class="{ 'is-symbol-active': isActive('U_min') }"
               />
               <UnitField
                 v-model="form.capacityCoefficient"
@@ -224,6 +256,8 @@
                 :max="1.2"
                 :step="0.01"
                 hint="0.5h≈0.42，1h≈0.52，10h≈1.0"
+                data-symbol="η_ah"
+                :class="{ 'is-symbol-active': isActive('η_ah') }"
               />
               <UnitField
                 v-model="form.manufacturerWPerCell"
@@ -232,6 +266,8 @@
                 :min="0"
                 :step="1"
                 hint="0 = 暂不校核"
+                data-symbol="W_man"
+                :class="{ 'is-symbol-active': isActive('W_man') }"
               />
               <UnitField
                 v-model="form.maxParallelStrings"
@@ -241,6 +277,8 @@
                 :max="8"
                 :step="1"
                 hint="GB 51194 建议 ≤4"
+                data-symbol="N_par"
+                :class="{ 'is-symbol-active': isActive('N_par') }"
               />
             </template>
 
@@ -252,6 +290,8 @@
                 :max="1"
                 :step="0.01"
                 hint="常取 0.8~0.9"
+                data-symbol="DOD"
+                :class="{ 'is-symbol-active': isActive('DOD') }"
               />
               <UnitField
                 v-model="form.soh"
@@ -260,6 +300,8 @@
                 :max="1"
                 :step="0.01"
                 hint="常取 0.8"
+                data-symbol="SOH"
+                :class="{ 'is-symbol-active': isActive('SOH') }"
               />
               <UnitField
                 v-model="form.tempDerating"
@@ -268,6 +310,8 @@
                 :max="2"
                 :step="0.01"
                 hint="25℃ 取 1.0，低温取大"
+                data-symbol="KT"
+                :class="{ 'is-symbol-active': isActive('KT') }"
               />
               <UnitField
                 v-model="form.maxCRate"
@@ -277,6 +321,8 @@
                 :max="10"
                 :step="0.1"
                 hint="按电芯/模组规格"
+                data-symbol="C_max"
+                :class="{ 'is-symbol-active': isActive('C_max') }"
               />
             </template>
           </div>
@@ -298,10 +344,87 @@
       </div>
 
       <aside class="output-column">
-        <div v-if="result" class="verdict" :class="result.overallPass ? 'is-pass' : 'is-review'">
+        <div v-if="result" class="result-strip">
+          <span class="strip-section">{{ result.configuredAh.toFixed(0) }} Ah</span>
+          <span class="check-status" :class="result.overallPass ? 'is-pass' : 'is-fail'">
+            {{ result.overallPass ? 'PASS' : 'REVIEW' }}
+          </span>
+          <span class="strip-driver">由 {{ result.drivers.join(' / ') }} 控制</span>
+          <a class="strip-link" href="#verdict">跳到结论 ↓</a>
+        </div>
+
+        <details v-if="result" ref="calcBookRef" class="panel calc-panel">
+          <summary>计算书（{{ calcSteps.length }} 步，点击展开）</summary>
+
+          <div class="calc-book">
+            <details
+              v-for="step in calcSteps"
+              :id="`calc-${step.key}`"
+              :key="step.key"
+              class="calc-step"
+              :class="{ 'is-fail': step.pass === false }"
+            >
+              <summary class="calc-step-head">
+                <span class="calc-step-no">{{ step.index }}</span>
+                <span class="calc-step-title">{{ step.title }}</span>
+                <span class="calc-step-key">{{ step.keyValue }}</span>
+                <span v-if="step.controlling" class="calc-step-flag">控制</span>
+                <span
+                  v-if="step.pass !== undefined"
+                  class="check-status"
+                  :class="step.pass ? 'is-pass' : 'is-fail'"
+                >
+                  {{ step.pass ? '通过' : '不通过' }}
+                </span>
+              </summary>
+
+              <div class="calc-step-body">
+                <p class="calc-formula">{{ step.formula }}</p>
+                <p class="calc-substitution">{{ step.substitution }}</p>
+                <p class="calc-result">{{ step.result }}</p>
+
+                <div v-if="step.symbols.length" class="calc-symbols">
+                  <button
+                    v-for="symbol in step.symbols"
+                    :key="`${step.key}-${symbol.symbol}`"
+                    type="button"
+                    class="symbol-chip"
+                    :class="{ 'is-symbol-active': chipActive(symbol) }"
+                    :data-symbol="symbol.inputSymbol"
+                    :title="sourceTitle(symbol)"
+                    @mouseenter="activateSymbol(symbol)"
+                    @mouseleave="activeSymbol = ''"
+                    @focus="activateSymbol(symbol)"
+                    @blur="activeSymbol = ''"
+                  >
+                    <span class="symbol-name">{{ symbol.symbol }}</span>
+                    <span class="symbol-value"
+                      >{{ symbol.value }}{{ symbol.unit ? ` ${symbol.unit}` : '' }}</span
+                    >
+                    <span class="symbol-label">{{ symbol.name }}</span>
+                    <span class="symbol-source" :class="`is-${symbol.source}`">
+                      {{ sourceLabel(symbol.source) }}
+                    </span>
+                  </button>
+                </div>
+
+                <p v-if="step.note" class="calc-step-note">{{ step.note }}</p>
+              </div>
+            </details>
+          </div>
+        </details>
+
+        <div
+          v-if="result"
+          id="verdict"
+          class="verdict"
+          :class="result.overallPass ? 'is-pass' : 'is-review'"
+        >
           <div class="verdict-top">
             <span class="verdict-kicker">
-              {{ result.batteryType === 'lead-acid' ? 'LEAD-ACID / 安时法初选' : 'LITHIUM / 能量法' }}
+              {{
+                result.batteryType === 'lead-acid' ? 'LEAD-ACID / 安时法初选' : 'LITHIUM / 能量法'
+              }}
             </span>
             <span class="verdict-stamp">{{ result.overallPass ? 'PASS' : 'REVIEW' }}</span>
           </div>
@@ -355,126 +478,73 @@
             <span class="panel-hint">CHECKS</span>
           </div>
 
-          <div class="table-wrap">
-            <table class="check-table">
-              <thead>
-                <tr>
-                  <th>项目</th>
-                  <th>要求</th>
-                  <th>实际</th>
-                  <th>结论</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="check in result.checks" :key="check.key">
-                  <td>
-                    <span class="check-label">{{ check.label }}</span>
-                    <span class="check-note">{{ check.note }}</span>
-                  </td>
-                  <td class="readout">{{ check.required }}</td>
-                  <td class="readout">{{ check.actual }}</td>
-                  <td>
-                    <span
-                      class="badge badge-sm"
-                      :class="check.pass ? 'badge-success' : 'badge-error'"
+          <div class="check-list">
+            <details
+              v-for="check in checkDetails"
+              :key="check.key"
+              class="check-item"
+              :class="{ 'is-fail': !check.pass }"
+            >
+              <summary class="check-item-head">
+                <span class="check-item-label">{{ check.label }}</span>
+                <span class="check-item-key">{{ check.keyValue }}</span>
+                <span v-if="check.controlling" class="check-item-flag">控制</span>
+                <span class="check-status" :class="check.pass ? 'is-pass' : 'is-fail'">
+                  {{ check.pass ? '通过' : '不通过' }}
+                </span>
+              </summary>
+
+              <div class="check-item-body">
+                <p class="check-formula">{{ check.formula }}</p>
+                <p class="check-substitution">{{ check.substitution }}</p>
+                <p class="check-line">
+                  <span class="check-line-label">要求</span>{{ check.required }}
+                </p>
+                <p class="check-line">
+                  <span class="check-line-label">实际</span>{{ check.actual }}
+                </p>
+                <p class="check-line">
+                  <span class="check-line-label">裕度</span>{{ check.margin }}
+                </p>
+
+                <div v-if="check.symbols.length" class="calc-symbols">
+                  <button
+                    v-for="symbol in check.symbols"
+                    :key="`${check.key}-${symbol.symbol}`"
+                    type="button"
+                    class="symbol-chip"
+                    :class="{ 'is-symbol-active': chipActive(symbol) }"
+                    :data-symbol="symbol.inputSymbol"
+                    :title="sourceTitle(symbol)"
+                    @mouseenter="activateSymbol(symbol)"
+                    @mouseleave="activeSymbol = ''"
+                    @focus="activateSymbol(symbol)"
+                    @blur="activeSymbol = ''"
+                  >
+                    <span class="symbol-name">{{ symbol.symbol }}</span>
+                    <span class="symbol-value"
+                      >{{ symbol.value }}{{ symbol.unit ? ` ${symbol.unit}` : '' }}</span
                     >
-                      {{ check.pass ? '通过' : '复核' }}
+                    <span class="symbol-label">{{ symbol.name }}</span>
+                    <span class="symbol-source" :class="`is-${symbol.source}`">
+                      {{ sourceLabel(symbol.source) }}
                     </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                  </button>
+                </div>
+
+                <p class="check-why">{{ check.why }}</p>
+                <button
+                  v-if="check.stepKey"
+                  type="button"
+                  class="check-link"
+                  @click="openCalcStep(check.stepKey)"
+                >
+                  查看计算书 {{ check.stepLabel }}
+                </button>
+              </div>
+            </details>
           </div>
         </div>
-
-        <details v-if="result" class="panel calc-panel" open>
-          <summary>计算过程</summary>
-          <dl class="calc-list">
-            <template v-if="result.batteryType === 'lead-acid'">
-              <div>
-                <dt>计算负荷</dt>
-                <dd class="readout">P = {{ result.loadPowerKw.toFixed(2) }} kW</dd>
-              </div>
-              <div>
-                <dt>放电电流</dt>
-                <dd class="readout">
-                  I = P×1000 / (U×η×η线) = {{ result.dischargeCurrentA.toFixed(2) }} A
-                </dd>
-              </div>
-              <div>
-                <dt>温度修正</dt>
-                <dd class="readout">
-                  α = {{ result.alpha }}，kt = 1+α(t−25) = {{ result.temperatureFactor.toFixed(3) }}
-                </dd>
-              </div>
-              <div>
-                <dt>安时法容量</dt>
-                <dd class="readout">
-                  Q = K·I·T / (η·kt) = {{ result.requiredAh.toFixed(1) }} Ah
-                </dd>
-              </div>
-              <div>
-                <dt>恒功率需求</dt>
-                <dd class="readout">
-                  Pcell = P×1000×K / (N×η×η线) = {{ result.requiredWPerCell.toFixed(1) }} W/单体
-                </dd>
-              </div>
-              <div>
-                <dt>终止电压</dt>
-                <dd class="readout">
-                  Uend = {{ result.seriesCells }} × {{ form.endVoltagePerCell }} =
-                  {{ result.endVoltageActual.toFixed(0) }} V
-                </dd>
-              </div>
-              <div>
-                <dt>推荐配置</dt>
-                <dd class="readout">
-                  {{ result.unitAh.toFixed(0) }} Ah × {{ result.parallelStrings }} 组 =
-                  {{ result.configuredAh.toFixed(0) }} Ah
-                </dd>
-              </div>
-            </template>
-            <template v-else>
-              <div>
-                <dt>负载能量</dt>
-                <dd class="readout">
-                  E = P×T / (η×η线) = {{ result.baseEnergyKwh.toFixed(2) }} kWh（降额前）
-                </dd>
-              </div>
-              <div>
-                <dt>降额后能量</dt>
-                <dd class="readout">
-                  Ereq = E×K / (DOD×SOH×KT) = {{ result.requiredEnergyKwh.toFixed(2) }} kWh
-                </dd>
-              </div>
-              <div>
-                <dt>所需容量</dt>
-                <dd class="readout">
-                  Q = Ereq×1000 / U = {{ result.requiredAh.toFixed(1) }} Ah
-                </dd>
-              </div>
-              <div>
-                <dt>放电电流</dt>
-                <dd class="readout">
-                  I = P×1000 / (U×η×η线) = {{ result.dischargeCurrentA.toFixed(2) }} A
-                </dd>
-              </div>
-              <div>
-                <dt>倍率校核</dt>
-                <dd class="readout">
-                  C = I / Q = {{ result.cRate.toFixed(2) }} C；按倍率下限
-                  {{ result.minAhByCRate.toFixed(1) }} Ah
-                </dd>
-              </div>
-              <div>
-                <dt>推荐配置</dt>
-                <dd class="readout">
-                  {{ result.unitAh.toFixed(0) }} Ah · {{ result.configuredEnergyKwh.toFixed(1) }} kWh
-                </dd>
-              </div>
-            </template>
-          </dl>
-        </details>
 
         <div v-if="result && result.warnings.length" class="warning-box">
           <p class="warning-title">
@@ -489,17 +559,17 @@
         <details class="panel source-panel">
           <summary>数据与依据</summary>
           <p>
-            铅酸容量公式来自 GB 51194-2016《通信电源设备安装工程设计规范》；备用时间底线来自
-            GB 50174-2017《数据中心设计规范》附录 A。
+            铅酸容量公式来自 GB 51194-2016《通信电源设备安装工程设计规范》；备用时间底线来自 GB
+            50174-2017《数据中心设计规范》附录 A。
           </p>
           <ul>
             <li>
-              GB 50174-2017 附录 A：A 级 UPS 电池最少 15 min、B 级 7 min（柴油发电机作为后备电源时）；
-              C 级按实际需要。该标准不给出 Ah 算法。
+              GB 50174-2017 附录 A：A 级 UPS 电池最少 15 min、B 级 7
+              min（柴油发电机作为后备电源时）； C 级按实际需要。该标准不给出 Ah 算法。
             </li>
             <li>
-              GB 51194-2016：Q = K·I·T / (η·[1+α(t−25)])；K 取 1.25；α 按放电小时率取
-              0.006 / 0.008 / 0.01；UPS 电池并联组数不宜超过 4 组。
+              GB 51194-2016：Q = K·I·T / (η·[1+α(t−25)])；K 取 1.25；α 按放电小时率取 0.006 / 0.008
+              / 0.01；UPS 电池并联组数不宜超过 4 组。
             </li>
             <li>
               铅酸产品参数按 GB/T 19638.1-2014、GB/T 19638.2-2014 核对；额定容量通常按 25 ℃、10h
@@ -513,18 +583,50 @@
               GB/T 42288-2022；数据中心锂电房间：T/CABEE 056-2023（团体标准）。
             </li>
             <li>
-              温度：铅酸容量按最低环境温度修正，寿命按最高环境温度校核；锂电按厂家温度降额曲线和
-              BMS 充放电窗口，不能直接套用铅酸 α。
+              温度：铅酸容量按最低环境温度修正，寿命按最高环境温度校核；锂电按厂家温度降额曲线和 BMS
+              充放电窗口，不能直接套用铅酸 α。
             </li>
           </ul>
         </details>
       </aside>
     </div>
+
+    <details class="panel param-panel">
+      <summary>参数说明</summary>
+      <div class="table-wrap">
+        <table class="param-table">
+          <thead>
+            <tr>
+              <th>符号</th>
+              <th>名称</th>
+              <th>含义</th>
+              <th>在计算中的位置</th>
+              <th>影响方向</th>
+              <th>来源</th>
+              <th>可修改</th>
+              <th>依据</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="doc in parameterDocs" :key="doc.symbol">
+              <td class="readout">{{ doc.symbol }}</td>
+              <td>{{ doc.name }}</td>
+              <td>{{ doc.meaning }}</td>
+              <td>{{ doc.position }}</td>
+              <td>{{ doc.impact }}</td>
+              <td>{{ doc.source }}</td>
+              <td>{{ doc.editable }}</td>
+              <td>{{ doc.basis }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, nextTick, reactive, ref } from 'vue'
 import {
   PhArrowCounterClockwise,
   PhBatteryCharging,
@@ -540,6 +642,13 @@ import {
   createDefaultInput,
   type BatterySizingInput,
 } from './batterySizing'
+import {
+  buildBatterySteps,
+  buildParameterDocs,
+  type CalcSymbol,
+  type SymbolSource,
+} from './calculationSteps'
+import { buildBatteryCheckDetails } from './checkDetails'
 
 const toolConfig = getToolById('battery_sizing')
 const toast = useToast()
@@ -558,6 +667,58 @@ const specLabel = computed(() => {
   return `${value.dcVoltageActual.toFixed(0)} V 直流 · ${value.configuredEnergyKwh.toFixed(1)} kWh · ${value.cRate.toFixed(2)} C`
 })
 
+const activeSymbol = ref('')
+const parameterDocs = buildParameterDocs()
+const calcSteps = computed(() => (result.value ? buildBatterySteps({ ...form }, result.value) : []))
+const checkDetails = computed(() => {
+  const value = result.value
+  if (!value) return []
+  return buildBatteryCheckDetails({ ...form }, value)
+})
+const calcBookRef = ref<HTMLDetailsElement | null>(null)
+
+function openCalcStep(key?: string) {
+  if (!key) return
+  if (calcBookRef.value) calcBookRef.value.open = true
+  nextTick(() => {
+    const target = document.getElementById(`calc-${key}`)
+    if (target instanceof HTMLDetailsElement) target.open = true
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  })
+}
+
+function isActive(symbolName: string): boolean {
+  return activeSymbol.value === symbolName
+}
+
+function activateSymbol(symbol: CalcSymbol) {
+  activeSymbol.value = symbol.inputSymbol ?? symbol.symbol
+}
+
+function chipActive(symbol: CalcSymbol): boolean {
+  return (
+    activeSymbol.value === symbol.symbol ||
+    (symbol.inputSymbol !== undefined && activeSymbol.value === symbol.inputSymbol)
+  )
+}
+
+const SOURCE_LABELS: Record<SymbolSource, string> = {
+  input: '输入',
+  table: '查表',
+  calc: '计算',
+  constant: '常数',
+  default: '默认',
+}
+
+function sourceLabel(source: SymbolSource): string {
+  return SOURCE_LABELS[source]
+}
+
+function sourceTitle(symbol: CalcSymbol): string {
+  const detail = symbol.sourceDetail ? ` · ${symbol.sourceDetail}` : ''
+  return `${symbol.name}：${sourceLabel(symbol.source)}${detail}`
+}
+
 function resetForm() {
   Object.assign(form, createDefaultInput())
   toast.info('已恢复默认参数')
@@ -573,7 +734,9 @@ function buildReport(): string {
     `负荷：${value.loadPowerKw.toFixed(2)} kW；备电时长：${value.backupMinutes} min；环境温度：${form.ambientTempC} ℃`,
     `直流电压：${value.dcVoltageActual.toFixed(0)} V；设计余量 K：${form.designMargin}`,
     ...(value.batteryType === 'lead-acid'
-      ? [`终止电压：${value.seriesCells} × ${form.endVoltagePerCell} = ${value.endVoltageActual.toFixed(0)} V`]
+      ? [
+          `终止电压：${value.seriesCells} × ${value.endVoltagePerCellActual.toFixed(2)} = ${value.endVoltageActual.toFixed(0)} V`,
+        ]
       : []),
     `放电电流：${value.dischargeCurrentA.toFixed(2)} A`,
     `所需容量：${value.requiredAh.toFixed(1)} Ah`,
@@ -581,7 +744,15 @@ function buildReport(): string {
       ? `推荐配置：${value.unitAh.toFixed(0)} Ah × ${value.parallelStrings} 组 = ${value.configuredAh.toFixed(0)} Ah`
       : `推荐配置：${value.unitAh.toFixed(0)} Ah · ${value.configuredEnergyKwh.toFixed(1)} kWh`,
     `预估备电：${value.estimatedRuntimeMinutes.toFixed(0)} min`,
+    `控制项：${value.drivers.join(' / ') || '—'}`,
     `结论：${value.overallPass ? '各项校核通过' : '存在需要复核的项'}`,
+    '',
+    '计算书：',
+    ...calcSteps.value.flatMap((step) => [
+      `${step.index}. ${step.title}：${step.formula.replace(/\n/g, '；')}`,
+      `   代入：${step.substitution}`,
+      `   结果：${step.result}`,
+    ]),
     '',
     '校核明细：',
     ...value.checks.map(
@@ -948,45 +1119,6 @@ async function copyReport() {
   overflow-x: auto;
 }
 
-.check-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 11px;
-}
-
-.check-table th {
-  padding: 0.45rem 0.55rem;
-  font-size: 10px;
-  font-weight: 500;
-  text-align: left;
-  color: var(--text-faint);
-  border-bottom: 1px solid var(--color-base-300);
-  white-space: nowrap;
-}
-
-.check-table td {
-  padding: 0.5rem 0.55rem;
-  vertical-align: top;
-  border-bottom: 1px solid color-mix(in oklab, var(--color-base-300) 60%, transparent);
-}
-
-.check-table tr:last-child td {
-  border-bottom: 0;
-}
-
-.check-label {
-  display: block;
-  font-weight: 600;
-}
-
-.check-note {
-  display: block;
-  margin-top: 0.15rem;
-  font-size: 9.5px;
-  line-height: 1.4;
-  color: var(--text-faint);
-}
-
 .calc-panel,
 .source-panel {
   padding: 0;
@@ -1002,34 +1134,429 @@ async function copyReport() {
   background-color: var(--color-base-200);
 }
 
-.calc-list {
-  margin: 0;
-  padding: 0.3rem 0.8rem 0.7rem;
-}
-
-.calc-list div {
+.result-strip {
+  position: sticky;
+  top: 4.5rem;
+  z-index: 6;
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.8rem;
-  padding: 0.38rem 0;
-  border-bottom: 1px dashed color-mix(in oklab, var(--color-base-300) 70%, transparent);
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-base-300);
+  background-color: var(--color-base-100);
+  box-shadow: 0 2px 6px color-mix(in oklab, var(--color-base-content) 8%, transparent);
 }
 
-.calc-list div:last-child {
-  border-bottom: 0;
+.strip-section {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
-.calc-list dt {
-  flex: 0 0 auto;
-  font-size: 11px;
+.strip-driver {
+  font-size: 10px;
   color: var(--text-muted);
 }
 
-.calc-list dd {
-  margin: 0;
-  font-size: 11px;
+.strip-link {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--color-primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.strip-link:hover {
+  text-decoration: underline;
+}
+
+#verdict {
+  scroll-margin-top: 8rem;
+}
+
+.check-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.5em;
+  padding: 0.1rem 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: nowrap;
+  border: 1px solid currentColor;
+}
+
+.check-status.is-pass {
+  color: var(--color-success);
+  background-color: color-mix(in oklab, var(--color-success) 10%, var(--color-base-100));
+}
+
+.check-status.is-fail {
+  color: var(--color-error);
+  background-color: color-mix(in oklab, var(--color-error) 10%, var(--color-base-100));
+}
+
+.check-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.check-item {
+  padding: 0.55rem 0.8rem;
+  border-bottom: 1px dashed color-mix(in oklab, var(--color-base-300) 70%, transparent);
+}
+
+.check-item:last-child {
+  border-bottom: 0;
+}
+
+.check-item.is-fail {
+  background-color: color-mix(in oklab, var(--color-error) 4%, transparent);
+}
+
+.check-item-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.check-item-head::-webkit-details-marker {
+  display: none;
+}
+
+.check-item-head::before {
+  content: '▸';
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.check-item[open] > .check-item-head::before {
+  content: '▾';
+}
+
+.check-item-label {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.check-item-key {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
   text-align: right;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.check-item-flag {
+  flex: 0 0 auto;
+  padding: 0 0.25rem;
+  font-size: 9px;
+  color: var(--color-primary);
+  border: 1px solid color-mix(in oklab, var(--color-primary) 40%, transparent);
+}
+
+.check-item-head .check-status {
+  flex: 0 0 auto;
+}
+
+.check-item-body {
+  padding-top: 0.45rem;
+}
+
+.check-formula,
+.check-substitution {
+  margin: 0.3rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+}
+
+.check-formula {
+  color: var(--color-base-content);
+}
+
+.check-line {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.25rem 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.check-line-label {
+  flex: 0 0 2.5em;
+  color: var(--text-faint);
+}
+
+.check-why {
+  margin: 0.35rem 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.check-link {
+  margin-top: 0.35rem;
+  padding: 0;
+  font-size: 11px;
+  color: var(--color-primary);
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+
+.check-link:hover {
+  text-decoration: underline;
+}
+
+.calc-book {
+  display: flex;
+  flex-direction: column;
+}
+
+.calc-step {
+  padding: 0.7rem 0.8rem;
+  border-bottom: 1px dashed color-mix(in oklab, var(--color-base-300) 70%, transparent);
+}
+
+.calc-step:last-child {
+  border-bottom: 0;
+}
+
+.calc-step.is-fail {
+  background-color: color-mix(in oklab, var(--color-error) 4%, transparent);
+}
+
+.calc-step-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.calc-step-head::-webkit-details-marker {
+  display: none;
+}
+
+.calc-step-head::before {
+  content: '▸';
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.calc-step[open] > .calc-step-head::before {
+  content: '▾';
+}
+
+.calc-step-title {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.calc-step-key {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-align: right;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.calc-step-flag {
+  flex: 0 0 auto;
+  padding: 0 0.25rem;
+  font-size: 9px;
+  color: var(--color-primary);
+  border: 1px solid color-mix(in oklab, var(--color-primary) 40%, transparent);
+}
+
+.calc-step-head .check-status {
+  flex: 0 0 auto;
+}
+
+.calc-step-body {
+  padding-top: 0.5rem;
+}
+
+.calc-step-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1;
+  color: var(--color-primary);
+  border: 1px solid color-mix(in oklab, var(--color-primary) 40%, transparent);
+}
+
+.calc-formula,
+.calc-substitution,
+.calc-result {
+  margin: 0.35rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.calc-formula {
+  color: var(--text-muted);
+}
+
+.calc-substitution {
+  color: var(--text-muted);
+}
+
+.calc-result {
+  color: var(--color-base-content);
+  font-weight: 600;
+}
+
+.calc-step-note {
+  margin: 0.35rem 0 0;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+.calc-symbols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.symbol-chip {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.18rem 0.42rem;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1.4;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  background-color: var(--color-base-200);
+  border: 1px solid var(--color-base-300);
+}
+
+.symbol-chip:hover,
+.symbol-chip:focus-visible {
+  border-color: var(--color-primary);
+}
+
+.symbol-chip.is-symbol-active {
+  border-color: var(--color-primary);
+  background-color: color-mix(in oklab, var(--color-primary) 8%, var(--color-base-100));
+}
+
+.symbol-name {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.symbol-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-base-content);
+}
+
+.symbol-label {
+  color: var(--text-faint);
+}
+
+.symbol-source {
+  padding: 0 0.2rem;
+  font-size: 9px;
+  line-height: 1.4;
+  white-space: nowrap;
+  border: 1px solid currentColor;
+}
+
+.symbol-source.is-input {
+  color: var(--color-primary);
+}
+
+.symbol-source.is-table {
+  color: var(--text-muted);
+}
+
+.symbol-source.is-calc {
+  color: var(--color-success);
+}
+
+.symbol-source.is-constant {
+  color: var(--color-warning);
+}
+
+.symbol-source.is-default {
+  color: var(--text-faint);
+  border-style: dashed;
+}
+
+.param-panel {
+  margin-top: 1rem;
+}
+
+.param-panel summary {
+  padding: 0.55rem 0.8rem;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-base-300);
+  background-color: var(--color-base-200);
+}
+
+.param-table {
+  width: 100%;
+  min-width: 960px;
+  border-collapse: collapse;
+  font-size: 10.5px;
+}
+
+.param-table th,
+.param-table td {
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid color-mix(in oklab, var(--color-base-300) 60%, transparent);
+}
+
+.param-table th {
+  font-size: 9.5px;
+  font-weight: 500;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.param-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.is-symbol-active {
+  outline: 2px solid color-mix(in oklab, var(--color-primary) 70%, transparent);
+  outline-offset: 2px;
 }
 
 .warning-box {
