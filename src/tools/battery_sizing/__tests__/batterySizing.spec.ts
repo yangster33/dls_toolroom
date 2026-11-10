@@ -76,9 +76,7 @@ describe('calculateBatterySizing', () => {
   })
 
   it('锂电按能量法计算并校核倍率', () => {
-    const result = calculateBatterySizing(
-      withInput({ batteryType: 'lithium', dcVoltage: 480 }),
-    )
+    const result = calculateBatterySizing(withInput({ batteryType: 'lithium', dcVoltage: 480 }))
 
     expect(result).not.toBeNull()
     expect(result!.baseEnergyKwh).toBeCloseTo(38.28, 1)
@@ -112,9 +110,44 @@ describe('calculateBatterySizing', () => {
     expect(calculateBatterySizing(withInput({ dcVoltage: 0 }))).toBeNull()
     expect(calculateBatterySizing(withInput({ efficiency: 0 }))).toBeNull()
     expect(calculateBatterySizing(withInput({ designMargin: 0 }))).toBeNull()
-    expect(
-      calculateBatterySizing(withInput({ batteryType: 'lithium', dod: 0 })),
-    ).toBeNull()
+    expect(calculateBatterySizing(withInput({ batteryType: 'lithium', dod: 0 }))).toBeNull()
+  })
+})
+
+describe('控制项与控制标记', () => {
+  it('铅酸由安时容量控制，并同时给出放电倍率', () => {
+    const result = calculateBatterySizing(withInput({}))
+
+    expect(result).not.toBeNull()
+    expect(result!.drivers).toEqual(['安时容量'])
+    expect(result!.cRate).toBeCloseTo(159.49 / 250, 3)
+  })
+
+  it('锂电默认由放电倍率控制', () => {
+    const result = calculateBatterySizing(withInput({ batteryType: 'lithium' }))
+
+    expect(result).not.toBeNull()
+    expect(result!.drivers).toEqual(['放电倍率'])
+  })
+
+  it('倍率上限放宽后由能量容量控制', () => {
+    const result = calculateBatterySizing(withInput({ batteryType: 'lithium', maxCRate: 10 }))
+
+    expect(result).not.toBeNull()
+    expect(result!.drivers).toEqual(['能量容量'])
+  })
+})
+
+describe('终止电压限幅', () => {
+  it('超出 1.5~1.9 V 时按边界取值', () => {
+    const high = calculateBatterySizing(withInput({ endVoltagePerCell: 2.2 }))
+    const low = calculateBatterySizing(withInput({ endVoltagePerCell: 1.2 }))
+
+    expect(high).not.toBeNull()
+    expect(low).not.toBeNull()
+    expect(high!.endVoltagePerCellActual).toBeCloseTo(1.9, 6)
+    expect(high!.endVoltageActual).toBeCloseTo(456, 6)
+    expect(low!.endVoltagePerCellActual).toBeCloseTo(1.5, 6)
   })
 })
 
