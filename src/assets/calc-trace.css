@@ -1,0 +1,481 @@
+/**
+ * 选型工具共用的「计算书 / 可追溯」样式。
+ *
+ * 只在挂了 `.calc-trace` 的页面上生效（电缆选型、蓄电池容量计算），
+ * 避免 `.check-status` / `.calc-panel` 这类通用类名外溢到其他工具。
+ */
+
+.calc-trace .calc-panel,
+.calc-trace .source-panel {
+  padding: 0;
+}
+
+.calc-trace .calc-panel > summary,
+.calc-trace .source-panel summary {
+  padding: 0.55rem 0.8rem;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-base-300);
+  background-color: var(--color-base-200);
+}
+
+.calc-trace .table-wrap {
+  overflow-x: auto;
+}
+
+/* 吸顶速览条 */
+
+.calc-trace .result-strip {
+  position: sticky;
+  top: 4.5rem;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-base-300);
+  background-color: var(--color-base-100);
+  box-shadow: 0 2px 6px color-mix(in oklab, var(--color-base-content) 8%, transparent);
+}
+
+.calc-trace .strip-section {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.calc-trace .strip-mode {
+  padding: 0 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1.5;
+  color: var(--color-warning);
+  border: 1px dashed color-mix(in oklab, var(--color-warning) 60%, transparent);
+}
+
+.calc-trace .strip-driver {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.calc-trace .strip-link {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--color-primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.calc-trace .strip-link:hover {
+  text-decoration: underline;
+}
+
+.calc-trace #verdict {
+  scroll-margin-top: 8rem;
+}
+
+/* 通过 / 不通过徽标 */
+
+.calc-trace .check-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.5em;
+  padding: 0.1rem 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: nowrap;
+  border: 1px solid currentColor;
+}
+
+.calc-trace .check-status.is-pass {
+  color: var(--color-success);
+  background-color: color-mix(in oklab, var(--color-success) 10%, var(--color-base-100));
+}
+
+.calc-trace .check-status.is-fail {
+  color: var(--color-error);
+  background-color: color-mix(in oklab, var(--color-error) 10%, var(--color-base-100));
+}
+
+/* 校核明细卡片 */
+
+.calc-trace .check-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.calc-trace .check-item {
+  padding: 0.55rem 0.8rem;
+  border-bottom: 1px dashed color-mix(in oklab, var(--color-base-300) 70%, transparent);
+}
+
+.calc-trace .check-item:last-child {
+  border-bottom: 0;
+}
+
+.calc-trace .check-item.is-fail {
+  background-color: color-mix(in oklab, var(--color-error) 4%, transparent);
+}
+
+.calc-trace .check-item-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.calc-trace .check-item-head::-webkit-details-marker {
+  display: none;
+}
+
+.calc-trace .check-item-head::before {
+  content: '▸';
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.calc-trace .check-item[open] > .check-item-head::before {
+  content: '▾';
+}
+
+.calc-trace .check-item-label {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.calc-trace .check-item-key {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-align: right;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.calc-trace .check-item-flag {
+  flex: 0 0 auto;
+  padding: 0 0.25rem;
+  font-size: 9px;
+  color: var(--color-primary);
+  border: 1px solid color-mix(in oklab, var(--color-primary) 40%, transparent);
+}
+
+.calc-trace .check-item-head .check-status {
+  flex: 0 0 auto;
+}
+
+.calc-trace .check-item-body {
+  padding-top: 0.45rem;
+}
+
+.calc-trace .check-formula,
+.calc-trace .check-substitution {
+  margin: 0.3rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+}
+
+.calc-trace .check-formula {
+  color: var(--color-base-content);
+}
+
+.calc-trace .check-line {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.25rem 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.calc-trace .check-line-label {
+  flex: 0 0 2.5em;
+  color: var(--text-faint);
+}
+
+.calc-trace .check-why {
+  margin: 0.35rem 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.calc-trace .check-link {
+  margin-top: 0.35rem;
+  padding: 0;
+  font-size: 11px;
+  color: var(--color-primary);
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+
+.calc-trace .check-link:hover {
+  text-decoration: underline;
+}
+
+/* 计算书 */
+
+.calc-trace .calc-book {
+  display: flex;
+  flex-direction: column;
+}
+
+.calc-trace .calc-mode-note {
+  margin: 0;
+  padding: 0.45rem 0.8rem;
+  font-size: 10px;
+  color: var(--text-faint);
+  border-bottom: 1px dashed color-mix(in oklab, var(--color-base-300) 70%, transparent);
+}
+
+.calc-trace .calc-step {
+  padding: 0.7rem 0.8rem;
+  border-bottom: 1px dashed color-mix(in oklab, var(--color-base-300) 70%, transparent);
+}
+
+.calc-trace .calc-step:last-child {
+  border-bottom: 0;
+}
+
+.calc-trace .calc-step.is-fail {
+  background-color: color-mix(in oklab, var(--color-error) 4%, transparent);
+}
+
+.calc-trace .calc-step-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.calc-trace .calc-step-head::-webkit-details-marker {
+  display: none;
+}
+
+.calc-trace .calc-step-head::before {
+  content: '▸';
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.calc-trace .calc-step[open] > .calc-step-head::before {
+  content: '▾';
+}
+
+.calc-trace .calc-step-title {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.calc-trace .calc-step-key {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-align: right;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.calc-trace .calc-step-flag {
+  flex: 0 0 auto;
+  padding: 0 0.25rem;
+  font-size: 9px;
+  color: var(--color-primary);
+  border: 1px solid color-mix(in oklab, var(--color-primary) 40%, transparent);
+}
+
+.calc-trace .calc-step-head .check-status {
+  flex: 0 0 auto;
+}
+
+.calc-trace .calc-step-body {
+  padding-top: 0.5rem;
+}
+
+.calc-trace .calc-step-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1;
+  color: var(--color-primary);
+  border: 1px solid color-mix(in oklab, var(--color-primary) 40%, transparent);
+}
+
+.calc-trace .calc-formula,
+.calc-trace .calc-substitution,
+.calc-trace .calc-result {
+  margin: 0.35rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.calc-trace .calc-formula {
+  color: var(--text-muted);
+}
+
+.calc-trace .calc-substitution {
+  color: var(--text-muted);
+}
+
+.calc-trace .calc-result {
+  color: var(--color-base-content);
+  font-weight: 600;
+}
+
+.calc-trace .calc-step-note {
+  margin: 0.35rem 0 0;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+/* 符号 chip */
+
+.calc-trace .calc-symbols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.calc-trace .symbol-chip {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.18rem 0.42rem;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1.4;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  background-color: var(--color-base-200);
+  border: 1px solid var(--color-base-300);
+}
+
+.calc-trace .symbol-chip:hover,
+.calc-trace .symbol-chip:focus-visible {
+  border-color: var(--color-primary);
+}
+
+.calc-trace .symbol-chip.is-symbol-active {
+  border-color: var(--color-primary);
+  background-color: color-mix(in oklab, var(--color-primary) 8%, var(--color-base-100));
+}
+
+.calc-trace .symbol-name {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.calc-trace .symbol-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-base-content);
+}
+
+.calc-trace .symbol-label {
+  color: var(--text-faint);
+}
+
+.calc-trace .symbol-source {
+  padding: 0 0.2rem;
+  font-size: 9px;
+  line-height: 1.4;
+  white-space: nowrap;
+  border: 1px solid currentColor;
+}
+
+.calc-trace .symbol-source.is-input {
+  color: var(--color-primary);
+}
+
+.calc-trace .symbol-source.is-table {
+  color: var(--text-muted);
+}
+
+.calc-trace .symbol-source.is-calc {
+  color: var(--color-success);
+}
+
+.calc-trace .symbol-source.is-constant {
+  color: var(--color-warning);
+}
+
+.calc-trace .symbol-source.is-default {
+  color: var(--text-faint);
+  border-style: dashed;
+}
+
+/* 参数说明表 */
+
+.calc-trace .param-panel {
+  margin-top: 1rem;
+}
+
+.calc-trace .param-panel summary {
+  padding: 0.55rem 0.8rem;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-base-300);
+  background-color: var(--color-base-200);
+}
+
+.calc-trace .param-table {
+  width: 100%;
+  min-width: 960px;
+  border-collapse: collapse;
+  font-size: 10.5px;
+}
+
+.calc-trace .param-table th,
+.calc-trace .param-table td {
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid color-mix(in oklab, var(--color-base-300) 60%, transparent);
+}
+
+.calc-trace .param-table th {
+  font-size: 9.5px;
+  font-weight: 500;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.calc-trace .param-table tr:last-child td {
+  border-bottom: 0;
+}
+
+/* 与计算书联动的输入高亮 */
+
+.calc-trace .is-symbol-active {
+  outline: 2px solid color-mix(in oklab, var(--color-primary) 70%, transparent);
+  outline-offset: 2px;
+}
