@@ -299,7 +299,7 @@ export interface BatteryCheckDetail {
 1. 容量系数只读提示，不改计算模型：`η_ah` 仍是直接输入，计算书按备电时长给典型表建议值
    （复用 `capacityCoefficientForHours`），偏差 > 0.02 时提示方向。
 2. 计算书默认折叠；1440×900 首屏为速览条 + 结论卡 + 校核摘要。
-3. 样式先按工具 23 复制（约 400 行 scoped CSS），公共抽取留到工具 25 开工时统一处理。
+3. 样式：先复制工具 23 的 scoped CSS 完成功能；合并进 master 后再抽成公共样式（见 §14）。
 
 与计划的差异：
 
@@ -312,4 +312,20 @@ export interface BatteryCheckDetail {
 确认速览吸顶、计算书折叠/展开、校核卡跳转与锂电 6 步分支。
 
 未做（沿用 §11）：不改容量模型；不做多厂家电池库；不做接线/熔断器选型；不做在线 SOH 评估。
+
+## 14. 公共样式抽取（`0747ffd`）
+
+工具 24 合并进 master 后，把工具 23/24 重复的计算书样式收进 `src/assets/calc-trace.css`：
+
+- 全部选择器加 `.calc-trace` 前缀，挂在两个页面根节点（`cable-page calc-trace` / `battery-page calc-trace`），
+  避免 `.check-status`、`.calc-panel`、`.param-table` 这类通用类名外溢到 dc_power_cabinet、hvac_cooling 等页面；
+- 两页共删约 950 行 scoped CSS，包含抽取时顺带清掉的失效规则（`.check-table`、`.check-label`、`.check-note`
+  在模板里已无引用）；
+- 样式由 `<script>` 里 `import '@/assets/calc-trace.css'` 统一引入，两个路由各引一次、构建期只打一份。
+
+验证：两页 1440×900 截图与抽取前逐像素一致（蓄电池页 PNG 字节数相同）；关键计算样式实测
+`result-strip` `position: sticky / top: 72px`、`symbol-chip` 边框与底色、`param-table` `min-width: 960px` 均正常；
+`type-check`、`lint:check`、`test:unit`（1036 / 84）、`build-only` 全绿。
+
+后续工具 25~28 直接复用 `.calc-trace`：页面根节点加 class、script 里 import 一次即可，不再复制样式。
 

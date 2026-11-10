@@ -46,6 +46,8 @@ interface CheckResult {
 
 右栏速览条用 `position: sticky`，需要 window 滚动而不是内部滚动容器；`ToolDetailView.vue` 里对 `tool-detail-battery_sizing` 设 `overflow-y: visible`，与电缆选型页同理。计算书默认折叠，1440×900 首屏可见速览、结论与校核摘要。
 
+计算书 / 校核卡 / 符号 chip / 参数表这些样式与工具 23 共用 `src/assets/calc-trace.css`：页面根节点挂 `calc-trace` 类、`<script>` 里 import 一次即可，类名统一带 `.calc-trace` 前缀，不会影响其他工具。
+
 ## 测试
 
 - `__tests__/batterySizing.spec.ts`：安时法与恒功率、低温 α 修正、2V/12V 串联一致、厂家 W/单体校核、锂电能量法与倍率控制、无效输入、`drivers` 与控制项、终止电压限幅、容量系数与 α 分段。

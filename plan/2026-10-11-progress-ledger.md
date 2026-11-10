@@ -7,8 +7,8 @@
 | 属性 | 值 |
 |---|---|
 | 审查基线 | `c096944`（2026-10-09 审计） |
-| 台账更新 | 2026-11-10（tool-24 蓄电池选型：计算书/来源标签/校核明细/参数说明/吸顶速览） |
-| 当前 HEAD | `8018615`（工具 24 测试提交；本台账回填提交见 git log） |
+| 台账更新 | 2026-11-10（tool-24 蓄电池选型：计算书/来源标签/校核明细/参数说明/吸顶速览 + 公共样式抽取） |
+| 当前 HEAD | `0747ffd`（工具 24 公共样式抽取；本台账回填提交见 git log） |
 | 工具数 | 32 个路由（含 5 个选型工具、sheet_template、room_layout） |
 | 测试 | **1036 passed / 84 files** |
 | 最近更新 | 2026-11-10 · **tool-24 蓄电池容量计算（计算书/可追溯/校核明细/控制项/吸顶速览）完成**；D4 / D5 / E2 / E3 / E4 / F1 / F2 / F3 / F4 / D4-e2e / room_layout MVP / tool-23 已完成；剩余 E1、F5、tool-25~28 |
@@ -28,6 +28,7 @@
 | 5 | 参数说明 | 32 行，含含义、位置、影响方向、来源、可修改、依据 |
 | 6 | 视口 | 右栏吸顶速览 + 计算书默认折叠；`tool-detail-battery_sizing` 改 window 滚动以支持 sticky |
 | 7 | 测试 | 1036 / 84 files（battery_sizing 33） |
+| 8 | 公共样式 | `0747ffd` 抽出 `src/assets/calc-trace.css`（`.calc-trace` 前缀），工具 23/24 共用，删约 950 行重复 CSS |
 
 文档：`docs/2026-11-10-tool-24-battery-sizing-transparency-plan.md`（§13 实施记录）、`public/docs/battery_sizing/{tool,method,tech}.md`。
 
