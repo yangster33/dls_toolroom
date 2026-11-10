@@ -14,6 +14,22 @@
         </p>
       </div>
       <div class="page-actions">
+        <div class="segmented mode-switch" role="group" aria-label="模式">
+          <button
+            type="button"
+            :class="{ active: uiMode === 'simple' }"
+            @click="setUiMode('simple')"
+          >
+            简易
+          </button>
+          <button
+            type="button"
+            :class="{ active: uiMode === 'professional' }"
+            @click="setUiMode('professional')"
+          >
+            专业
+          </button>
+        </div>
         <button type="button" class="btn btn-sm btn-ghost" @click="resetForm">
           <PhArrowCounterClockwise aria-hidden="true" />
           重置
@@ -35,6 +51,14 @@
           >GB 50217</span
         >
         及电缆厂家数据复核。
+      </p>
+    </div>
+
+    <div v-if="isSimple" class="notice notice-simple">
+      <PhInfo weight="fill" aria-hidden="true" />
+      <p>
+        简易模式按阻性负荷 cosφ=1、η=1、Kd=1
+        计算；电机、变压器等感性负荷请切「专业」模式，或改用「按电流」输入。
       </p>
     </div>
 
@@ -74,7 +98,7 @@
               hint="线电压 / 直流电压"
             />
 
-            <template v-if="form.system === 'dc'">
+            <template v-if="form.system === 'dc' && !isSimple">
               <label class="field">
                 <span class="field-label">
                   直流回路类型
@@ -154,6 +178,7 @@
             />
 
             <UnitField
+              v-if="!isSimple"
               v-model="form.powerFactor"
               data-symbol="cosφ"
               :class="{ 'is-symbol-active': isActive('cosφ') }"
@@ -166,7 +191,7 @@
             />
 
             <UnitField
-              v-if="form.system === 'three-phase'"
+              v-if="form.system === 'three-phase' && !isSimple"
               v-model="form.harmonicThdPercent"
               data-symbol="h3"
               :class="{ 'is-symbol-active': isActive('h3') }"
@@ -179,6 +204,7 @@
             />
 
             <UnitField
+              v-if="!isSimple"
               v-model="form.efficiency"
               data-symbol="η"
               :class="{ 'is-symbol-active': isActive('η') }"
@@ -190,7 +216,7 @@
             />
 
             <UnitField
-              v-if="form.inputMode === 'power'"
+              v-if="form.inputMode === 'power' && !isSimple"
               v-model="form.demandFactor"
               data-symbol="Kd"
               :class="{ 'is-symbol-active': isActive('Kd') }"
@@ -249,7 +275,7 @@
               {{ methodInfo.description }}
             </p>
 
-            <template v-if="form.system === 'dc'">
+            <template v-if="form.system === 'dc' && !isSimple">
               <label class="field field-wide">
                 <span class="field-label">
                   载流量数据源
@@ -329,7 +355,7 @@
               </template>
             </template>
 
-            <template v-if="isBuried">
+            <template v-if="isBuried && !isSimple">
               <label class="field" data-symbol="s" :class="{ 'is-symbol-active': isActive('s') }">
                 <span class="field-label">
                   电缆间距
@@ -363,6 +389,7 @@
             </template>
 
             <UnitField
+              v-if="!isSimple"
               v-model="form.ambientTempC"
               data-symbol="θ"
               :class="{ 'is-symbol-active': isActive('θ') }"
@@ -386,6 +413,7 @@
             />
 
             <UnitField
+              v-if="!isSimple"
               v-model="form.groupedCircuits"
               data-symbol="G"
               :class="{ 'is-symbol-active': isActive('G') }"
@@ -398,6 +426,7 @@
             />
 
             <UnitField
+              v-if="!isSimple"
               v-model="form.parallelCables"
               data-symbol="n"
               :class="{ 'is-symbol-active': isActive('n') }"
@@ -410,6 +439,7 @@
             />
 
             <UnitField
+              v-if="!isSimple"
               v-model="form.reactanceOhmPerKm"
               data-symbol="X"
               :class="{ 'is-symbol-active': isActive('X') }"
@@ -467,6 +497,7 @@
             </div>
 
             <UnitField
+              v-if="!isSimple"
               v-model="form.shortCircuitKa"
               data-symbol="Isc"
               :class="{ 'is-symbol-active': isActive('Isc') }"
@@ -479,6 +510,7 @@
             />
 
             <UnitField
+              v-if="!isSimple"
               v-model="form.clearingTimeS"
               data-symbol="t"
               :class="{ 'is-symbol-active': isActive('t') }"
@@ -490,7 +522,12 @@
               hint="用于热稳定校核"
             />
 
-            <label class="field" data-symbol="In" :class="{ 'is-symbol-active': isActive('In') }">
+            <label
+              v-if="!isSimple"
+              class="field"
+              data-symbol="In"
+              :class="{ 'is-symbol-active': isActive('In') }"
+            >
               <span class="field-label">
                 断路器额定电流 In
                 <span class="field-hint">0 = 自动</span>
@@ -505,7 +542,7 @@
               />
             </label>
 
-            <label class="field">
+            <label v-if="!isSimple" class="field">
               <span class="field-label">
                 保护电器类型
                 <span class="field-hint">{{
@@ -526,7 +563,7 @@
               </select>
             </label>
 
-            <template v-if="form.system !== 'dc'">
+            <template v-if="form.system !== 'dc' && !isSimple">
               <div class="field field-wide">
                 <span class="field-label">
                   电机启动校核
@@ -592,12 +629,26 @@
             直流模式只做电缆校核；DC 断路器/熔断器需按 DC 电压下的 Icu/Ics、极性和 L/R
             时间常数复核。
           </p>
+
+          <details v-if="isSimple" class="assumption-card" open>
+            <summary>简易模式假定（固定值参与计算）</summary>
+            <table class="assumption-table">
+              <tbody>
+                <tr v-for="item in simpleAssumptions" :key="item.label">
+                  <th scope="row">{{ item.label }}</th>
+                  <td class="readout">{{ item.value }}</td>
+                  <td class="assumption-note">{{ item.note }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </details>
         </section>
       </div>
 
       <aside class="output-column">
         <div v-if="result" class="result-strip">
           <span class="strip-section">{{ formatSection(result.selectedSection) }} mm² / 相</span>
+          <span v-if="isSimple" class="strip-mode">简易</span>
           <span class="check-status" :class="result.overallPass ? 'is-pass' : 'is-fail'">
             {{ result.overallPass ? 'PASS' : 'REVIEW' }}
           </span>
@@ -609,6 +660,7 @@
           <summary>计算书（7 步，点击展开）</summary>
 
           <div class="calc-book">
+            <p v-if="isSimple" class="calc-mode-note">模式：简易（固定值见“简易模式假定”）</p>
             <details
               v-for="step in calcSteps"
               :id="`calc-${step.key}`"
@@ -693,6 +745,8 @@
           </p>
 
           <p class="verdict-why">{{ verdictWhy }}</p>
+
+          <p v-if="isSimple" class="verdict-mode">{{ simpleModeNote }}</p>
 
           <div class="verdict-metrics">
             <div>
@@ -872,7 +926,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import {
   PhArrowCounterClockwise,
   PhCopy,
@@ -894,9 +948,11 @@ import {
   MATERIAL_OPTIONS,
   PROTECTION_DEVICE_OPTIONS,
   STANDARD_SECTIONS,
+  SIMPLE_MODE_FIXED,
   SYSTEM_OPTIONS,
   calculateCableSizing,
   createDefaultInput,
+  createSimpleInput,
   formatSection,
   type CableSizingInput,
 } from './cableSizing'
@@ -912,15 +968,123 @@ import { buildCheckDetails } from './checkDetails'
 const toolConfig = getToolById('cable_sizing')
 const toast = useToast()
 
-const form = reactive<CableSizingInput>(createDefaultInput())
+type UiMode = 'simple' | 'professional'
+const UI_MODE_KEY = 'dls.cable-sizing.ui-mode.v1'
+
+function cloneInput(input: CableSizingInput): CableSizingInput {
+  return { ...input, dcManufacturerAmpacity: [...input.dcManufacturerAmpacity] }
+}
+
+const uiMode = ref<UiMode>('simple')
+const isSimple = computed(() => uiMode.value === 'simple')
+/** 简易 / 专业各存一份快照，切换模式不丢用户已填值 */
+const modeSnapshots: Record<UiMode, CableSizingInput> = {
+  simple: createSimpleInput(),
+  professional: createDefaultInput(),
+}
+const form = reactive<CableSizingInput>(cloneInput(modeSnapshots.simple))
 const copied = ref(false)
 
 const result = computed(() => calculateCableSizing({ ...form }))
 
+interface AssumptionItem {
+  label: string
+  value: string
+  note: string
+}
+
+const simpleAssumptions = computed<AssumptionItem[]>(() => {
+  const items: AssumptionItem[] = [
+    { label: 'cosφ 功率因数', value: '1.00', note: '按阻性负荷；感性负荷请切专业模式' },
+    { label: 'η 效率', value: '1.00', note: '不计效率损失' },
+    { label: 'Kd 需要系数', value: '1.00', note: '按满载' },
+    { label: 'h3 三次谐波', value: '0 %', note: '不计谐波与中性线电流' },
+    { label: '并列回路 / 并联', value: '1 回 / 1 根', note: '单回路、单根敷设' },
+    {
+      label: 'X 线路电抗',
+      value: `${SIMPLE_MODE_FIXED.reactanceOhmPerKm} Ω/km`,
+      note: '常量，计算书标“默认”',
+    },
+    {
+      label: 'Isc / t',
+      value: `${SIMPLE_MODE_FIXED.shortCircuitKa} kA / ${SIMPLE_MODE_FIXED.clearingTimeS} s`,
+      note: '短路热稳定按假定值校核',
+    },
+    { label: 'In 断路器', value: '自动匹配', note: '取不小于 Ib 的最小标准壳架' },
+    { label: '保护电器', value: '微型断路器 MCB', note: '按 In ≤ Iz 校核' },
+    { label: '电机启动校核', value: '不校核', note: '动力负荷请切专业模式' },
+    {
+      label: '环境 / 土壤温度',
+      value: `${SIMPLE_MODE_FIXED.ambientTempC} ℃`,
+      note: form.method === 'D' ? '直埋按 40 ℃ 土壤，偏保守' : '按空气温度修正',
+    },
+  ]
+  if (form.method === 'D') {
+    items.push({ label: '埋地间距 / 土壤热阻率', value: '相触 / 2.5 K·m/W', note: '仅 D 直埋' })
+  }
+  if (form.system === 'dc') {
+    items.push({
+      label: '直流回路 / 制式 / 载流量源',
+      value: '负荷回路 / 2 线 / 国家标准表',
+      note: '厂家 DC 表在简易模式隐藏',
+    })
+  }
+  return items
+})
+
+const simpleModeNote = computed(
+  () =>
+    `简易模式：cosφ=1、η=1、Kd=1、Isc 按假定 ${SIMPLE_MODE_FIXED.shortCircuitKa} kA、t=${SIMPLE_MODE_FIXED.clearingTimeS} s、环境 ${SIMPLE_MODE_FIXED.ambientTempC} ℃、In 自动、MCB。`,
+)
+
+function persistUiMode(mode: UiMode) {
+  try {
+    window.localStorage.setItem(UI_MODE_KEY, mode)
+  } catch {
+    /* localStorage 不可用时忽略 */
+  }
+}
+
+function setUiMode(mode: UiMode, silent = false) {
+  if (mode === uiMode.value) return
+  Object.assign(modeSnapshots[uiMode.value], cloneInput(form))
+  uiMode.value = mode
+  Object.assign(form, cloneInput(modeSnapshots[mode]))
+  persistUiMode(mode)
+  if (silent) return
+  toast.info(
+    mode === 'simple'
+      ? '已切到简易模式：高级参数按固定值参与计算'
+      : '已切到专业模式：可继续调整高级参数',
+  )
+}
+
+onMounted(() => {
+  try {
+    const saved = window.localStorage.getItem(UI_MODE_KEY)
+    if (saved === 'professional') setUiMode('professional', true)
+  } catch {
+    /* localStorage 不可用时忽略 */
+  }
+})
+
 const activeSymbol = ref('')
 const parameterDocs = buildParameterDocs()
 const calcSteps = computed(() => (result.value ? buildCalculationSteps(form, result.value) : []))
-const checkDetails = computed(() => (result.value ? buildCheckDetails(form, result.value) : []))
+const checkDetails = computed(() => {
+  const value = result.value
+  if (!value) return []
+  const details = buildCheckDetails(form, value)
+  if (!isSimple.value) return details
+  return details.map((detail) =>
+    detail.key === 'thermal'
+      ? {
+          ...detail,
+          why: `${detail.why}（短路电流按假定 ${SIMPLE_MODE_FIXED.shortCircuitKa} kA）`,
+        }
+      : detail,
+  )
+})
 const calcBookRef = ref<HTMLDetailsElement | null>(null)
 
 function openCalcStep(key?: string) {
@@ -1101,8 +1265,11 @@ function sourceTitle(symbol: CalcSymbol): string {
 }
 
 function resetForm() {
-  Object.assign(form, createDefaultInput())
-  toast.info('已恢复默认参数')
+  Object.assign(
+    form,
+    cloneInput(uiMode.value === 'simple' ? createSimpleInput() : createDefaultInput()),
+  )
+  toast.info(uiMode.value === 'simple' ? '已恢复简易模式默认参数' : '已恢复默认参数')
 }
 
 function buildReport(): string {
@@ -1111,6 +1278,11 @@ function buildReport(): string {
   const lines = [
     '电缆选型计算书（方案初选）',
     `系统：${SYSTEM_OPTIONS.find((item) => item.key === form.system)?.label ?? form.system}`,
+    ...(isSimple.value
+      ? [
+          `模式：简易（cosφ=1、η=1、Kd=1、Isc=${SIMPLE_MODE_FIXED.shortCircuitKa} kA 假定、t=${SIMPLE_MODE_FIXED.clearingTimeS} s、${SIMPLE_MODE_FIXED.ambientTempC} ℃、In 自动、MCB）`,
+        ]
+      : []),
     `标称电压：${form.voltage} V；线路长度：${form.lengthM} m`,
     ...(form.system === 'dc'
       ? [
@@ -1206,6 +1378,8 @@ async function copyReport() {
 
 .page-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 0.5rem;
 }
 
@@ -1233,6 +1407,15 @@ async function copyReport() {
   height: 15px;
   margin-top: 0.15rem;
   color: var(--color-primary);
+}
+
+.notice-simple {
+  border-color: color-mix(in oklab, var(--color-warning) 38%, var(--color-base-300));
+  background-color: color-mix(in oklab, var(--color-warning) 6%, var(--color-base-100));
+}
+
+.notice-simple svg {
+  color: var(--color-warning);
 }
 
 .workbench {
@@ -1366,6 +1549,48 @@ async function copyReport() {
   box-shadow: inset 0 -2px 0 var(--color-primary);
 }
 
+.mode-switch {
+  flex: 0 0 auto;
+  min-width: 7.5rem;
+}
+
+.assumption-card {
+  margin: 0 0.85rem 0.85rem;
+  border: 1px solid color-mix(in oklab, var(--color-warning) 30%, var(--color-base-300));
+  background-color: color-mix(in oklab, var(--color-warning) 4%, var(--color-base-100));
+}
+
+.assumption-card > summary {
+  padding: 0.45rem 0.6rem;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.assumption-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10.5px;
+}
+
+.assumption-table th,
+.assumption-table td {
+  padding: 0.3rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+  border-top: 1px dashed color-mix(in oklab, var(--color-base-300) 70%, transparent);
+}
+
+.assumption-table th {
+  width: 34%;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.assumption-note {
+  color: var(--text-faint);
+}
+
 .result-strip {
   position: sticky;
   top: 4.5rem;
@@ -1384,6 +1609,15 @@ async function copyReport() {
   font-size: 14px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+.strip-mode {
+  padding: 0 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1.5;
+  color: var(--color-warning);
+  border: 1px dashed color-mix(in oklab, var(--color-warning) 60%, transparent);
 }
 
 .strip-driver {
@@ -1507,6 +1741,15 @@ async function copyReport() {
   font-size: 11px;
   line-height: 1.65;
   color: var(--text-muted);
+}
+
+.verdict-mode {
+  margin-top: 0.45rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  border: 1px dashed var(--color-base-300);
 }
 
 .verdict-metrics {
@@ -1762,6 +2005,14 @@ async function copyReport() {
 .calc-book {
   display: flex;
   flex-direction: column;
+}
+
+.calc-mode-note {
+  margin: 0;
+  padding: 0.45rem 0.8rem;
+  font-size: 10px;
+  color: var(--text-faint);
+  border-bottom: 1px dashed color-mix(in oklab, var(--color-base-300) 70%, transparent);
 }
 
 .calc-step {
