@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   calculateCableSizing,
   createDefaultInput,
+  createSimpleInput,
   formatSection,
+  SIMPLE_MODE_FIXED,
   type CableSizingInput,
 } from '../cableSizing'
 import {
@@ -370,5 +372,67 @@ describe('直流模式', () => {
 
     expect(result).not.toBeNull()
     expect(result!.startingPass).toBeNull()
+  })
+})
+
+describe('createSimpleInput', () => {
+  it('按方案初选假定固定高级参数', () => {
+    const input = createSimpleInput()
+
+    expect(SIMPLE_MODE_FIXED).toEqual({
+      ambientTempC: 40,
+      shortCircuitKa: 6,
+      clearingTimeS: 0.1,
+      reactanceOhmPerKm: 0.08,
+    })
+    expect(input.powerFactor).toBe(1)
+    expect(input.efficiency).toBe(1)
+    expect(input.demandFactor).toBe(1)
+    expect(input.harmonicThdPercent).toBe(0)
+    expect(input.groupedCircuits).toBe(1)
+    expect(input.parallelCables).toBe(1)
+    expect(input.reactanceOhmPerKm).toBe(0.08)
+    expect(input.shortCircuitKa).toBe(6)
+    expect(input.clearingTimeS).toBe(0.1)
+    expect(input.ambientTempC).toBe(40)
+    expect(input.breakerRatingA).toBeNull()
+    expect(input.protectionDevice).toBe('mcb')
+    expect(input.motorStarting).toBe(false)
+    expect(input.dcAmpacitySource).toBe('standard')
+    expect(input.dcManufacturerAmpacity).toEqual([])
+  })
+
+  it('默认工况按 40 ℃ 修正并选 16 mm²', () => {
+    const result = calculateCableSizing(createSimpleInput())
+
+    expect(result).not.toBeNull()
+    expect(result!.designCurrentA).toBeCloseTo(45.58, 1)
+    expect(result!.temperatureFactor).toBeCloseTo(0.91, 2)
+    expect(result!.selectedSection).toBe(16)
+    expect(result!.totalAmpacityA).toBeCloseTo(80.99, 1)
+    expect(result!.voltageDropPercent).toBeCloseTo(2.28, 1)
+    expect(result!.drivers).toContain('短路热稳定')
+    expect(result!.overallPass).toBe(true)
+  })
+
+  it('按电流输入时不乘 cosφ / η', () => {
+    const result = calculateCableSizing({
+      ...createSimpleInput(),
+      inputMode: 'current',
+      currentA: 100,
+    })
+
+    expect(result).not.toBeNull()
+    expect(result!.designCurrentA).toBeCloseTo(100, 6)
+  })
+
+  it('专业模式默认值不受影响', () => {
+    const input = createDefaultInput()
+
+    expect(input.powerFactor).toBe(0.85)
+    expect(input.efficiency).toBe(0.9)
+    expect(input.demandFactor).toBe(0.8)
+    expect(input.ambientTempC).toBe(35)
+    expect(input.shortCircuitKa).toBe(6)
   })
 })

@@ -296,6 +296,46 @@ export function createDefaultInput(): CableSizingInput {
   }
 }
 
+/** 简易模式固定值：方案初选时不需要用户输入的参数，集中在这里便于页面同步展示。 */
+export const SIMPLE_MODE_FIXED = {
+  ambientTempC: 40,
+  shortCircuitKa: 6,
+  clearingTimeS: 0.1,
+  reactanceOhmPerKm: 0.08,
+} as const
+
+/**
+ * 简易模式默认输入：核心字段与 createDefaultInput 相同，
+ * 其余参数按方案初选的假定值固定（cosφ=1、η=1、Kd=1、h3=0、单回路单根、40 ℃、6 kA）。
+ *
+ * 这里只是输入值组合，不改变引擎口径；专业模式仍使用 createDefaultInput()。
+ */
+export function createSimpleInput(): CableSizingInput {
+  return {
+    ...createDefaultInput(),
+    powerFactor: 1,
+    efficiency: 1,
+    demandFactor: 1,
+    ambientTempC: SIMPLE_MODE_FIXED.ambientTempC,
+    shortCircuitKa: SIMPLE_MODE_FIXED.shortCircuitKa,
+    clearingTimeS: SIMPLE_MODE_FIXED.clearingTimeS,
+    reactanceOhmPerKm: SIMPLE_MODE_FIXED.reactanceOhmPerKm,
+    groupedCircuits: 1,
+    parallelCables: 1,
+    harmonicThdPercent: 0,
+    motorStarting: false,
+    breakerRatingA: null,
+    protectionDevice: 'mcb',
+    buriedSpacing: 'touching',
+    soilThermalResistivity: 2.5,
+    dcCircuitType: 'load',
+    dcWiring: 'twoWire',
+    dcAmpacitySource: 'standard',
+    dcManufacturerAmpacity: [],
+    dcManufacturerName: '',
+  }
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }
