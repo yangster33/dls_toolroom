@@ -7,15 +7,28 @@
 | 属性 | 值 |
 |---|---|
 | 审查基线 | `c096944`（2026-10-09 审计） |
-| 台账更新 | 2026-11-10（tool-24 蓄电池选型：计算书/来源标签/校核明细/参数说明/吸顶速览 + 公共样式抽取） |
-| 当前 HEAD | `0747ffd`（工具 24 公共样式抽取；本台账回填提交见 git log） |
+| 台账更新 | 2026-11-11（tool-24 简易/专业双模式） |
+| 当前 HEAD | `83cee3c`（工具 24 简易模式测试提交；本台账回填提交见 git log） |
 | 工具数 | 32 个路由（含 5 个选型工具、sheet_template、room_layout） |
-| 测试 | **1036 passed / 84 files** |
-| 最近更新 | 2026-11-10 · **tool-24 蓄电池容量计算（计算书/可追溯/校核明细/控制项/吸顶速览）完成**；D4 / D5 / E2 / E3 / E4 / F1 / F2 / F3 / F4 / D4-e2e / room_layout MVP / tool-23 已完成；剩余 E1、F5、tool-25~28 |
+| 测试 | **1043 passed / 84 files** |
+| 最近更新 | 2026-11-11 · **tool-24 简易/专业双模式完成**；tool-23/24 的透明度与公共样式已完成；D4 / D5 / E2 / E3 / E4 / F1 / F2 / F3 / F4 / D4-e2e / room_layout MVP 已完成；剩余 E1、F5、tool-25~28 |
 
 ---
 
 ## 一、已完成台账
+
+### 2026-11-11 · 工具 24 蓄电池选型简易 / 专业双模式（`d1b49ec` / `8ab25f0` / `83cee3c`）
+
+| # | 项 | 结果 |
+|---|---|---|
+| 1 | 简易默认值 | `SIMPLE_MODE_FIXED` + `createSimpleInput()`：cosφ 0.9、η 0.95、η线 0.99、30 ℃、K 1.25/1.20、12 V、1.75 V、N_par 4、W/单体不校核、DOD 0.9 / SOH 0.8 / KT 1.0 / C_max 1.0 |
+| 2 | 自动取值 | 备电时长 → η_ah 查表；标称电压 → U_min = 0.85×标称（实施时由 0.9 下调，0.9×480=432 V 会高于 420 V 终止电压） |
+| 3 | 模式开关 | 页头「简易 / 专业」，默认简易；`localStorage['dls.battery-sizing.ui-mode.v1']`；两侧快照；重置按模式 |
+| 4 | 透明度 | 常驻提示、11 行假定卡（锂电 9 行）、结果条「简易」徽标、结论/计算书/报告模式行；计算书 η_ah 标「查表」 |
+| 5 | 测试 | 1043 / 84 files（battery_sizing 40，新增 7） |
+| 6 | 截图 | `test-results/simple-battery-default.png`、`simple-battery-assumptions.png`、`simple-battery-lithium.png` |
+
+文档：`plan/2026-11-10-battery-sizing-simple-mode-plan.md`（§2 口径确认、§10 实施记录）、`public/docs/battery_sizing/{tool,method,tech}.md`。
 
 ### 2026-11-10 · 工具 24 蓄电池容量计算（`b91354e` / `711b9a8` / `1bca474` / `8018615`）
 
