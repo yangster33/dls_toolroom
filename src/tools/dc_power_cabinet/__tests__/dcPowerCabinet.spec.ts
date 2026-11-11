@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  SIMPLE_MODE_FIXED,
   calculateDcCabinet,
   createDefaultInput,
+  createSimpleInput,
   nextStandardBreaker,
   usableUForHeight,
   voltageLabelFor,
@@ -122,6 +124,84 @@ describe('calculateDcCabinet', () => {
     expect(calculateDcCabinet(withInput({ moduleDerating: 0 }))).toBeNull()
     expect(calculateDcCabinet(withInput({ acPowerFactor: 0 }))).toBeNull()
     expect(calculateDcCabinet(withInput({ rectifierEfficiency: 0 }))).toBeNull()
+  })
+})
+
+describe('createSimpleInput · 简易模式', () => {
+  it('固定 9 组厂家 / 规范类参数', () => {
+    const input = createSimpleInput()
+
+    expect(input.chargeRate).toBe(0.1)
+    expect(input.moduleDerating).toBe(0.9)
+    expect(input.moduleU).toBe(1)
+    expect(input.reserveU).toBe(8)
+    expect(input.cabinetHeightMm).toBe(2000)
+    expect(input.cabinetWidthMm).toBe(600)
+    expect(input.cabinetDepthMm).toBe(600)
+    expect(input.maxModulesPerCabinet).toBe(24)
+    expect(input.acPhase).toBe(3)
+    expect(input.acVoltage).toBe(380)
+    expect(input.acPowerFactor).toBe(0.99)
+    expect(input.rectifierEfficiency).toBe(0.92)
+    expect(input.breakerMargin).toBe(1.25)
+  })
+
+  it('负荷侧输入保持可见 / 可改，overrides 不被固定值覆盖', () => {
+    const input = createSimpleInput({
+      dcVoltage: 24,
+      loadMode: 'power',
+      loadPowerKw: 9.6,
+      futureGrowth: 1.5,
+      batteryAh: 300,
+      moduleCurrentA: 50,
+      redundancy: 'N+2',
+    })
+
+    expect(input.dcVoltage).toBe(24)
+    expect(input.loadMode).toBe('power')
+    expect(input.loadPowerKw).toBe(9.6)
+    expect(input.futureGrowth).toBe(1.5)
+    expect(input.batteryAh).toBe(300)
+    expect(input.moduleCurrentA).toBe(50)
+    expect(input.redundancy).toBe('N+2')
+    // 厂家 / 规范类参数仍按简易模式固定
+    expect(input.moduleDerating).toBe(SIMPLE_MODE_FIXED.moduleDerating)
+    expect(input.acPhase).toBe(3)
+    expect(input.acVoltage).toBe(380)
+    expect(input.breakerMargin).toBe(1.25)
+  })
+
+  it('简易默认结果锚点：-48 V / 200 A / 500 Ah', () => {
+    const result = calculateDcCabinet(createSimpleInput())
+
+    expect(result).not.toBeNull()
+    expect(result!.voltageLabel).toBe('-48V')
+    expect(result!.loadCurrentA).toBeCloseTo(200, 6)
+    expect(result!.chargeCurrentA).toBeCloseTo(50, 6)
+    expect(result!.designCurrentA).toBeCloseTo(250, 6)
+    expect(result!.mainModules).toBe(3)
+    expect(result!.redundantModules).toBe(1)
+    expect(result!.totalModules).toBe(4)
+    expect(result!.installedNameplateA).toBe(400)
+    expect(result!.cabinetCount).toBe(1)
+    expect(result!.mainBreakerA).toBe(315)
+    expect(result!.acInputPowerKw).toBeCloseTo(13.0, 1)
+    expect(result!.acInputCurrentA).toBeCloseTo(20.0, 1)
+    expect(result!.acBreakerA).toBe(32)
+    expect(result!.overallPass).toBe(true)
+  })
+
+  it('简易默认结果与专业默认结果一致（固定值均等于专业默认值）', () => {
+    const simple = calculateDcCabinet(createSimpleInput())
+    const professional = calculateDcCabinet(createDefaultInput())
+
+    expect(simple).not.toBeNull()
+    expect(professional).not.toBeNull()
+    expect(simple!.totalModules).toBe(professional!.totalModules)
+    expect(simple!.cabinetCount).toBe(professional!.cabinetCount)
+    expect(simple!.mainBreakerA).toBe(professional!.mainBreakerA)
+    expect(simple!.acBreakerA).toBe(professional!.acBreakerA)
+    expect(simple!.drivers).toEqual(professional!.drivers)
   })
 })
 
