@@ -82,10 +82,17 @@ export function stepLabel(step: CalcStep): string {
   return `${CIRCLED[step.index - 1] ?? step.index} ${step.title}`
 }
 
+/** 计算书选项：简易模式下部分符号的来源与注释不同。 */
+export interface BatteryStepOptions {
+  simple?: boolean
+}
+
 export function buildBatterySteps(
   input: BatterySizingInput,
   result: BatterySizingResult,
+  options: BatteryStepOptions = {},
 ): CalcStep[] {
+  const isSimple = options.simple === true
   const isLeadAcid = input.batteryType === 'lead-acid'
   const isUps = input.loadMode === 'ups'
   const p = result.loadPowerKw
@@ -238,15 +245,18 @@ export function buildBatterySteps(
           sourceDetail: 'GB 51194-2016：≥10 h 取 0.006，1~10 h 取 0.008，<1 h 取 0.01',
         }),
         symbol('温度修正系数', fmt(result.temperatureFactor, 3), 'calc', { symbol: 'Kt' }),
-        symbol('放电容量系数', fmt(result.capacityCoefficient, 2), 'input', {
+        symbol('放电容量系数', fmt(result.capacityCoefficient, 2), isSimple ? 'table' : 'input', {
           symbol: 'η_ah',
-          inputSymbol: 'η_ah',
-          sourceDetail: `${capacity.table}：备电 ${fmt(hours, 1)} h → ${fmt(capacity.suggested, 2)}`,
+          ...(isSimple ? {} : { inputSymbol: 'η_ah' }),
+          sourceDetail: isSimple
+            ? `${capacity.table}：T=${fmt(hours, 1)} h → ${fmt(capacity.suggested, 2)}（简易模式自动取值）`
+            : `${capacity.table}：备电 ${fmt(hours, 1)} h → ${fmt(capacity.suggested, 2)}`,
         }),
       ],
-      note:
-        capacity.deviationNote ??
-        `η_ah 与典型值 ${fmt(capacity.suggested, 2)} 一致（偏差在 ±0.02 内）。`,
+      note: isSimple
+        ? `简易模式按备电时长自动取 η_ah = ${fmt(result.capacityCoefficient, 2)}；需要按厂家放电曲线取值时请切「专业」模式手动输入。`
+        : (capacity.deviationNote ??
+          `η_ah 与典型值 ${fmt(capacity.suggested, 2)} 一致（偏差在 ±0.02 内）。`),
     })
 
     // ⑤ 所需容量

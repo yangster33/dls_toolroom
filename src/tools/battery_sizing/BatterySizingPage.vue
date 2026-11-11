@@ -15,6 +15,22 @@
         </p>
       </div>
       <div class="page-actions">
+        <div class="segmented mode-switch" role="group" aria-label="模式">
+          <button
+            type="button"
+            :class="{ active: uiMode === 'simple' }"
+            @click="setUiMode('simple')"
+          >
+            简易
+          </button>
+          <button
+            type="button"
+            :class="{ active: uiMode === 'professional' }"
+            @click="setUiMode('professional')"
+          >
+            专业
+          </button>
+        </div>
         <button type="button" class="btn btn-sm btn-ghost" @click="resetForm">
           <PhArrowCounterClockwise aria-hidden="true" />
           重置
@@ -36,6 +52,17 @@
           >GB 50174-2017</span
         >
         只规定最少备用时间，不规定容量算法。结果用于方案初选，施工图应由注册电气工程师复核。
+      </p>
+    </div>
+
+    <div v-if="isSimple" class="notice notice-simple">
+      <PhInfo weight="fill" aria-hidden="true" />
+      <p>
+        简易模式按 cosφ=0.9、η=0.95、η线=0.99、{{
+          SIMPLE_MODE_FIXED.ambientTempC
+        }}
+        ℃、K=1.25（铅酸）计算，η_ah 按备电时长查表；低温电池室、需要厂家
+        W/单体复核或调整终止电压校核时请切「专业」模式。
       </p>
     </div>
 
@@ -117,6 +144,7 @@
                 :class="{ 'is-symbol-active': isActive('K_load') }"
               />
               <UnitField
+                v-if="!isSimple"
                 v-model="form.powerFactor"
                 label="输出功率因数 PF"
                 :min="0.1"
@@ -150,6 +178,7 @@
               :class="{ 'is-symbol-active': isActive('T') }"
             />
             <UnitField
+              v-if="!isSimple"
               v-model="form.ambientTempC"
               label="最低环境温度 t"
               unit="℃"
@@ -161,6 +190,7 @@
               :class="{ 'is-symbol-active': isActive('t') }"
             />
             <UnitField
+              v-if="!isSimple"
               v-model="form.efficiency"
               label="UPS 逆变效率 η"
               :min="0.5"
@@ -171,6 +201,7 @@
               :class="{ 'is-symbol-active': isActive('η') }"
             />
             <UnitField
+              v-if="!isSimple"
               v-model="form.lineEfficiency"
               label="线路效率 η线"
               :min="0.8"
@@ -202,6 +233,7 @@
               :class="{ 'is-symbol-active': isActive('U') }"
             />
             <UnitField
+              v-if="!isSimple"
               v-model="form.designMargin"
               label="设计余量 K"
               :min="1"
@@ -212,7 +244,7 @@
               :class="{ 'is-symbol-active': isActive('K') }"
             />
 
-            <template v-if="form.batteryType === 'lead-acid'">
+            <template v-if="form.batteryType === 'lead-acid' && !isSimple">
               <label
                 class="field"
                 data-symbol="cellVoltage"
@@ -282,7 +314,7 @@
               />
             </template>
 
-            <template v-else>
+            <template v-else-if="form.batteryType === 'lithium' && !isSimple">
               <UnitField
                 v-model="form.dod"
                 label="放电深度 DOD"
@@ -340,12 +372,26 @@
               大容量锂电房间设计可参考 T/CABEE 056-2023（团体标准）。
             </template>
           </p>
+
+          <details v-if="isSimple" class="assumption-card" open>
+            <summary>简易模式假定（固定值参与计算）</summary>
+            <table class="assumption-table">
+              <tbody>
+                <tr v-for="item in simpleAssumptions" :key="item.label">
+                  <th scope="row">{{ item.label }}</th>
+                  <td class="readout">{{ item.value }}</td>
+                  <td class="assumption-note">{{ item.note }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </details>
         </section>
       </div>
 
       <aside class="output-column">
         <div v-if="result" class="result-strip">
           <span class="strip-section">{{ result.configuredAh.toFixed(0) }} Ah</span>
+          <span v-if="isSimple" class="strip-mode">简易</span>
           <span class="check-status" :class="result.overallPass ? 'is-pass' : 'is-fail'">
             {{ result.overallPass ? 'PASS' : 'REVIEW' }}
           </span>
@@ -357,6 +403,7 @@
           <summary>计算书（{{ calcSteps.length }} 步，点击展开）</summary>
 
           <div class="calc-book">
+            <p v-if="isSimple" class="calc-mode-note">模式：简易（固定值见“简易模式假定”）</p>
             <details
               v-for="step in calcSteps"
               :id="`calc-${step.key}`"
@@ -439,6 +486,7 @@
             {{ result.overallPass ? '各项校核通过' : '存在需要复核的项' }} · 预估备电
             {{ result.estimatedRuntimeMinutes.toFixed(0) }} min
           </p>
+          <p v-if="isSimple" class="verdict-mode">{{ simpleModeNote }}</p>
 
           <div class="verdict-metrics">
             <div>
@@ -626,7 +674,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import {
   PhArrowCounterClockwise,
   PhBatteryCharging,
@@ -638,8 +686,12 @@ import { useToast } from '@/composables/useToast'
 import { getToolById } from '../toolData'
 import UnitField from './UnitField.vue'
 import {
+  SIMPLE_MODE_FIXED,
   calculateBatterySizing,
   createDefaultInput,
+  createSimpleInput,
+  simpleCapacityCoefficient,
+  simpleDcMinVoltage,
   type BatterySizingInput,
 } from './batterySizing'
 import {
@@ -654,10 +706,160 @@ import '@/assets/calc-trace.css'
 const toolConfig = getToolById('battery_sizing')
 const toast = useToast()
 
-const form = reactive<BatterySizingInput>(createDefaultInput())
+type UiMode = 'simple' | 'professional'
+const UI_MODE_KEY = 'dls.battery-sizing.ui-mode.v1'
+
+const uiMode = ref<UiMode>('simple')
+const isSimple = computed(() => uiMode.value === 'simple')
+/** 简易 / 专业各存一份快照，切换模式不丢用户已填值 */
+const modeSnapshots: Record<UiMode, BatterySizingInput> = {
+  simple: createSimpleInput(),
+  professional: createDefaultInput(),
+}
+
+const form = reactive<BatterySizingInput>({ ...modeSnapshots.simple })
 const copied = ref(false)
 
 const result = computed(() => calculateBatterySizing({ ...form }))
+
+interface AssumptionItem {
+  label: string
+  value: string
+  note: string
+}
+
+const simpleAssumptions = computed<AssumptionItem[]>(() => {
+  const items: AssumptionItem[] = [
+    {
+      label: 'cosφ 输出功率因数',
+      value: SIMPLE_MODE_FIXED.powerFactor.toFixed(2),
+      note: 'UPS 负载功率因数典型值',
+    },
+    {
+      label: 'η 逆变效率',
+      value: SIMPLE_MODE_FIXED.efficiency.toFixed(2),
+      note: '高频机典型效率',
+    },
+    {
+      label: 'η线 线路效率',
+      value: SIMPLE_MODE_FIXED.lineEfficiency.toFixed(2),
+      note: '直流线路与变换损耗',
+    },
+    {
+      label: 't 最低环境温度',
+      value: `${SIMPLE_MODE_FIXED.ambientTempC} ℃`,
+      note: '电池室偏低时所需容量更大，请切专业模式',
+    },
+    {
+      label: 'K 设计余量',
+      value: form.batteryType === 'lead-acid' ? '1.25' : '1.20',
+      note: form.batteryType === 'lead-acid' ? 'GB 51194 常用值' : '锂电常用值',
+    },
+  ]
+
+  if (form.batteryType === 'lead-acid') {
+    items.push(
+      {
+        label: '单体规格',
+        value: `${SIMPLE_MODE_FIXED.cellVoltage} V`,
+        note: '12 V 电池块（6 只 2 V 单体）',
+      },
+      {
+        label: '终止电压',
+        value: `${SIMPLE_MODE_FIXED.endVoltagePerCell.toFixed(2)} V/单体`,
+        note: '常见终止电压',
+      },
+      {
+        label: 'UPS 最低直流输入',
+        value: `${simpleDcMinVoltage(form.dcVoltage)} V`,
+        note: '按 0.85 × 标称电压粗校核',
+      },
+      {
+        label: 'η_ah 放电容量系数',
+        value: form.capacityCoefficient.toFixed(2),
+        note: `按备电 ${form.backupMinutes} min 查表自动取值`,
+      },
+      {
+        label: '厂家 W/单体',
+        value: '不校核',
+        note: '需要恒功率复核时请切专业模式',
+      },
+      {
+        label: '最大并联组数',
+        value: `${SIMPLE_MODE_FIXED.maxParallelStrings} 组`,
+        note: 'GB 51194 建议值',
+      },
+    )
+  } else {
+    items.push(
+      { label: 'DOD 放电深度', value: SIMPLE_MODE_FIXED.dod.toFixed(2), note: '常规放电深度' },
+      { label: 'SOH 寿命末期', value: SIMPLE_MODE_FIXED.soh.toFixed(2), note: '常取 0.8' },
+      { label: 'KT 温度降额', value: SIMPLE_MODE_FIXED.tempDerating.toFixed(2), note: '25 ℃ 基准' },
+      {
+        label: 'C_max 最大倍率',
+        value: `${SIMPLE_MODE_FIXED.maxCRate.toFixed(2)} C`,
+        note: '常规持续倍率',
+      },
+    )
+  }
+
+  return items
+})
+
+const simpleModeNote = computed(() => {
+  const base = `简易模式：cosφ=${SIMPLE_MODE_FIXED.powerFactor}、η=${SIMPLE_MODE_FIXED.efficiency}、η线=${SIMPLE_MODE_FIXED.lineEfficiency}、${SIMPLE_MODE_FIXED.ambientTempC} ℃、K=${form.batteryType === 'lead-acid' ? SIMPLE_MODE_FIXED.designMarginLeadAcid : SIMPLE_MODE_FIXED.designMarginLithium}`
+  return form.batteryType === 'lead-acid'
+    ? `${base}、η_ah 按备电时长查表、U_min=0.85×标称、厂家 W/单体未输入。`
+    : `${base}、DOD ${SIMPLE_MODE_FIXED.dod}、SOH ${SIMPLE_MODE_FIXED.soh}、KT ${SIMPLE_MODE_FIXED.tempDerating}、C_max ${SIMPLE_MODE_FIXED.maxCRate} C。`
+})
+
+function persistUiMode(mode: UiMode) {
+  try {
+    window.localStorage.setItem(UI_MODE_KEY, mode)
+  } catch {
+    /* localStorage 不可用时忽略 */
+  }
+}
+
+function setUiMode(mode: UiMode, silent = false) {
+  if (mode === uiMode.value) return
+  Object.assign(modeSnapshots[uiMode.value], { ...form })
+  uiMode.value = mode
+  Object.assign(form, { ...modeSnapshots[mode] })
+  persistUiMode(mode)
+  if (silent) return
+  toast.info(
+    mode === 'simple'
+      ? '已切到简易模式：高级参数按固定值参与计算'
+      : '已切到专业模式：可继续调整高级参数',
+  )
+}
+
+onMounted(() => {
+  try {
+    const saved = window.localStorage.getItem(UI_MODE_KEY)
+    if (saved === 'professional') setUiMode('professional', true)
+  } catch {
+    /* localStorage 不可用时忽略 */
+  }
+})
+
+// 简易模式：备电时长决定容量系数，标称电压决定 UPS 最低直流输入的粗校核值
+watch(
+  () => form.backupMinutes,
+  (minutes) => {
+    if (!isSimple.value) return
+    form.capacityCoefficient = simpleCapacityCoefficient(Number(minutes))
+  },
+)
+
+watch(
+  () => form.dcVoltage,
+  (voltage) => {
+    if (!isSimple.value) return
+    form.dcMinVoltage = simpleDcMinVoltage(Number(voltage))
+  },
+)
 
 const specLabel = computed(() => {
   const value = result.value
@@ -670,7 +872,9 @@ const specLabel = computed(() => {
 
 const activeSymbol = ref('')
 const parameterDocs = buildParameterDocs()
-const calcSteps = computed(() => (result.value ? buildBatterySteps({ ...form }, result.value) : []))
+const calcSteps = computed(() =>
+  result.value ? buildBatterySteps({ ...form }, result.value, { simple: isSimple.value }) : [],
+)
 const checkDetails = computed(() => {
   const value = result.value
   if (!value) return []
@@ -721,8 +925,10 @@ function sourceTitle(symbol: CalcSymbol): string {
 }
 
 function resetForm() {
-  Object.assign(form, createDefaultInput())
-  toast.info('已恢复默认参数')
+  const next = isSimple.value ? createSimpleInput() : createDefaultInput()
+  Object.assign(form, next)
+  Object.assign(modeSnapshots[uiMode.value], { ...next })
+  toast.info(isSimple.value ? '已恢复简易模式默认参数' : '已恢复默认参数')
 }
 
 function buildReport(): string {
@@ -732,6 +938,7 @@ function buildReport(): string {
   const lines = [
     '蓄电池容量估算书（方案初选）',
     `电池类型：${value.batteryType === 'lead-acid' ? '铅酸蓄电池' : '锂离子电池'}`,
+    ...(isSimple.value ? [`模式：简易（${simpleModeNote.value.replace(/^简易模式：/, '')}）`] : []),
     `负荷：${value.loadPowerKw.toFixed(2)} kW；备电时长：${value.backupMinutes} min；环境温度：${form.ambientTempC} ℃`,
     `直流电压：${value.dcVoltageActual.toFixed(0)} V；设计余量 K：${form.designMargin}`,
     ...(value.batteryType === 'lead-acid'
@@ -851,6 +1058,68 @@ async function copyReport() {
   height: 15px;
   margin-top: 0.15rem;
   color: var(--color-primary);
+}
+
+/* 简易 / 专业模式 */
+
+.mode-switch {
+  flex: 0 0 auto;
+  min-width: 7.5rem;
+}
+
+.notice-simple {
+  border-color: color-mix(in oklab, var(--color-warning) 38%, var(--color-base-300));
+  background-color: color-mix(in oklab, var(--color-warning) 6%, var(--color-base-100));
+}
+
+.notice-simple svg {
+  color: var(--color-warning);
+}
+
+.assumption-card {
+  margin: 0 0.85rem 0.85rem;
+  border: 1px solid color-mix(in oklab, var(--color-warning) 30%, var(--color-base-300));
+  background-color: color-mix(in oklab, var(--color-warning) 4%, var(--color-base-100));
+}
+
+.assumption-card > summary {
+  padding: 0.45rem 0.6rem;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.assumption-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10.5px;
+}
+
+.assumption-table th,
+.assumption-table td {
+  padding: 0.3rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+  border-top: 1px dashed color-mix(in oklab, var(--color-base-300) 70%, transparent);
+}
+
+.assumption-table th {
+  width: 34%;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.assumption-note {
+  color: var(--text-faint);
+}
+
+.verdict-mode {
+  margin-top: 0.45rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  border: 1px dashed var(--color-base-300);
 }
 
 .workbench {
