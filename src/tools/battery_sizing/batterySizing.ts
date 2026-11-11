@@ -138,6 +138,70 @@ export function createDefaultInput(): BatterySizingInput {
   }
 }
 
+/** 简易模式固定值：方案初选时不需要用户输入的参数，集中在这里便于页面同步展示。 */
+export const SIMPLE_MODE_FIXED = {
+  powerFactor: 0.9,
+  efficiency: 0.95,
+  lineEfficiency: 0.99,
+  ambientTempC: 30,
+  designMarginLeadAcid: 1.25,
+  designMarginLithium: 1.2,
+  cellVoltage: 12 as CellVoltage,
+  endVoltagePerCell: 1.75,
+  manufacturerWPerCell: 0,
+  maxParallelStrings: 4,
+  dod: 0.9,
+  soh: 0.8,
+  tempDerating: 1,
+  maxCRate: 1,
+  /** UPS 最低直流输入按标称电压的比例做粗校核（0.85 ≈ 常见直流输入下限；1.75 V/单体对应 0.875） */
+  dcMinVoltageRatio: 0.85,
+} as const
+
+/** 简易模式：按备电时长自动取典型放电容量系数。 */
+export function simpleCapacityCoefficient(minutes: number): number {
+  return capacityCoefficientForHours(Math.max(0, Number(minutes) || 0) / 60)
+}
+
+/** 简易模式：UPS 最低直流输入的粗校核值（标称电压 × 0.9）。 */
+export function simpleDcMinVoltage(dcVoltage: number): number {
+  return Math.round(Math.max(0, Number(dcVoltage) || 0) * SIMPLE_MODE_FIXED.dcMinVoltageRatio)
+}
+
+/**
+ * 简易模式默认输入：核心字段与 createDefaultInput 相同，其余按方案初选的假定值固定。
+ *
+ * 假定：cosφ=0.9、η=0.95、η线=0.99、30 ℃、K=1.25（锂电 1.2）、12 V 单体、1.75 V 终止电压、
+ * U_min=0.9×标称电压、η_ah 按备电时长查表、厂家 W/单体不校核、并联 ≤4 组。
+ *
+ * 这里只是输入值组合，不改变引擎口径；专业模式仍使用 createDefaultInput()。
+ */
+export function createSimpleInput(overrides: Partial<BatterySizingInput> = {}): BatterySizingInput {
+  const merged: BatterySizingInput = { ...createDefaultInput(), ...overrides }
+  const isLithium = merged.batteryType === 'lithium'
+
+  return {
+    ...merged,
+    powerFactor: SIMPLE_MODE_FIXED.powerFactor,
+    efficiency: SIMPLE_MODE_FIXED.efficiency,
+    lineEfficiency: SIMPLE_MODE_FIXED.lineEfficiency,
+    ambientTempC: SIMPLE_MODE_FIXED.ambientTempC,
+    designMargin: isLithium
+      ? SIMPLE_MODE_FIXED.designMarginLithium
+      : SIMPLE_MODE_FIXED.designMarginLeadAcid,
+    cellVoltage: SIMPLE_MODE_FIXED.cellVoltage,
+    endVoltagePerCell: SIMPLE_MODE_FIXED.endVoltagePerCell,
+    dcMinVoltage: simpleDcMinVoltage(merged.dcVoltage),
+    capacityCoefficient: simpleCapacityCoefficient(merged.backupMinutes),
+    manufacturerWPerCell: SIMPLE_MODE_FIXED.manufacturerWPerCell,
+    maxParallelStrings: SIMPLE_MODE_FIXED.maxParallelStrings,
+    dod: SIMPLE_MODE_FIXED.dod,
+    soh: SIMPLE_MODE_FIXED.soh,
+    tempDerating: SIMPLE_MODE_FIXED.tempDerating,
+    maxCRate: SIMPLE_MODE_FIXED.maxCRate,
+  }
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }
