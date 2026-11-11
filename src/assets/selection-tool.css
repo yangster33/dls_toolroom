@@ -438,7 +438,6 @@
   padding-left: 1.6rem;
 }
 
-
 .selection-tool .verdict-why {
   margin-top: 0.55rem;
   padding-top: 0.55rem;
@@ -452,22 +451,21 @@
   color: var(--color-warning);
 }
 @media (max-width: 1080px) {
-.selection-tool .workbench {
+  .selection-tool .workbench {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
 @media (max-width: 640px) {
-
-.selection-tool .field-grid {
+  .selection-tool .field-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
-.selection-tool .page-actions {
+  .selection-tool .page-actions {
     width: 100%;
   }
 
-.selection-tool .verdict-section {
+  .selection-tool .verdict-section {
     font-size: 34px;
   }
 }

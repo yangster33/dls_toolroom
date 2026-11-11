@@ -25,15 +25,9 @@
         <div class="check-item-body">
           <p class="check-formula">{{ check.formula }}</p>
           <p class="check-substitution">{{ check.substitution }}</p>
-          <p class="check-line">
-            <span class="check-line-label">要求</span>{{ check.required }}
-          </p>
-          <p class="check-line">
-            <span class="check-line-label">实际</span>{{ check.actual }}
-          </p>
-          <p class="check-line">
-            <span class="check-line-label">裕度</span>{{ check.margin }}
-          </p>
+          <p class="check-line"><span class="check-line-label">要求</span>{{ check.required }}</p>
+          <p class="check-line"><span class="check-line-label">实际</span>{{ check.actual }}</p>
+          <p class="check-line"><span class="check-line-label">裕度</span>{{ check.margin }}</p>
 
           <div v-if="check.symbols.length" class="calc-symbols">
             <SymbolChip

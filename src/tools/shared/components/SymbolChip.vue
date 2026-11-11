@@ -11,9 +11,7 @@
     @blur="emit('deactivate')"
   >
     <span class="symbol-name">{{ symbol.symbol }}</span>
-    <span class="symbol-value"
-      >{{ symbol.value }}{{ symbol.unit ? ` ${symbol.unit}` : '' }}</span
-    >
+    <span class="symbol-value">{{ symbol.value }}{{ symbol.unit ? ` ${symbol.unit}` : '' }}</span>
     <span class="symbol-label">{{ symbol.name }}</span>
     <span class="symbol-source" :class="`is-${symbol.source}`">
       {{ sourceLabel(symbol.source) }}
