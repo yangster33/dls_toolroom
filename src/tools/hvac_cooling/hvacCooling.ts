@@ -120,6 +120,8 @@ export interface HvacCoolingResult {
 
   designMargin: number
   correctionFactor: number
+  /** 控制最终选型的约束，如 ['运行冷量', '单台负载率'] */
+  drivers: string[]
   checks: CheckResult[]
   warnings: string[]
   overallPass: boolean
@@ -248,6 +250,74 @@ export function createDefaultInput(): HvacCoolingInput {
     unitSensibleRatio: 0.9,
     correctionFactor: 1,
     pBasisKw: 2.5,
+  }
+}
+
+/**
+ * 简易模式固定值：只固定厂家 / 规范类与方案假定（经验值）两组参数。
+ *
+ * 负荷侧输入（房间类型、计算方式、面积、IT 功率、设计余量、冗余方式）仍由用户选择；
+ * 面积指标按房间类型预设取值，见 createSimpleInput。
+ * 这些值全部是引擎合法输入，不改变 createDefaultInput() 与任何公式。
+ */
+export const SIMPLE_MODE_FIXED = {
+  /** 厂家 / 规范类：机房专用机型 */
+  unitType: 'precision' as AcUnitType,
+  /** 负荷显热比，机房常规 0.90 */
+  loadSensibleRatio: 0.9,
+  /** 机组显热比，精密空调常规 0.90 */
+  unitSensibleRatio: 0.9,
+  /** 不做海拔 / 工况 / 污垢修正 */
+  correctionFactor: 1,
+  /** 匹数换算基准，常用 2.5 kW/P */
+  pBasisKw: 2.5,
+  /** 0 = 自动推荐 */
+  unitCapacityKw: 0,
+  runningUnitCount: 0,
+  /** 方案假定（经验值）：电能全部转热 */
+  heatFactor: 1,
+  /** 100 m² 量级机房的围护结构经验值 */
+  envelopeLoadKw: 3,
+  otherLoadKw: 1,
+  lightingWPerM2: 10,
+  peopleCount: 2,
+  peopleWPerPerson: 120,
+  freshAirMode: 'load' as FreshAirMode,
+  /** 按冷负荷直接输入，不做焓差换算 */
+  freshAirLoadKw: 2,
+} as const
+
+/**
+ * 简易模式默认输入：核心字段与 createDefaultInput 相同，其余按方案初选的假定值固定。
+ *
+ * 面积指标取房间类型预设（通信机房 400 W/m² 等）；自定义机房保留传入值。
+ * 这里只是输入值组合，不改变引擎口径；专业模式仍使用 createDefaultInput()。
+ */
+export function createSimpleInput(overrides: Partial<HvacCoolingInput> = {}): HvacCoolingInput {
+  const merged: HvacCoolingInput = { ...createDefaultInput(), ...overrides }
+  const areaIndexWPerM2 =
+    merged.roomType === 'custom'
+      ? merged.areaIndexWPerM2
+      : getRoomTypePreset(merged.roomType).areaIndexWPerM2
+
+  return {
+    ...merged,
+    areaIndexWPerM2,
+    unitType: SIMPLE_MODE_FIXED.unitType,
+    loadSensibleRatio: SIMPLE_MODE_FIXED.loadSensibleRatio,
+    unitSensibleRatio: SIMPLE_MODE_FIXED.unitSensibleRatio,
+    correctionFactor: SIMPLE_MODE_FIXED.correctionFactor,
+    pBasisKw: SIMPLE_MODE_FIXED.pBasisKw,
+    unitCapacityKw: SIMPLE_MODE_FIXED.unitCapacityKw,
+    runningUnitCount: SIMPLE_MODE_FIXED.runningUnitCount,
+    heatFactor: SIMPLE_MODE_FIXED.heatFactor,
+    envelopeLoadKw: SIMPLE_MODE_FIXED.envelopeLoadKw,
+    otherLoadKw: SIMPLE_MODE_FIXED.otherLoadKw,
+    lightingWPerM2: SIMPLE_MODE_FIXED.lightingWPerM2,
+    peopleCount: SIMPLE_MODE_FIXED.peopleCount,
+    peopleWPerPerson: SIMPLE_MODE_FIXED.peopleWPerPerson,
+    freshAirMode: SIMPLE_MODE_FIXED.freshAirMode,
+    freshAirLoadKw: SIMPLE_MODE_FIXED.freshAirLoadKw,
   }
 }
 
@@ -523,6 +593,11 @@ export function calculateHvacCooling(input: HvacCoolingInput): HvacCoolingResult
     warnings.push('运行台数较多，建议评估集中冷源、增大单台容量或采用模块化机房空调。')
   }
 
+  // 只记录真正决定选型的约束：运行冷量决定所需容量与运行台数，90% 单台负载率
+  // 是自动选单台容量的设计目标。显冷量通常由这两者派生，只有校核不通过时才单独控制。
+  const drivers: string[] = ['运行冷量', '单台负载率']
+  if (unitSensibleCapacityKw < sensibleLoadKw - 1e-6) drivers.push('显冷量')
+
   return {
     roomType: input.roomType,
     calculationMode: input.calculationMode,
@@ -551,6 +626,7 @@ export function calculateHvacCooling(input: HvacCoolingInput): HvacCoolingResult
     unitSensibleCapacityKw,
     designMargin,
     correctionFactor,
+    drivers,
     checks,
     warnings,
     overallPass: checks.every((check) => check.pass),
