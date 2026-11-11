@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   calculateBatterySizing,
   createDefaultInput,
+  createSimpleInput,
   type BatterySizingInput,
 } from '../batterySizing'
 import { buildBatterySteps, buildParameterDocs, stepLabel } from '../calculationSteps'
@@ -103,6 +104,35 @@ describe('buildBatterySteps · 锂电', () => {
     expect(capacity?.keyValue).toContain('Q_min,C')
     expect(capacity?.substitution).toContain('159.49 / 1.00')
     expect(capacity?.note).toContain('倍率')
+  })
+})
+
+describe('buildBatterySteps · 简易模式', () => {
+  it('容量系数标为查表，并说明按备电时长自动取值', () => {
+    const input = createSimpleInput()
+    const result = calculateBatterySizing(input)
+    expect(result).not.toBeNull()
+
+    const steps = buildBatterySteps(input, result!, { simple: true })
+    const factors = steps.find((step) => step.key === 'factors')
+    const capacityCoefficient = factors?.symbols.find((symbol) => symbol.symbol === 'η_ah')
+
+    expect(capacityCoefficient?.source).toBe('table')
+    expect(capacityCoefficient?.inputSymbol).toBeUndefined()
+    expect(capacityCoefficient?.sourceDetail).toContain('简易模式自动取值')
+    expect(factors?.note).toContain('简易模式')
+  })
+
+  it('专业模式仍标为输入', () => {
+    const input = withInput({})
+    const result = calculateBatterySizing(input)
+    expect(result).not.toBeNull()
+
+    const steps = buildBatterySteps(input, result!)
+    const factors = steps.find((step) => step.key === 'factors')
+
+    expect(factors?.symbols.find((symbol) => symbol.symbol === 'η_ah')?.source).toBe('input')
+    expect(factors?.note).toContain('典型值')
   })
 })
 

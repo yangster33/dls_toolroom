@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  SIMPLE_MODE_FIXED,
   alphaForHours,
   calculateBatterySizing,
   capacityCoefficientForHours,
   createDefaultInput,
+  createSimpleInput,
+  simpleCapacityCoefficient,
+  simpleDcMinVoltage,
   type BatterySizingInput,
 } from '../batterySizing'
 
@@ -148,6 +152,64 @@ describe('终止电压限幅', () => {
     expect(high!.endVoltagePerCellActual).toBeCloseTo(1.9, 6)
     expect(high!.endVoltageActual).toBeCloseTo(456, 6)
     expect(low!.endVoltagePerCellActual).toBeCloseTo(1.5, 6)
+  })
+})
+
+describe('简易模式（2026-11-11）', () => {
+  it('铅酸简易默认按假定值固定，核心字段与默认一致', () => {
+    const input = createSimpleInput()
+
+    expect(input.powerFactor).toBe(SIMPLE_MODE_FIXED.powerFactor)
+    expect(input.efficiency).toBe(SIMPLE_MODE_FIXED.efficiency)
+    expect(input.lineEfficiency).toBe(SIMPLE_MODE_FIXED.lineEfficiency)
+    expect(input.ambientTempC).toBe(30)
+    expect(input.designMargin).toBe(1.25)
+    expect(input.cellVoltage).toBe(12)
+    expect(input.endVoltagePerCell).toBe(1.75)
+    expect(input.dcMinVoltage).toBe(408)
+    expect(input.capacityCoefficient).toBeCloseTo(0.42, 6)
+    expect(input.manufacturerWPerCell).toBe(0)
+    expect(input.maxParallelStrings).toBe(4)
+    expect(input.upsKva).toBe(createDefaultInput().upsKva)
+  })
+
+  it('锂电简易默认余量取 1.20，并固定 DOD/SOH/KT/倍率', () => {
+    const input = createSimpleInput({ batteryType: 'lithium' })
+
+    expect(input.designMargin).toBe(1.2)
+    expect(input.dod).toBe(0.9)
+    expect(input.soh).toBe(0.8)
+    expect(input.tempDerating).toBe(1)
+    expect(input.maxCRate).toBe(1)
+  })
+
+  it('容量系数按备电时长自动查表，直流下限按 0.9 粗校核', () => {
+    expect(simpleCapacityCoefficient(30)).toBeCloseTo(0.42, 6)
+    expect(simpleCapacityCoefficient(120)).toBeCloseTo(0.61, 6)
+    expect(simpleCapacityCoefficient(600)).toBeCloseTo(1, 6)
+    expect(simpleDcMinVoltage(480)).toBe(408)
+    expect(createSimpleInput({ backupMinutes: 120 }).capacityCoefficient).toBeCloseTo(0.61, 6)
+  })
+
+  it('T=2 h 的简易输入与手填同样系数后结果一致', () => {
+    const simple = calculateBatterySizing(createSimpleInput({ backupMinutes: 120 }))
+    const manual = calculateBatterySizing(
+      withInput({ backupMinutes: 120, capacityCoefficient: 0.61, ambientTempC: 30 }),
+    )
+
+    expect(simple).not.toBeNull()
+    expect(manual).not.toBeNull()
+    expect(simple!.requiredAh).toBeCloseTo(manual!.requiredAh, 6)
+    expect(simple!.configuredAh).toBe(manual!.configuredAh)
+  })
+
+  it('简易默认下终止电压按 0.85×标称粗校核仍通过', () => {
+    const result = calculateBatterySizing(createSimpleInput())
+
+    expect(result).not.toBeNull()
+    expect(result!.endVoltageActual).toBeCloseTo(420, 6)
+    expect(result!.checks.find((check) => check.key === 'voltage')?.pass).toBe(true)
+    expect(result!.overallPass).toBe(true)
   })
 })
 
