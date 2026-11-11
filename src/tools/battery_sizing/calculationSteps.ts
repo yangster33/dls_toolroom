@@ -5,6 +5,15 @@
  * 查表 / 插值 / 限幅细节由 traceability.ts 从同一份表数据生成。
  */
 
+import {
+  formatNumber,
+  makeSymbol as symbol,
+  stepLabelOf,
+  type CalcSymbol,
+  type CalcStep,
+  type ParameterDoc,
+  type SymbolSource,
+} from '../shared/calcTrace'
 import { MAX_UNIT_AH, type BatterySizingInput, type BatterySizingResult } from './batterySizing'
 import {
   describeAlpha,
@@ -14,73 +23,12 @@ import {
   describeTemperatureFactor,
 } from './traceability'
 
-export type SymbolSource = 'input' | 'table' | 'calc' | 'constant' | 'default'
+export type { CalcSymbol, CalcStep, ParameterDoc, SymbolSource }
 
-export interface CalcSymbol {
-  symbol: string
-  name: string
-  value: string
-  unit?: string
-  /** 对应输入控件的 data-symbol；计算值不填 */
-  inputSymbol?: string
-  source: SymbolSource
-  /** 来源细节：表号、规则、常数说明等 */
-  sourceDetail?: string
-}
-
-export interface CalcStep {
-  key: string
-  index: number
-  title: string
-  /** 折叠时显示的关键值，如 "Q = 237.3 Ah" */
-  keyValue: string
-  formula: string
-  substitution: string
-  result: string
-  symbols: CalcSymbol[]
-  pass?: boolean
-  controlling?: boolean
-  note?: string
-}
-
-export interface ParameterDoc {
-  symbol: string
-  name: string
-  meaning: string
-  position: string
-  impact: string
-  source: string
-  editable: string
-  basis: string
-}
-
-const CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩']
-
-function fmt(value: number, digits = 1): string {
-  return value.toFixed(digits)
-}
-
-function symbol(
-  name: string,
-  value: string,
-  source: SymbolSource,
-  options: { symbol?: string; unit?: string; inputSymbol?: string; sourceDetail?: string } = {},
-): CalcSymbol {
-  return {
-    symbol: options.symbol ?? name,
-    name,
-    value,
-    source,
-    ...(options.unit ? { unit: options.unit } : {}),
-    ...(options.inputSymbol ? { inputSymbol: options.inputSymbol } : {}),
-    ...(options.sourceDetail ? { sourceDetail: options.sourceDetail } : {}),
-  }
-}
+const fmt = (value: number, digits = 1) => formatNumber(value, digits)
 
 /** 计算书步骤的显示名，如 "⑤ 所需容量"。 */
-export function stepLabel(step: CalcStep): string {
-  return `${CIRCLED[step.index - 1] ?? step.index} ${step.title}`
-}
+export const stepLabel = stepLabelOf
 
 /** 计算书选项：简易模式下部分符号的来源与注释不同。 */
 export interface BatteryStepOptions {

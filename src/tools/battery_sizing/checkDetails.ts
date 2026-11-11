@@ -4,66 +4,23 @@
  * 计算仍由 batterySizing.ts 完成；这里只读取结果，不改变容量选型。
  */
 
-import type { BatterySizingInput, BatterySizingResult } from './batterySizing'
 import {
-  buildBatterySteps,
-  stepLabel,
-  type CalcStep,
-  type CalcSymbol,
-  type SymbolSource,
-} from './calculationSteps'
+  formatNumber as fmt,
+  makeSymbol,
+  signed,
+  whyText as baseWhyText,
+  type CheckDetail,
+} from '../shared/calcTrace'
+import type { BatterySizingInput, BatterySizingResult } from './batterySizing'
+import { buildBatterySteps, stepLabel, type CalcStep } from './calculationSteps'
 import { describeAlpha, describeCapacityCoefficient } from './traceability'
 
-export interface CheckDetail {
-  key: string
-  label: string
-  /** 折叠时显示的关键值，如 "Q_cfg = 250 Ah" */
-  keyValue: string
-  required: string
-  actual: string
-  pass: boolean
-  controlling: boolean
-  margin: string
-  formula: string
-  substitution: string
-  symbols: CalcSymbol[]
-  why: string
-  /** 关联计算书步骤的 key，如 "capacity" */
-  stepKey?: string
-  /** 关联计算书步骤的显示名，如 "⑤ 所需容量（安时法）" */
-  stepLabel?: string
-}
+export type { CheckDetail }
 
-function fmt(value: number, digits = 1): string {
-  return value.toFixed(digits)
-}
-
-function signed(value: number, digits = 1): string {
-  return `${value >= 0 ? '+' : ''}${fmt(value, digits)}`
-}
-
-function makeSymbol(
-  name: string,
-  value: string,
-  source: SymbolSource,
-  options: { symbol?: string; unit?: string; inputSymbol?: string; sourceDetail?: string } = {},
-): CalcSymbol {
-  return {
-    symbol: options.symbol ?? name,
-    name,
-    value,
-    source,
-    ...(options.unit ? { unit: options.unit } : {}),
-    ...(options.inputSymbol ? { inputSymbol: options.inputSymbol } : {}),
-    ...(options.sourceDetail ? { sourceDetail: options.sourceDetail } : {}),
-  }
-}
+const WHY = { subject: '容量', failHint: '需要调整容量、并联组数或厂家选型。' }
 
 function whyText(pass: boolean, controlling: boolean, margin: string, drivers: string[]): string {
-  if (!pass) return `不满足；缺口 ${margin}，需要调整容量、并联组数或厂家选型。`
-  if (controlling) return `满足，且是控制项；余量 ${margin}。`
-  const driverText = drivers.length ? drivers.join(' / ') : '其他约束'
-  return `满足，但未控制最终容量；当前由 ${driverText} 控制，余量 ${margin}。`
+  return baseWhyText(pass, controlling, margin, drivers, WHY)
 }
 
 function checkOf(result: BatterySizingResult, key: string) {

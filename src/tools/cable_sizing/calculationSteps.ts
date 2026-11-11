@@ -6,6 +6,14 @@
  */
 
 import {
+  formatNumber,
+  makeSymbol as symbol,
+  type CalcSymbol,
+  type CalcStep,
+  type ParameterDoc,
+  type SymbolSource,
+} from '../shared/calcTrace'
+import {
   describeBreaker,
   describeGroupingFactor,
   describeHarmonicFactor,
@@ -16,49 +24,7 @@ import {
 } from './traceability'
 import type { CableSizingInput, CableSizingResult, ProtectionDevice } from './types'
 
-export type SymbolSource = 'input' | 'table' | 'calc' | 'constant' | 'default'
-
-export interface CalcSymbol {
-  symbol: string
-  name: string
-  value: string
-  unit?: string
-  /** 对应输入控件的 data-symbol；计算值不填 */
-  inputSymbol?: string
-  source: SymbolSource
-  /** 来源细节：表号、规则、常数说明等 */
-  sourceDetail?: string
-}
-
-export interface CalcStep {
-  key: string
-  index: number
-  title: string
-  /** 折叠时显示的关键值，如 "Pjs = 24.00 kW" */
-  keyValue: string
-  formula: string
-  substitution: string
-  result: string
-  symbols: CalcSymbol[]
-  pass?: boolean
-  controlling?: boolean
-  note?: string
-}
-
-export interface ParameterDoc {
-  symbol: string
-  name: string
-  meaning: string
-  position: string
-  impact: string
-  source: string
-  editable: string
-  basis: string
-}
-
-function formatNumber(value: number, digits = 1): string {
-  return value.toFixed(digits)
-}
+export type { CalcSymbol, CalcStep, ParameterDoc, SymbolSource }
 
 function formatSection(section: number): string {
   return Number.isInteger(section) ? String(section) : section.toFixed(1)
@@ -66,23 +32,6 @@ function formatSection(section: number): string {
 
 function formatPoints(points: ReadonlyArray<readonly [number, number]>): string {
   return points.map(([value, factor]) => `${value}→${factor.toFixed(2)}`).join('，')
-}
-
-function symbol(
-  name: string,
-  value: string,
-  source: SymbolSource,
-  options: { symbol?: string; unit?: string; inputSymbol?: string; sourceDetail?: string } = {},
-): CalcSymbol {
-  return {
-    symbol: options.symbol ?? name,
-    name,
-    value,
-    source,
-    ...(options.unit ? { unit: options.unit } : {}),
-    ...(options.inputSymbol ? { inputSymbol: options.inputSymbol } : {}),
-    ...(options.sourceDetail ? { sourceDetail: options.sourceDetail } : {}),
-  }
 }
 
 function protectionLabel(device: ProtectionDevice): string {

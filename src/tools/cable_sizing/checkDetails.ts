@@ -4,63 +4,26 @@
  * 计算仍由 cableSizing.ts 完成；这里只读取结果，不改变选型。
  */
 
-import type { CalcSymbol, SymbolSource } from './calculationSteps'
+import {
+  formatNumber as fmt,
+  makeSymbol,
+  signed,
+  whyText as baseWhyText,
+  type CalcSymbol,
+  type CheckDetail,
+} from '../shared/calcTrace'
 import type { CableSizingInput, CableSizingResult } from './types'
 
-export interface CheckDetail {
-  key: string
-  label: string
-  /** 折叠时显示的关键值，如 "Iz = 85.4 A" */
-  keyValue: string
-  required: string
-  actual: string
-  pass: boolean
-  controlling: boolean
-  margin: string
-  formula: string
-  substitution: string
-  symbols: CalcSymbol[]
-  why: string
-  /** 关联计算书步骤的 key，如 "ampacity" */
-  stepKey?: string
-  /** 关联计算书步骤的显示名，如 "④ 载流量" */
-  stepLabel?: string
-}
-
-function fmt(value: number, digits = 1): string {
-  return value.toFixed(digits)
-}
+export type { CheckDetail }
 
 function fmtSection(section: number): string {
   return Number.isInteger(section) ? String(section) : section.toFixed(1)
 }
 
-function signed(value: number, digits = 1): string {
-  return `${value >= 0 ? '+' : ''}${fmt(value, digits)}`
-}
-
-function makeSymbol(
-  name: string,
-  value: string,
-  source: SymbolSource,
-  options: { symbol?: string; unit?: string; inputSymbol?: string; sourceDetail?: string } = {},
-): CalcSymbol {
-  return {
-    symbol: options.symbol ?? name,
-    name,
-    value,
-    source,
-    ...(options.unit ? { unit: options.unit } : {}),
-    ...(options.inputSymbol ? { inputSymbol: options.inputSymbol } : {}),
-    ...(options.sourceDetail ? { sourceDetail: options.sourceDetail } : {}),
-  }
-}
+const WHY = { subject: '截面', failHint: '需要调整截面、保护整定或敷设条件。' }
 
 function whyText(pass: boolean, controlling: boolean, margin: string, drivers: string[]): string {
-  if (!pass) return `不满足；缺口 ${margin}，需要调整截面、保护整定或敷设条件。`
-  if (controlling) return `满足，且是控制项；余量 ${margin}。`
-  const driverText = drivers.length ? drivers.join(' / ') : '其他约束'
-  return `满足，但未控制最终截面；当前由 ${driverText} 控制，余量 ${margin}。`
+  return baseWhyText(pass, controlling, margin, drivers, WHY)
 }
 
 function checkOf(result: CableSizingResult, key: string) {
