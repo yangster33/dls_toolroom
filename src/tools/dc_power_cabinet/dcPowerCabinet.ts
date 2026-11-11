@@ -140,6 +140,64 @@ export function createDefaultInput(): DcCabinetInput {
   }
 }
 
+/**
+ * 简易模式固定值：只固定厂家 / 规范类参数，负荷侧输入（电压、负荷、远期比、
+ * 电池容量、模块电流、冗余）仍由用户选择。
+ *
+ * 这些值全部是引擎合法输入，不改变 createDefaultInput() 与任何公式。
+ */
+export const SIMPLE_MODE_FIXED = {
+  /** GB 51194 常用值，约 0.1C10 */
+  chargeRate: 0.1,
+  /** 高温 / 高海拔按厂家曲线取的常用降额 */
+  moduleDerating: 0.9,
+  moduleU: 1,
+  /** 监控、配电、备用等非模块占用 U 数 */
+  reserveU: 8,
+  cabinetHeightMm: 2000,
+  cabinetWidthMm: 600,
+  cabinetDepthMm: 600,
+  /** 常见 2 m 柜的单柜模块上限 */
+  maxModulesPerCabinet: 24,
+  /** 机房常规三相 380 V 进线 */
+  acPhase: 3 as AcPhase,
+  acVoltage: 380,
+  /** 高频整流模块典型功率因数 */
+  acPowerFactor: 0.99,
+  /** 高频整流模块典型效率 */
+  rectifierEfficiency: 0.92,
+  /** 常用整定余量 */
+  breakerMargin: 1.25,
+} as const
+
+/**
+ * 简易模式默认输入：核心字段与 createDefaultInput 相同，其余按方案初选的假定值固定。
+ *
+ * 假定：0.1C10 均充、模块降额 0.9、模块 1U / 备用 8U、柜体 2000×600×600 mm、
+ * 单柜最多 24 个模块、三相 380 V、PF 0.99、整流效率 0.92、断路器余量 1.25。
+ *
+ * 这里只是输入值组合，不改变引擎口径；专业模式仍使用 createDefaultInput()。
+ */
+export function createSimpleInput(overrides: Partial<DcCabinetInput> = {}): DcCabinetInput {
+  return {
+    ...createDefaultInput(),
+    ...overrides,
+    chargeRate: SIMPLE_MODE_FIXED.chargeRate,
+    moduleDerating: SIMPLE_MODE_FIXED.moduleDerating,
+    moduleU: SIMPLE_MODE_FIXED.moduleU,
+    reserveU: SIMPLE_MODE_FIXED.reserveU,
+    cabinetHeightMm: SIMPLE_MODE_FIXED.cabinetHeightMm,
+    cabinetWidthMm: SIMPLE_MODE_FIXED.cabinetWidthMm,
+    cabinetDepthMm: SIMPLE_MODE_FIXED.cabinetDepthMm,
+    maxModulesPerCabinet: SIMPLE_MODE_FIXED.maxModulesPerCabinet,
+    acPhase: SIMPLE_MODE_FIXED.acPhase,
+    acVoltage: SIMPLE_MODE_FIXED.acVoltage,
+    acPowerFactor: SIMPLE_MODE_FIXED.acPowerFactor,
+    rectifierEfficiency: SIMPLE_MODE_FIXED.rectifierEfficiency,
+    breakerMargin: SIMPLE_MODE_FIXED.breakerMargin,
+  }
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }
