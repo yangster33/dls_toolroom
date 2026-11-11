@@ -1,5 +1,5 @@
 <template>
-  <div class="battery-page calc-trace">
+  <div class="battery-page calc-trace selection-tool">
     <header class="page-head">
       <div class="page-title">
         <p class="eyebrow">
@@ -15,27 +15,12 @@
         </p>
       </div>
       <div class="page-actions">
-        <div class="segmented mode-switch" role="group" aria-label="模式">
-          <button
-            type="button"
-            :class="{ active: uiMode === 'simple' }"
-            @click="setUiMode('simple')"
-          >
-            简易
-          </button>
-          <button
-            type="button"
-            :class="{ active: uiMode === 'professional' }"
-            @click="setUiMode('professional')"
-          >
-            专业
-          </button>
-        </div>
-        <button type="button" class="btn btn-sm btn-ghost" @click="resetForm">
+        <ModeSwitch :model-value="uiMode" @update:model-value="setUiMode" />
+        <button type="button" class="btn btn-sm btn-ghost" @click="reset">
           <PhArrowCounterClockwise aria-hidden="true" />
           重置
         </button>
-        <button type="button" class="btn btn-sm btn-primary" @click="copyReport">
+        <button type="button" class="btn btn-sm btn-primary" @click="copy(buildReport())">
           <PhCopy aria-hidden="true" />
           {{ copied ? '已复制' : '复制计算书' }}
         </button>
@@ -373,93 +358,29 @@
             </template>
           </p>
 
-          <details v-if="isSimple" class="assumption-card" open>
-            <summary>简易模式假定（固定值参与计算）</summary>
-            <table class="assumption-table">
-              <tbody>
-                <tr v-for="item in simpleAssumptions" :key="item.label">
-                  <th scope="row">{{ item.label }}</th>
-                  <td class="readout">{{ item.value }}</td>
-                  <td class="assumption-note">{{ item.note }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </details>
+          <AssumptionCard v-if="isSimple" :items="simpleAssumptions" />
         </section>
       </div>
 
       <aside class="output-column">
-        <div v-if="result" class="result-strip">
-          <span class="strip-section">{{ result.configuredAh.toFixed(0) }} Ah</span>
-          <span v-if="isSimple" class="strip-mode">简易</span>
-          <span class="check-status" :class="result.overallPass ? 'is-pass' : 'is-fail'">
-            {{ result.overallPass ? 'PASS' : 'REVIEW' }}
-          </span>
-          <span class="strip-driver">由 {{ result.drivers.join(' / ') }} 控制</span>
-          <a class="strip-link" href="#verdict">跳到结论 ↓</a>
-        </div>
+        <ResultStrip
+          v-if="result"
+          :value="result.configuredAh.toFixed(0)"
+          unit="Ah"
+          :badge="isSimple ? '简易' : ''"
+          :pass="result.overallPass"
+          :drivers="result.drivers"
+        />
 
-        <details v-if="result" ref="calcBookRef" class="panel calc-panel">
-          <summary>计算书（{{ calcSteps.length }} 步，点击展开）</summary>
-
-          <div class="calc-book">
-            <p v-if="isSimple" class="calc-mode-note">模式：简易（固定值见“简易模式假定”）</p>
-            <details
-              v-for="step in calcSteps"
-              :id="`calc-${step.key}`"
-              :key="step.key"
-              class="calc-step"
-              :class="{ 'is-fail': step.pass === false }"
-            >
-              <summary class="calc-step-head">
-                <span class="calc-step-no">{{ step.index }}</span>
-                <span class="calc-step-title">{{ step.title }}</span>
-                <span class="calc-step-key">{{ step.keyValue }}</span>
-                <span v-if="step.controlling" class="calc-step-flag">控制</span>
-                <span
-                  v-if="step.pass !== undefined"
-                  class="check-status"
-                  :class="step.pass ? 'is-pass' : 'is-fail'"
-                >
-                  {{ step.pass ? '通过' : '不通过' }}
-                </span>
-              </summary>
-
-              <div class="calc-step-body">
-                <p class="calc-formula">{{ step.formula }}</p>
-                <p class="calc-substitution">{{ step.substitution }}</p>
-                <p class="calc-result">{{ step.result }}</p>
-
-                <div v-if="step.symbols.length" class="calc-symbols">
-                  <button
-                    v-for="symbol in step.symbols"
-                    :key="`${step.key}-${symbol.symbol}`"
-                    type="button"
-                    class="symbol-chip"
-                    :class="{ 'is-symbol-active': chipActive(symbol) }"
-                    :data-symbol="symbol.inputSymbol"
-                    :title="sourceTitle(symbol)"
-                    @mouseenter="activateSymbol(symbol)"
-                    @mouseleave="activeSymbol = ''"
-                    @focus="activateSymbol(symbol)"
-                    @blur="activeSymbol = ''"
-                  >
-                    <span class="symbol-name">{{ symbol.symbol }}</span>
-                    <span class="symbol-value"
-                      >{{ symbol.value }}{{ symbol.unit ? ` ${symbol.unit}` : '' }}</span
-                    >
-                    <span class="symbol-label">{{ symbol.name }}</span>
-                    <span class="symbol-source" :class="`is-${symbol.source}`">
-                      {{ sourceLabel(symbol.source) }}
-                    </span>
-                  </button>
-                </div>
-
-                <p v-if="step.note" class="calc-step-note">{{ step.note }}</p>
-              </div>
-            </details>
-          </div>
-        </details>
+        <CalcBook
+          v-if="result"
+          ref="calcBookRef"
+          :steps="calcSteps"
+          :mode-note="isSimple ? '模式：简易（固定值见“简易模式假定”）' : ''"
+          :active-symbol="activeSymbol"
+          @activate="activateSymbol"
+          @deactivate="deactivate"
+        />
 
         <div
           v-if="result"
@@ -519,80 +440,15 @@
           <p>请输入有效的 UPS 容量或负载功率、备电时长、直流电压后查看估算结果。</p>
         </div>
 
-        <div v-if="result" class="panel check-panel">
-          <div class="panel-head compact">
-            <span class="panel-no">✓</span>
-            <h2>校核明细</h2>
-            <span class="panel-hint">CHECKS</span>
-          </div>
-
-          <div class="check-list">
-            <details
-              v-for="check in checkDetails"
-              :key="check.key"
-              class="check-item"
-              :class="{ 'is-fail': !check.pass }"
-            >
-              <summary class="check-item-head">
-                <span class="check-item-label">{{ check.label }}</span>
-                <span class="check-item-key">{{ check.keyValue }}</span>
-                <span v-if="check.controlling" class="check-item-flag">控制</span>
-                <span class="check-status" :class="check.pass ? 'is-pass' : 'is-fail'">
-                  {{ check.pass ? '通过' : '不通过' }}
-                </span>
-              </summary>
-
-              <div class="check-item-body">
-                <p class="check-formula">{{ check.formula }}</p>
-                <p class="check-substitution">{{ check.substitution }}</p>
-                <p class="check-line">
-                  <span class="check-line-label">要求</span>{{ check.required }}
-                </p>
-                <p class="check-line">
-                  <span class="check-line-label">实际</span>{{ check.actual }}
-                </p>
-                <p class="check-line">
-                  <span class="check-line-label">裕度</span>{{ check.margin }}
-                </p>
-
-                <div v-if="check.symbols.length" class="calc-symbols">
-                  <button
-                    v-for="symbol in check.symbols"
-                    :key="`${check.key}-${symbol.symbol}`"
-                    type="button"
-                    class="symbol-chip"
-                    :class="{ 'is-symbol-active': chipActive(symbol) }"
-                    :data-symbol="symbol.inputSymbol"
-                    :title="sourceTitle(symbol)"
-                    @mouseenter="activateSymbol(symbol)"
-                    @mouseleave="activeSymbol = ''"
-                    @focus="activateSymbol(symbol)"
-                    @blur="activeSymbol = ''"
-                  >
-                    <span class="symbol-name">{{ symbol.symbol }}</span>
-                    <span class="symbol-value"
-                      >{{ symbol.value }}{{ symbol.unit ? ` ${symbol.unit}` : '' }}</span
-                    >
-                    <span class="symbol-label">{{ symbol.name }}</span>
-                    <span class="symbol-source" :class="`is-${symbol.source}`">
-                      {{ sourceLabel(symbol.source) }}
-                    </span>
-                  </button>
-                </div>
-
-                <p class="check-why">{{ check.why }}</p>
-                <button
-                  v-if="check.stepKey"
-                  type="button"
-                  class="check-link"
-                  @click="openCalcStep(check.stepKey)"
-                >
-                  查看计算书 {{ check.stepLabel }}
-                </button>
-              </div>
-            </details>
-          </div>
-        </div>
+        <CheckList
+          v-if="result"
+          :details="checkDetails"
+          hint="CHECKS"
+          :active-symbol="activeSymbol"
+          @activate="activateSymbol"
+          @deactivate="deactivate"
+          @open-step="openCalcStep"
+        />
 
         <div v-if="result && result.warnings.length" class="warning-box">
           <p class="warning-title">
@@ -639,42 +495,12 @@
       </aside>
     </div>
 
-    <details class="panel param-panel">
-      <summary>参数说明</summary>
-      <div class="table-wrap">
-        <table class="param-table">
-          <thead>
-            <tr>
-              <th>符号</th>
-              <th>名称</th>
-              <th>含义</th>
-              <th>在计算中的位置</th>
-              <th>影响方向</th>
-              <th>来源</th>
-              <th>可修改</th>
-              <th>依据</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="doc in parameterDocs" :key="doc.symbol">
-              <td class="readout">{{ doc.symbol }}</td>
-              <td>{{ doc.name }}</td>
-              <td>{{ doc.meaning }}</td>
-              <td>{{ doc.position }}</td>
-              <td>{{ doc.impact }}</td>
-              <td>{{ doc.source }}</td>
-              <td>{{ doc.editable }}</td>
-              <td>{{ doc.basis }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </details>
+    <ParamDocs :docs="parameterDocs" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import {
   PhArrowCounterClockwise,
   PhBatteryCharging,
@@ -682,9 +508,19 @@ import {
   PhInfo,
   PhWarningCircle,
 } from '@phosphor-icons/vue'
-import { useToast } from '@/composables/useToast'
 import { getToolById } from '../toolData'
-import UnitField from './UnitField.vue'
+import AssumptionCard from '@/tools/shared/components/AssumptionCard.vue'
+import CalcBook from '@/tools/shared/components/CalcBook.vue'
+import CheckList from '@/tools/shared/components/CheckList.vue'
+import ModeSwitch from '@/tools/shared/components/ModeSwitch.vue'
+import ParamDocs from '@/tools/shared/components/ParamDocs.vue'
+import ResultStrip from '@/tools/shared/components/ResultStrip.vue'
+import UnitField from '@/tools/shared/components/UnitField.vue'
+import { formatCheckLines, formatStepLines } from '@/tools/shared/report'
+import { useCopyText } from '@/tools/shared/useCopyText'
+import { useSymbolLink } from '@/tools/shared/useSymbolLink'
+import { useUiMode } from '@/tools/shared/useUiMode'
+import '@/assets/selection-tool.css'
 import {
   SIMPLE_MODE_FIXED,
   calculateBatterySizing,
@@ -694,31 +530,22 @@ import {
   simpleDcMinVoltage,
   type BatterySizingInput,
 } from './batterySizing'
-import {
-  buildBatterySteps,
-  buildParameterDocs,
-  type CalcSymbol,
-  type SymbolSource,
-} from './calculationSteps'
+import { buildBatterySteps, buildParameterDocs } from './calculationSteps'
 import { buildBatteryCheckDetails } from './checkDetails'
 import '@/assets/calc-trace.css'
 
 const toolConfig = getToolById('battery_sizing')
-const toast = useToast()
 
-type UiMode = 'simple' | 'professional'
-const UI_MODE_KEY = 'dls.battery-sizing.ui-mode.v1'
-
-const uiMode = ref<UiMode>('simple')
-const isSimple = computed(() => uiMode.value === 'simple')
-/** 简易 / 专业各存一份快照，切换模式不丢用户已填值 */
-const modeSnapshots: Record<UiMode, BatterySizingInput> = {
-  simple: createSimpleInput(),
-  professional: createDefaultInput(),
-}
-
-const form = reactive<BatterySizingInput>({ ...modeSnapshots.simple })
-const copied = ref(false)
+const form = reactive<BatterySizingInput>(createSimpleInput())
+const { uiMode, isSimple, setUiMode, reset } = useUiMode<BatterySizingInput>({
+  storageKey: 'dls.battery-sizing.ui-mode.v1',
+  createSimple: createSimpleInput,
+  createDefault: createDefaultInput,
+  getForm: () => ({ ...form }),
+  setForm: (next) => Object.assign(form, next),
+})
+const { activeSymbol, isActive, activateSymbol, deactivate } = useSymbolLink()
+const { copied, copy } = useCopyText()
 
 const result = computed(() => calculateBatterySizing({ ...form }))
 
@@ -813,37 +640,6 @@ const simpleModeNote = computed(() => {
     : `${base}、DOD ${SIMPLE_MODE_FIXED.dod}、SOH ${SIMPLE_MODE_FIXED.soh}、KT ${SIMPLE_MODE_FIXED.tempDerating}、C_max ${SIMPLE_MODE_FIXED.maxCRate} C。`
 })
 
-function persistUiMode(mode: UiMode) {
-  try {
-    window.localStorage.setItem(UI_MODE_KEY, mode)
-  } catch {
-    /* localStorage 不可用时忽略 */
-  }
-}
-
-function setUiMode(mode: UiMode, silent = false) {
-  if (mode === uiMode.value) return
-  Object.assign(modeSnapshots[uiMode.value], { ...form })
-  uiMode.value = mode
-  Object.assign(form, { ...modeSnapshots[mode] })
-  persistUiMode(mode)
-  if (silent) return
-  toast.info(
-    mode === 'simple'
-      ? '已切到简易模式：高级参数按固定值参与计算'
-      : '已切到专业模式：可继续调整高级参数',
-  )
-}
-
-onMounted(() => {
-  try {
-    const saved = window.localStorage.getItem(UI_MODE_KEY)
-    if (saved === 'professional') setUiMode('professional', true)
-  } catch {
-    /* localStorage 不可用时忽略 */
-  }
-})
-
 // 简易模式：备电时长决定容量系数，标称电压决定 UPS 最低直流输入的粗校核值
 watch(
   () => form.backupMinutes,
@@ -870,7 +666,6 @@ const specLabel = computed(() => {
   return `${value.dcVoltageActual.toFixed(0)} V 直流 · ${value.configuredEnergyKwh.toFixed(1)} kWh · ${value.cRate.toFixed(2)} C`
 })
 
-const activeSymbol = ref('')
 const parameterDocs = buildParameterDocs()
 const calcSteps = computed(() =>
   result.value ? buildBatterySteps({ ...form }, result.value, { simple: isSimple.value }) : [],
@@ -880,55 +675,10 @@ const checkDetails = computed(() => {
   if (!value) return []
   return buildBatteryCheckDetails({ ...form }, value)
 })
-const calcBookRef = ref<HTMLDetailsElement | null>(null)
+const calcBookRef = ref<InstanceType<typeof CalcBook> | null>(null)
 
 function openCalcStep(key?: string) {
-  if (!key) return
-  if (calcBookRef.value) calcBookRef.value.open = true
-  nextTick(() => {
-    const target = document.getElementById(`calc-${key}`)
-    if (target instanceof HTMLDetailsElement) target.open = true
-    target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  })
-}
-
-function isActive(symbolName: string): boolean {
-  return activeSymbol.value === symbolName
-}
-
-function activateSymbol(symbol: CalcSymbol) {
-  activeSymbol.value = symbol.inputSymbol ?? symbol.symbol
-}
-
-function chipActive(symbol: CalcSymbol): boolean {
-  return (
-    activeSymbol.value === symbol.symbol ||
-    (symbol.inputSymbol !== undefined && activeSymbol.value === symbol.inputSymbol)
-  )
-}
-
-const SOURCE_LABELS: Record<SymbolSource, string> = {
-  input: '输入',
-  table: '查表',
-  calc: '计算',
-  constant: '常数',
-  default: '默认',
-}
-
-function sourceLabel(source: SymbolSource): string {
-  return SOURCE_LABELS[source]
-}
-
-function sourceTitle(symbol: CalcSymbol): string {
-  const detail = symbol.sourceDetail ? ` · ${symbol.sourceDetail}` : ''
-  return `${symbol.name}：${sourceLabel(symbol.source)}${detail}`
-}
-
-function resetForm() {
-  const next = isSimple.value ? createSimpleInput() : createDefaultInput()
-  Object.assign(form, next)
-  Object.assign(modeSnapshots[uiMode.value], { ...next })
-  toast.info(isSimple.value ? '已恢复简易模式默认参数' : '已恢复默认参数')
+  if (key) calcBookRef.value?.openStep(key)
 }
 
 function buildReport(): string {
@@ -956,39 +706,14 @@ function buildReport(): string {
     `结论：${value.overallPass ? '各项校核通过' : '存在需要复核的项'}`,
     '',
     '计算书：',
-    ...calcSteps.value.flatMap((step) => [
-      `${step.index}. ${step.title}：${step.formula.replace(/\n/g, '；')}`,
-      `   代入：${step.substitution}`,
-      `   结果：${step.result}`,
-    ]),
+    ...formatStepLines(calcSteps.value),
     '',
     '校核明细：',
-    ...value.checks.map(
-      (check) =>
-        `- ${check.label}：${check.pass ? '通过' : '复核'}；要求 ${check.required}；实际 ${check.actual}`,
-    ),
+    ...formatCheckLines(value.checks, { fail: '复核' }),
     '',
     '注：本计算书为方案初选，正式设计应按现行标准、厂家放电表及注册电气工程师意见复核。',
   ]
   return lines.join('\n')
-}
-
-async function copyReport() {
-  const report = buildReport()
-  if (!report) {
-    toast.error('暂无可复制的计算结果')
-    return
-  }
-  try {
-    await navigator.clipboard.writeText(report)
-    copied.value = true
-    toast.success('计算书已复制到剪贴板')
-    window.setTimeout(() => {
-      copied.value = false
-    }, 1600)
-  } catch {
-    toast.error('复制失败，请检查浏览器剪贴板权限')
-  }
 }
 </script>
 
@@ -997,460 +722,9 @@ async function copyReport() {
   padding: 1rem 1.25rem 1.5rem;
 }
 
-.page-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 0.35rem;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  color: var(--text-faint);
-}
-
-.eyebrow svg {
-  width: 13px;
-  height: 13px;
-  color: var(--color-primary);
-}
-
-.page-desc {
-  max-width: 62ch;
-  margin-top: 0.3rem;
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-.page-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.page-actions svg {
-  width: 15px;
-  height: 15px;
-}
-
-.notice {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-  margin-top: 1rem;
-  padding: 0.65rem 0.8rem;
-  border: 1px solid color-mix(in oklab, var(--color-primary) 28%, var(--color-base-300));
-  background-color: color-mix(in oklab, var(--color-primary) 6%, var(--color-base-100));
-  color: var(--text-muted);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.notice svg {
-  flex: 0 0 auto;
-  width: 15px;
-  height: 15px;
-  margin-top: 0.15rem;
-  color: var(--color-primary);
-}
-
-/* 简易 / 专业模式 */
-
-.mode-switch {
-  flex: 0 0 auto;
-  min-width: 7.5rem;
-}
-
-.notice-simple {
-  border-color: color-mix(in oklab, var(--color-warning) 38%, var(--color-base-300));
-  background-color: color-mix(in oklab, var(--color-warning) 6%, var(--color-base-100));
-}
-
-.notice-simple svg {
-  color: var(--color-warning);
-}
-
-.assumption-card {
-  margin: 0 0.85rem 0.85rem;
-  border: 1px solid color-mix(in oklab, var(--color-warning) 30%, var(--color-base-300));
-  background-color: color-mix(in oklab, var(--color-warning) 4%, var(--color-base-100));
-}
-
-.assumption-card > summary {
-  padding: 0.45rem 0.6rem;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.assumption-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 10.5px;
-}
-
-.assumption-table th,
-.assumption-table td {
-  padding: 0.3rem 0.6rem;
-  text-align: left;
-  vertical-align: top;
-  border-top: 1px dashed color-mix(in oklab, var(--color-base-300) 70%, transparent);
-}
-
-.assumption-table th {
-  width: 34%;
-  font-weight: 500;
-  color: var(--text-muted);
-}
-
-.assumption-note {
-  color: var(--text-faint);
-}
-
-.verdict-mode {
-  margin-top: 0.45rem;
-  padding: 0.35rem 0.5rem;
-  font-size: 10.5px;
-  line-height: 1.55;
-  color: var(--text-muted);
-  border: 1px dashed var(--color-base-300);
-}
-
-.workbench {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
-  gap: 1rem;
-  align-items: start;
-  margin-top: 1rem;
-}
-
-.input-column,
-.output-column {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  min-width: 0;
-}
-
-.panel {
-  border: 1px solid var(--color-base-300);
-  background-color: var(--color-base-100);
-}
-
-.panel-head {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  padding: 0.65rem 0.8rem;
-  border-bottom: 1px solid var(--color-base-300);
-  background-color: var(--color-base-200);
-}
-
-.panel-head.compact {
-  padding: 0.55rem 0.8rem;
-}
-
-.panel-no {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 22px;
-  height: 18px;
-  padding: 0 0.3rem;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  line-height: 1;
-  color: var(--color-primary);
-  border: 1px solid color-mix(in oklab, var(--color-primary) 40%, transparent);
-}
-
-.panel-head h2 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.panel-hint {
-  margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  color: var(--text-faint);
-}
-
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.8rem;
-  padding: 0.85rem;
-}
-
-.field {
-  display: block;
-  min-width: 0;
-}
-
-.field-wide {
-  grid-column: 1 / -1;
-}
-
-.field-label {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.3rem;
-  font-size: 12px;
-  line-height: 1.3;
-  color: var(--text-muted);
-}
-
-.field-hint {
-  flex: 0 0 auto;
-  font-size: 10px;
-  color: var(--text-faint);
-}
-
-.field-note {
-  margin: 0;
-  padding: 0 0.85rem 0.8rem;
-  font-size: 11px;
-  line-height: 1.55;
-  color: var(--text-faint);
-}
-
-.segmented {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  border: 1px solid var(--color-base-300);
-}
-
-.segmented button {
-  padding: 0.34rem 0.5rem;
-  font-size: 12px;
-  color: var(--text-muted);
-  background-color: var(--color-base-100);
-}
-
-.segmented button + button {
-  border-left: 1px solid var(--color-base-300);
-}
-
-.segmented button.active {
-  color: var(--color-primary);
-  background-color: color-mix(in oklab, var(--color-primary) 8%, var(--color-base-100));
-  box-shadow: inset 0 -2px 0 var(--color-primary);
-}
-
-.verdict {
-  position: relative;
-  border: 1px solid var(--color-base-300);
-  border-left-width: 3px;
-  background-color: var(--color-base-100);
-  padding: 0.8rem 0.9rem 0.9rem;
-}
-
-.verdict.is-pass {
-  border-left-color: var(--color-success);
-  background-image: linear-gradient(
-    135deg,
-    color-mix(in oklab, var(--color-success) 6%, transparent),
-    transparent 45%
-  );
-}
-
-.verdict.is-review {
-  border-left-color: var(--color-warning);
-  background-image: linear-gradient(
-    135deg,
-    color-mix(in oklab, var(--color-warning) 8%, transparent),
-    transparent 45%
-  );
-}
-
-.verdict-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.verdict-kicker {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  color: var(--text-faint);
-}
-
-.verdict-stamp {
-  padding: 0.1rem 0.4rem;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  border: 1px solid currentColor;
-  transform: rotate(-2deg);
-}
-
-.is-pass .verdict-stamp {
-  color: var(--color-success);
-}
-
-.is-review .verdict-stamp {
-  color: var(--color-warning);
-}
-
-.verdict-main {
-  display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
-  margin-top: 0.45rem;
-}
-
-.verdict-section {
-  font-family: var(--font-mono);
-  font-size: 40px;
-  line-height: 1;
-  font-weight: 500;
-  letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums;
-}
-
-.verdict-unit {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.verdict-spec {
-  margin-top: 0.35rem;
-  font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--color-base-content);
-  word-break: break-all;
-}
-
-.verdict-sub {
-  margin-top: 0.2rem;
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.verdict-metrics {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.45rem;
-  margin-top: 0.7rem;
-  padding-top: 0.65rem;
-  border-top: 1px solid var(--color-base-300);
-}
-
-.verdict-metrics div {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-}
-
-.verdict-metrics span {
-  font-size: 10px;
-  color: var(--text-faint);
-}
-
-.verdict-metrics strong {
-  font-family: var(--font-mono);
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
-}
-
-.empty-result {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-  padding: 0.9rem;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--text-muted);
-}
-
-.empty-result svg {
-  flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-  margin-top: 0.1rem;
-  color: var(--color-warning);
-}
-
-.warning-box {
-  border: 1px solid color-mix(in oklab, var(--color-warning) 40%, var(--color-base-300));
-  background-color: color-mix(in oklab, var(--color-warning) 7%, var(--color-base-100));
-  padding: 0.65rem 0.8rem;
-}
-
-.warning-title {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-warning);
-}
-
-.warning-title svg {
-  width: 15px;
-  height: 15px;
-}
-
-.warning-box ul {
-  margin: 0.4rem 0 0;
-  padding-left: 1.1rem;
-  font-size: 11px;
-  line-height: 1.65;
-  color: var(--text-muted);
-}
-
-.source-panel p,
-.source-panel ul {
-  padding: 0 0.8rem;
-  font-size: 11px;
-  line-height: 1.7;
-  color: var(--text-muted);
-}
-
-.source-panel p {
-  padding-top: 0.6rem;
-}
-
-.source-panel ul {
-  padding-bottom: 0.7rem;
-  padding-left: 1.6rem;
-}
-
-@media (max-width: 1080px) {
-  .workbench {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 @media (max-width: 640px) {
   .battery-page {
     padding: 0.75rem;
-  }
-
-  .field-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .page-actions {
-    width: 100%;
-  }
-
-  .verdict-section {
-    font-size: 34px;
   }
 }
 </style>
