@@ -1,5 +1,5 @@
 <template>
-  <div class="hvac-page">
+  <div class="hvac-page calc-trace selection-tool">
     <header class="page-head">
       <div class="page-title">
         <p class="eyebrow">
@@ -15,15 +15,16 @@
         </p>
       </div>
       <div class="page-actions">
+        <ModeSwitch :model-value="uiMode" @update:model-value="setUiMode" />
         <button type="button" class="btn btn-sm btn-ghost" @click="loadExample">
           <PhLightbulb aria-hidden="true" />
           示例
         </button>
-        <button type="button" class="btn btn-sm btn-ghost" @click="resetForm">
+        <button type="button" class="btn btn-sm btn-ghost" @click="reset">
           <PhArrowCounterClockwise aria-hidden="true" />
           重置
         </button>
-        <button type="button" class="btn btn-sm btn-primary" @click="copyReport">
+        <button type="button" class="btn btn-sm btn-primary" @click="copy(buildReport())">
           <PhCopy aria-hidden="true" />
           {{ copied ? '已复制' : '复制计算书' }}
         </button>
@@ -43,6 +44,18 @@
 
     <div class="workbench">
       <div class="input-column">
+        <div v-if="isSimple" class="notice notice-simple">
+          <PhInfo weight="fill" aria-hidden="true" />
+          <p>
+            简易模式只固定厂家 / 规范参数，并把照明、人员、围护、新风等负荷侧输入按方案假定取值；
+            <template v-if="form.calculationMode === 'area'">
+              面积指标取「{{ roomPreset.label }}」预设
+              <span class="readout">{{ form.areaIndexWPerM2 }} W/m²</span>。
+            </template>
+            这些经验值不适用于高密度机房；需要按厂家样本核对显热比、修正系数或新风湿负荷时请切「专业」。
+          </p>
+        </div>
+
         <section class="panel">
           <div class="panel-head">
             <span class="panel-no">01</span>
@@ -70,6 +83,8 @@
               :min="1"
               :step="1"
               hint="建筑面积"
+              data-symbol="A"
+              :class="{ 'is-symbol-active': isActive('A') }"
             />
 
             <div class="field field-wide">
@@ -96,7 +111,7 @@
             </div>
 
             <UnitField
-              v-if="form.calculationMode === 'area'"
+              v-if="!isSimple && form.calculationMode === 'area'"
               v-model="form.areaIndexWPerM2"
               label="面积指标 qA"
               unit="W/m²"
@@ -104,6 +119,8 @@
               :max="3000"
               :step="10"
               :hint="`${roomPreset.areaIndexRange[0]}~${roomPreset.areaIndexRange[1]} W/m²`"
+              data-symbol="q_A"
+              :class="{ 'is-symbol-active': isActive('q_A') }"
             />
           </div>
 
@@ -134,57 +151,77 @@
               :min="0"
               :step="0.1"
               hint="铭牌输入功率；UPS 需换算"
+              data-symbol="P_IT"
+              :class="{ 'is-symbol-active': isActive('P_IT') }"
             />
             <UnitField
+              v-if="!isSimple"
               v-model="form.heatFactor"
               label="设备发热系数"
               :min="0.5"
               :max="1.2"
               :step="0.01"
               hint="通信设备可取 1.00"
+              data-symbol="K_heat"
+              :class="{ 'is-symbol-active': isActive('K_heat') }"
             />
             <UnitField
+              v-if="!isSimple"
               v-model="form.powerLossKw"
               label="电力设备损耗"
               unit="kW"
               :min="0"
               :step="0.1"
               hint="UPS / 整流器 / 配电"
+              data-symbol="P_loss"
+              :class="{ 'is-symbol-active': isActive('P_loss') }"
             />
             <UnitField
+              v-if="!isSimple"
               v-model="form.envelopeLoadKw"
               label="围护结构 + 太阳辐射"
               unit="kW"
               :min="0"
               :step="0.1"
               hint="逐时计算或估算"
+              data-symbol="Q_env"
+              :class="{ 'is-symbol-active': isActive('Q_env') }"
             />
             <UnitField
+              v-if="!isSimple"
               v-model="form.lightingWPerM2"
               label="照明功率密度"
               unit="W/m²"
               :min="0"
               :step="1"
               hint="LED 约 8~12"
+              data-symbol="L_light"
+              :class="{ 'is-symbol-active': isActive('L_light') }"
             />
             <UnitField
+              v-if="!isSimple"
               v-model="form.peopleCount"
               label="人员数量"
               unit="人"
               :min="0"
               :step="1"
               hint="维护 / 值班人员"
+              data-symbol="N_people"
+              :class="{ 'is-symbol-active': isActive('N_people') }"
             />
             <UnitField
+              v-if="!isSimple"
               v-model="form.peopleWPerPerson"
               label="每人散热量"
               unit="W/人"
               :min="0"
               :step="10"
               hint="轻作业 100~150"
+              data-symbol="q_people"
+              :class="{ 'is-symbol-active': isActive('q_people') }"
             />
 
-            <div class="field field-wide">
+            <div v-if="!isSimple" class="field field-wide">
               <span class="field-label">
                 新风输入方式
                 <span class="field-hint">按风量或直接输入</span>
@@ -207,7 +244,7 @@
               </div>
             </div>
 
-            <template v-if="form.freshAirMode === 'airflow'">
+            <template v-if="!isSimple && form.freshAirMode === 'airflow'">
               <UnitField
                 v-model="form.freshAirM3h"
                 label="新风量 L"
@@ -215,6 +252,8 @@
                 :min="0"
                 :step="100"
                 hint="按人员 / 工艺要求"
+                data-symbol="L_fresh"
+                :class="{ 'is-symbol-active': isActive('L_fresh') }"
               />
               <UnitField
                 v-model="form.freshAirDeltaHKjKg"
@@ -223,25 +262,32 @@
                 :min="0"
                 :step="1"
                 hint="室外 − 室内"
+                data-symbol="Δh"
+                :class="{ 'is-symbol-active': isActive('Δh') }"
               />
             </template>
             <UnitField
-              v-else
+              v-else-if="!isSimple"
               v-model="form.freshAirLoadKw"
               label="新风冷负荷"
               unit="kW"
               :min="0"
               :step="0.1"
               hint="可直接输入"
+              data-symbol="Q_fresh"
+              :class="{ 'is-symbol-active': isActive('Q_fresh') }"
             />
 
             <UnitField
+              v-if="!isSimple"
               v-model="form.otherLoadKw"
               label="其他负荷"
               unit="kW"
               :min="0"
               :step="0.1"
               hint="加湿 / 水泵 / 工艺"
+              data-symbol="Q_other"
+              :class="{ 'is-symbol-active': isActive('Q_other') }"
             />
           </div>
 
@@ -269,9 +315,15 @@
               :max="0.5"
               :step="0.01"
               hint="0.15 = 15%"
+              data-symbol="K_margin"
+              :class="{ 'is-symbol-active': isActive('K_margin') }"
             />
 
-            <label class="field">
+            <label
+              class="field"
+              data-symbol="redundancy"
+              :class="{ 'is-symbol-active': isActive('redundancy') }"
+            >
               <span class="field-label">冗余方式</span>
               <select v-model="form.redundancy" class="select select-bordered select-sm w-full">
                 <option value="none">无备份</option>
@@ -280,7 +332,7 @@
               </select>
             </label>
 
-            <label class="field field-wide">
+            <label v-if="!isSimple" class="field field-wide">
               <span class="field-label">
                 空调类型
                 <span class="field-hint">{{ unitTypeOption.description }}</span>
@@ -297,6 +349,7 @@
             </label>
 
             <UnitField
+              v-if="!isSimple"
               v-model="form.runningUnitCount"
               label="运行台数 N"
               unit="台"
@@ -304,40 +357,55 @@
               :max="8"
               :step="1"
               hint="0 = 自动"
+              data-symbol="N_run"
+              :class="{ 'is-symbol-active': isActive('N_run') }"
             />
             <UnitField
+              v-if="!isSimple"
               v-model="form.unitCapacityKw"
               label="单台容量"
               unit="kW"
               :min="0"
               :step="1"
               hint="0 = 自动"
+              data-symbol="Q_unit"
+              :class="{ 'is-symbol-active': isActive('Q_unit') }"
             />
             <UnitField
+              v-if="!isSimple"
               v-model="form.loadSensibleRatio"
               label="机房显热比"
               :min="0.5"
               :max="1"
               :step="0.01"
               hint="通信机房 0.85~1.0"
+              data-symbol="SHR_load"
+              :class="{ 'is-symbol-active': isActive('SHR_load') }"
             />
             <UnitField
+              v-if="!isSimple"
               v-model="form.unitSensibleRatio"
               label="空调显热比"
               :min="0.5"
               :max="1"
               :step="0.01"
               hint="精密空调约 0.90"
+              data-symbol="SHR_unit"
+              :class="{ 'is-symbol-active': isActive('SHR_unit') }"
             />
             <UnitField
+              v-if="!isSimple"
               v-model="form.correctionFactor"
               label="综合修正系数 K"
               :min="0.5"
               :max="1.5"
               :step="0.01"
               hint="海拔 / 高温 / 管路"
+              data-symbol="K_corr"
+              :class="{ 'is-symbol-active': isActive('K_corr') }"
             />
             <UnitField
+              v-if="!isSimple"
               v-model="form.pBasisKw"
               label="匹换算基准"
               unit="kW/P"
@@ -345,6 +413,8 @@
               :max="3"
               :step="0.001"
               hint="常用 2.5；老口径 2.324"
+              data-symbol="p_basis"
+              :class="{ 'is-symbol-active': isActive('p_basis') }"
             />
           </div>
 
@@ -352,11 +422,46 @@
             “运行台数 N”和“单台容量”填 0 时由工具自动推荐。N+1 表示 N 台运行 + 1 台备用； 2N 表示 N
             台运行 + N 台备用。综合修正系数小于 1 时，所需设备制冷量按 Q / K 放大。
           </p>
+
+          <AssumptionCard
+            v-if="isSimple"
+            :items="vendorAssumptions"
+            title="简易模式假定 · 厂家 / 规范（固定值参与计算）"
+          />
+          <AssumptionCard
+            v-if="isSimple"
+            :items="schemeAssumptions"
+            title="简易模式假定 · 方案假定（经验值，可切专业修改）"
+          />
         </section>
       </div>
 
       <aside class="output-column">
-        <div v-if="result" class="verdict" :class="result.overallPass ? 'is-pass' : 'is-review'">
+        <ResultStrip
+          v-if="result"
+          :value="result.requiredCapacityKw.toFixed(1)"
+          unit="kW"
+          :badge="isSimple ? '简易' : ''"
+          :pass="result.overallPass"
+          :drivers="result.drivers"
+        />
+
+        <CalcBook
+          v-if="result"
+          ref="calcBookRef"
+          :steps="calcSteps"
+          :mode-note="isSimple ? '模式：简易（固定值见“简易模式假定”）' : ''"
+          :active-symbol="activeSymbol"
+          @activate="activateSymbol"
+          @deactivate="deactivate"
+        />
+
+        <div
+          v-if="result"
+          id="verdict"
+          class="verdict"
+          :class="result.overallPass ? 'is-pass' : 'is-review'"
+        >
           <div class="verdict-top">
             <span class="verdict-kicker">COOLING LOAD / 设备所需制冷量</span>
             <span class="verdict-stamp">{{ result.overallPass ? 'PASS' : 'REVIEW' }}</span>
@@ -369,12 +474,16 @@
 
           <p class="verdict-spec">
             ≈ {{ result.pValue.toFixed(1) }} P（按 {{ result.pBasisKw }} kW/P 估算）
+            <template v-if="form.unitType === 'chilled-water'">
+              · {{ result.rtValue.toFixed(1) }} RT
+            </template>
           </p>
           <p class="verdict-sub">
             计算冷负荷 {{ result.totalLoadKw.toFixed(1) }} kW · 设计冷负荷
             {{ result.designLoadKw.toFixed(1) }} kW · 显冷量
             {{ result.sensibleLoadKw.toFixed(1) }} kW
           </p>
+          <p v-if="isSimple" class="verdict-mode">{{ simpleModeNote }}</p>
 
           <div class="verdict-metrics">
             <div>
@@ -393,6 +502,14 @@
               <span>单台负载率</span>
               <strong>{{ (result.unitLoadRate * 100).toFixed(1) }}%</strong>
             </div>
+            <div>
+              <span>运行 / 备用</span>
+              <strong>{{ result.runningCount }} 用 / {{ result.backupCount }} 备</strong>
+            </div>
+            <div>
+              <span>故障后可用</span>
+              <strong>{{ result.faultCapacityKw.toFixed(1) }} kW</strong>
+            </div>
           </div>
         </div>
 
@@ -401,12 +518,22 @@
           <p>请输入有效的面积和冷负荷参数后查看估算结果。</p>
         </div>
 
-        <div v-if="result" class="panel">
-          <div class="panel-head compact">
+        <details v-if="result && result.warnings.length" class="warning-box">
+          <summary class="warning-title">
+            <PhWarningCircle weight="fill" aria-hidden="true" />
+            需要注意（{{ result.warnings.length }} 条，点击展开）
+          </summary>
+          <ul>
+            <li v-for="(warning, index) in result.warnings" :key="index">{{ warning }}</li>
+          </ul>
+        </details>
+
+        <details v-if="result" class="panel breakdown-panel">
+          <summary>
             <span class="panel-no">Σ</span>
             <h2>冷负荷分项</h2>
-            <span class="panel-hint">BREAKDOWN</span>
-          </div>
+            <span class="breakdown-total readout">{{ result.totalLoadKw.toFixed(2) }} kW</span>
+          </summary>
 
           <div class="table-wrap">
             <table class="check-table">
@@ -436,164 +563,17 @@
               </tfoot>
             </table>
           </div>
-        </div>
-
-        <div v-if="result" class="panel">
-          <div class="panel-head compact">
-            <span class="panel-no">◧</span>
-            <h2>选型建议</h2>
-            <span class="panel-hint">SELECTION</span>
-          </div>
-
-          <div class="selection-body">
-            <div class="selection-main">
-              <span class="selection-count">{{ result.installedCount }} 台</span>
-              <span class="selection-spec">{{ selectionLabel }}</span>
-            </div>
-
-            <dl class="calc-list">
-              <div>
-                <dt>运行 / 备用</dt>
-                <dd class="readout">{{ result.runningCount }} 用 / {{ result.backupCount }} 备</dd>
-              </div>
-              <div>
-                <dt>单台容量</dt>
-                <dd class="readout">
-                  {{ result.unitCapacityKw.toFixed(1) }} kW（≈
-                  {{ (result.unitCapacityKw / form.pBasisKw).toFixed(1) }} P）
-                </dd>
-              </div>
-              <div>
-                <dt>运行冷量</dt>
-                <dd class="readout">{{ result.runningCapacityKw.toFixed(1) }} kW</dd>
-              </div>
-              <div>
-                <dt>故障后可用</dt>
-                <dd class="readout">{{ result.faultCapacityKw.toFixed(1) }} kW</dd>
-              </div>
-              <div>
-                <dt>显冷量</dt>
-                <dd class="readout">
-                  {{ result.unitSensibleCapacityKw.toFixed(1) }} kW（SHR
-                  {{ result.unitSensibleRatio.toFixed(2) }}）
-                </dd>
-              </div>
-              <div v-if="form.unitType === 'chilled-water'">
-                <dt>所需冷吨</dt>
-                <dd class="readout">{{ result.rtValue.toFixed(1) }} RT</dd>
-              </div>
-            </dl>
-          </div>
-        </div>
-
-        <div v-if="result" class="panel check-panel">
-          <div class="panel-head compact">
-            <span class="panel-no">✓</span>
-            <h2>校核明细</h2>
-            <span class="panel-hint">CHECKS</span>
-          </div>
-
-          <div class="table-wrap">
-            <table class="check-table">
-              <thead>
-                <tr>
-                  <th>项目</th>
-                  <th>要求</th>
-                  <th>实际</th>
-                  <th>结论</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="check in result.checks" :key="check.key">
-                  <td>
-                    <span class="check-label">{{ check.label }}</span>
-                    <span class="check-note">{{ check.note }}</span>
-                  </td>
-                  <td class="readout">{{ check.required }}</td>
-                  <td class="readout">{{ check.actual }}</td>
-                  <td>
-                    <span
-                      class="badge badge-sm"
-                      :class="check.pass ? 'badge-success' : 'badge-error'"
-                    >
-                      {{ check.pass ? '通过' : '复核' }}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <details v-if="result" class="panel calc-panel" open>
-          <summary>计算过程</summary>
-          <dl class="calc-list">
-            <template v-if="result.calculationMode === 'area'">
-              <div>
-                <dt>面积法</dt>
-                <dd class="readout">
-                  Q = {{ form.areaIndexWPerM2 }} W/m² × {{ result.areaM2.toFixed(0) }} m² / 1000 =
-                  {{ result.totalLoadKw.toFixed(2) }} kW
-                </dd>
-              </div>
-            </template>
-            <template v-else>
-              <div v-for="item in result.loadItems" :key="item.key">
-                <dt>{{ item.label }}</dt>
-                <dd class="readout">{{ item.note }} = {{ item.kw.toFixed(2) }} kW</dd>
-              </div>
-            </template>
-            <div>
-              <dt>总冷负荷</dt>
-              <dd class="readout">Q总 = {{ result.totalLoadKw.toFixed(2) }} kW</dd>
-            </div>
-            <div>
-              <dt>设计冷负荷</dt>
-              <dd class="readout">
-                Q设计 = Q总 × (1 + {{ (result.designMargin * 100).toFixed(0) }}%) =
-                {{ result.designLoadKw.toFixed(2) }} kW
-              </dd>
-            </div>
-            <div>
-              <dt>修正后所需制冷量</dt>
-              <dd class="readout">
-                Q需 = Q设计 / {{ result.correctionFactor.toFixed(2) }} =
-                {{ result.requiredCapacityKw.toFixed(2) }} kW
-              </dd>
-            </div>
-            <div>
-              <dt>显冷量</dt>
-              <dd class="readout">
-                Q显 = Q设计 × {{ result.loadSensibleRatio.toFixed(2) }} =
-                {{ result.sensibleLoadKw.toFixed(2) }} kW
-              </dd>
-            </div>
-            <div>
-              <dt>潜热负荷</dt>
-              <dd class="readout">Q潜 = Q设计 − Q显 = {{ result.latentLoadKw.toFixed(2) }} kW</dd>
-            </div>
-            <div>
-              <dt>市场俗称</dt>
-              <dd class="readout">
-                P ≈ Q需 / {{ result.pBasisKw }} = {{ result.pValue.toFixed(1) }} P
-              </dd>
-            </div>
-            <div>
-              <dt>推荐配置</dt>
-              <dd class="readout">{{ selectionLabel }}</dd>
-            </div>
-          </dl>
         </details>
 
-        <div v-if="result && result.warnings.length" class="warning-box">
-          <p class="warning-title">
-            <PhWarningCircle weight="fill" aria-hidden="true" />
-            需要注意
-          </p>
-          <ul>
-            <li v-for="(warning, index) in result.warnings" :key="index">{{ warning }}</li>
-          </ul>
-        </div>
+        <CheckList
+          v-if="result"
+          :details="checkDetails"
+          hint="CHECKS"
+          :active-symbol="activeSymbol"
+          @activate="activateSymbol"
+          @deactivate="deactivate"
+          @open-step="openCalcStep"
+        />
 
         <details class="panel source-panel">
           <summary>数据与依据</summary>
@@ -626,6 +606,8 @@
         </details>
       </aside>
     </div>
+
+    <ParamDocs :docs="parameterDocs" />
   </div>
 </template>
 
@@ -641,23 +623,47 @@ import {
 } from '@phosphor-icons/vue'
 import { useToast } from '@/composables/useToast'
 import { getToolById } from '../toolData'
+import AssumptionCard from '@/tools/shared/components/AssumptionCard.vue'
+import CalcBook from '@/tools/shared/components/CalcBook.vue'
+import CheckList from '@/tools/shared/components/CheckList.vue'
+import ModeSwitch from '@/tools/shared/components/ModeSwitch.vue'
+import ParamDocs from '@/tools/shared/components/ParamDocs.vue'
+import ResultStrip from '@/tools/shared/components/ResultStrip.vue'
 import UnitField from '@/tools/shared/components/UnitField.vue'
+import { formatCheckLines, formatStepLines } from '@/tools/shared/report'
+import { useCopyText } from '@/tools/shared/useCopyText'
+import { useSymbolLink } from '@/tools/shared/useSymbolLink'
+import { useUiMode } from '@/tools/shared/useUiMode'
+import '@/assets/selection-tool.css'
 import {
   AC_UNIT_TYPE_OPTIONS,
   ROOM_TYPE_PRESETS,
+  SIMPLE_MODE_FIXED,
   calculateHvacCooling,
   createDefaultInput,
+  createSimpleInput,
   freshAirLoadFromAirflow,
   getAcUnitTypeOption,
   getRoomTypePreset,
   type HvacCoolingInput,
 } from './hvacCooling'
+import { buildHvacSteps, buildParameterDocs } from './calculationSteps'
+import { buildHvacCheckDetails } from './checkDetails'
+import '@/assets/calc-trace.css'
 
 const toolConfig = getToolById('hvac_cooling')
 const toast = useToast()
 
-const form = reactive<HvacCoolingInput>(createDefaultInput())
-const copied = ref(false)
+const form = reactive<HvacCoolingInput>(createSimpleInput())
+const { uiMode, isSimple, setUiMode, reset } = useUiMode<HvacCoolingInput>({
+  storageKey: 'dls.hvac-cooling.ui-mode.v1',
+  createSimple: createSimpleInput,
+  createDefault: createDefaultInput,
+  getForm: () => ({ ...form }),
+  setForm: (next) => Object.assign(form, next),
+})
+const { activeSymbol, isActive, activateSymbol, deactivate } = useSymbolLink()
+const { copied, copy } = useCopyText()
 
 const result = computed(() => calculateHvacCooling({ ...form }))
 const roomPreset = computed(() => getRoomTypePreset(form.roomType))
@@ -676,16 +682,119 @@ const selectionLabel = computed(() => {
   return `${value.runningCount} × ${value.unitCapacityKw.toFixed(1)} kW${backup}`
 })
 
+interface AssumptionItem {
+  label: string
+  value: string
+  note: string
+}
+
+const vendorAssumptions = computed<AssumptionItem[]>(() => [
+  {
+    label: '机组类型',
+    value: '机房专用空调（精密）',
+    note: '厂家 / 规范：机房专用机型',
+  },
+  {
+    label: '显热比（负荷 / 机组）',
+    value: `${SIMPLE_MODE_FIXED.loadSensibleRatio.toFixed(2)} / ${SIMPLE_MODE_FIXED.unitSensibleRatio.toFixed(2)}`,
+    note: '机房常规值',
+  },
+  {
+    label: '综合修正系数',
+    value: SIMPLE_MODE_FIXED.correctionFactor.toFixed(2),
+    note: '不做海拔 / 工况 / 污垢修正',
+  },
+  {
+    label: '匹数基准',
+    value: `${SIMPLE_MODE_FIXED.pBasisKw.toFixed(2)} kW/P`,
+    note: '市场常用换算口径',
+  },
+  {
+    label: '机组容量 / 运行台数',
+    value: '0 / 0（自动推荐）',
+    note: '沿用现有 0 = 自动',
+  },
+])
+
+const schemeAssumptions = computed<AssumptionItem[]>(() => {
+  if (form.calculationMode === 'area') {
+    return [
+      {
+        label: '面积指标',
+        value: `${form.areaIndexWPerM2.toFixed(0)} W/m²`,
+        note:
+          form.roomType === 'custom'
+            ? '自定义机房按当前指标'
+            : `按「${roomPreset.value.label}」预设取值`,
+      },
+    ]
+  }
+
+  return [
+    {
+      label: '热转换系数',
+      value: SIMPLE_MODE_FIXED.heatFactor.toFixed(2),
+      note: '电能全部转热',
+    },
+    {
+      label: '围护结构 / 其他负荷',
+      value: `${SIMPLE_MODE_FIXED.envelopeLoadKw.toFixed(0)} / ${SIMPLE_MODE_FIXED.otherLoadKw.toFixed(0)} kW`,
+      note: '100 m² 量级经验值',
+    },
+    {
+      label: '照明 / 人员',
+      value: `${SIMPLE_MODE_FIXED.lightingWPerM2} W/m² / ${SIMPLE_MODE_FIXED.peopleCount} 人 × ${SIMPLE_MODE_FIXED.peopleWPerPerson} W`,
+      note: '机房常规',
+    },
+    {
+      label: '新风',
+      value: `按冷负荷 ${SIMPLE_MODE_FIXED.freshAirLoadKw.toFixed(0)} kW`,
+      note: '不做焓差换算',
+    },
+  ]
+})
+
+const simpleModeNote = computed(() => {
+  const base = `固定值：精密 · SHR ${SIMPLE_MODE_FIXED.loadSensibleRatio.toFixed(2)}/${SIMPLE_MODE_FIXED.unitSensibleRatio.toFixed(2)} · K ${SIMPLE_MODE_FIXED.correctionFactor.toFixed(2)} · ${SIMPLE_MODE_FIXED.pBasisKw} kW/P · 自动选型`
+  return form.calculationMode === 'area'
+    ? `${base} · 面积指标 ${form.areaIndexWPerM2.toFixed(0)} W/m²`
+    : `${base}；方案假定见左侧`
+})
+
+const simpleReportNote = computed(() => {
+  const base = `精密空调、SHR ${SIMPLE_MODE_FIXED.loadSensibleRatio.toFixed(2)}/${SIMPLE_MODE_FIXED.unitSensibleRatio.toFixed(2)}、K ${SIMPLE_MODE_FIXED.correctionFactor.toFixed(2)}、${SIMPLE_MODE_FIXED.pBasisKw} kW/P、机组容量 / 台数自动`
+  return form.calculationMode === 'area'
+    ? `${base}；面积指标 ${form.areaIndexWPerM2.toFixed(0)} W/m²`
+    : `${base}；热转换 ${SIMPLE_MODE_FIXED.heatFactor.toFixed(2)}、围护 ${SIMPLE_MODE_FIXED.envelopeLoadKw} kW、其他 ${SIMPLE_MODE_FIXED.otherLoadKw} kW、照明 ${SIMPLE_MODE_FIXED.lightingWPerM2} W/m²、${SIMPLE_MODE_FIXED.peopleCount} 人×${SIMPLE_MODE_FIXED.peopleWPerPerson} W、新风 ${SIMPLE_MODE_FIXED.freshAirLoadKw} kW`
+})
+
+const parameterDocs = buildParameterDocs()
+const calcSteps = computed(() => (result.value ? buildHvacSteps({ ...form }, result.value) : []))
+const checkDetails = computed(() => {
+  const value = result.value
+  if (!value) return []
+  return buildHvacCheckDetails({ ...form }, value)
+})
+const calcBookRef = ref<InstanceType<typeof CalcBook> | null>(null)
+
+function openCalcStep(key?: string) {
+  if (key) calcBookRef.value?.openStep(key)
+}
+
+// 机房类型切换：面积指标跟随预设；简易模式显热比保持固定 0.90。
 watch(
   () => form.roomType,
   (key) => {
     if (key === 'custom') return
     const preset = getRoomTypePreset(key)
     form.areaIndexWPerM2 = preset.areaIndexWPerM2
-    form.loadSensibleRatio = preset.defaultSensibleRatio
+    form.loadSensibleRatio = isSimple.value
+      ? SIMPLE_MODE_FIXED.loadSensibleRatio
+      : preset.defaultSensibleRatio
   },
 )
 
+// 机组类型切换：专业模式沿用原行为，带出该机型的默认显热比。
 watch(
   () => form.unitType,
   (type) => {
@@ -693,13 +802,8 @@ watch(
   },
 )
 
-function resetForm() {
-  Object.assign(form, createDefaultInput())
-  toast.info('已恢复默认参数')
-}
-
 function loadExample() {
-  Object.assign(form, createDefaultInput())
+  Object.assign(form, isSimple.value ? createSimpleInput() : createDefaultInput())
   toast.info('已载入 100 m² 通信机房示例')
 }
 
@@ -709,6 +813,7 @@ function buildReport(): string {
 
   const lines = [
     '机房空调制冷量估算书（方案初选）',
+    ...(isSimple.value ? [`模式：简易（${simpleReportNote.value}）`] : []),
     `机房类型：${roomPreset.value.label}`,
     `面积：${value.areaM2.toFixed(0)} m²；计算方式：${
       value.calculationMode === 'area' ? '面积指标法' : '详细分项法'
@@ -740,13 +845,14 @@ function buildReport(): string {
     } 用 / ${value.backupCount} 备）`,
     `运行冷量：${value.runningCapacityKw.toFixed(1)} kW；故障后可用：${value.faultCapacityKw.toFixed(1)} kW`,
     `单台负载率：${(value.unitLoadRate * 100).toFixed(1)}%`,
+    `控制项：${value.drivers.join(' / ') || '—'}`,
     `结论：${value.overallPass ? '各项校核通过' : '存在需要复核的项'}`,
     '',
+    '计算书：',
+    ...formatStepLines(calcSteps.value),
+    '',
     '校核明细：',
-    ...value.checks.map(
-      (check) =>
-        `- ${check.label}：${check.pass ? '通过' : '复核'}；要求 ${check.required}；实际 ${check.actual}`,
-    ),
+    ...formatCheckLines(checkDetails.value, { fail: '复核' }),
   )
 
   if (value.warnings.length) {
@@ -760,24 +866,6 @@ function buildReport(): string {
 
   return lines.join('\n')
 }
-
-async function copyReport() {
-  const report = buildReport()
-  if (!report) {
-    toast.error('暂无可复制的计算结果')
-    return
-  }
-  try {
-    await navigator.clipboard.writeText(report)
-    copied.value = true
-    toast.success('计算书已复制到剪贴板')
-    window.setTimeout(() => {
-      copied.value = false
-    }, 1600)
-  } catch {
-    toast.error('复制失败，请检查浏览器剪贴板权限')
-  }
-}
 </script>
 
 <style scoped>
@@ -785,345 +873,65 @@ async function copyReport() {
   padding: 1rem 1.25rem 1.5rem;
 }
 
-.page-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
+/* 简易提示条放进左栏，避免把右栏速览 / 校核摘要推到首屏之外 */
+.hvac-page .input-column > .notice {
+  margin-top: 0;
 }
 
-.eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 0.35rem;
-  font-family: var(--font-mono);
+/* 次要块默认折叠：保留内容与顺序，给首屏的结论卡和校核摘要留空间 */
+.hvac-page .warning-box summary,
+.hvac-page .breakdown-panel summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.hvac-page .warning-box summary::-webkit-details-marker,
+.hvac-page .breakdown-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.hvac-page .warning-box summary::before,
+.hvac-page .breakdown-panel summary::before {
+  content: '▸';
+  flex: 0 0 auto;
   font-size: 10px;
-  letter-spacing: 0.12em;
   color: var(--text-faint);
 }
 
-.eyebrow svg {
-  width: 13px;
-  height: 13px;
-  color: var(--color-primary);
+.hvac-page .warning-box[open] > summary::before,
+.hvac-page .breakdown-panel[open] > summary::before {
+  content: '▾';
 }
 
-.page-desc {
-  max-width: 62ch;
-  margin-top: 0.3rem;
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-.page-actions {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.page-actions svg {
-  width: 15px;
-  height: 15px;
-}
-
-.notice {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-  margin-top: 1rem;
-  padding: 0.65rem 0.8rem;
-  border: 1px solid color-mix(in oklab, var(--color-primary) 28%, var(--color-base-300));
-  background-color: color-mix(in oklab, var(--color-primary) 6%, var(--color-base-100));
-  color: var(--text-muted);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.notice svg {
-  flex: 0 0 auto;
-  width: 15px;
-  height: 15px;
-  margin-top: 0.15rem;
-  color: var(--color-primary);
-}
-
-.workbench {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
-  gap: 1rem;
-  align-items: start;
-  margin-top: 1rem;
-}
-
-.input-column,
-.output-column {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  min-width: 0;
-}
-
-.panel {
-  border: 1px solid var(--color-base-300);
-  background-color: var(--color-base-100);
-}
-
-.panel-head {
+.hvac-page .breakdown-panel summary {
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
-  padding: 0.65rem 0.8rem;
-  border-bottom: 1px solid var(--color-base-300);
+  padding: 0.55rem 0.8rem;
+  font-size: 12px;
   background-color: var(--color-base-200);
 }
 
-.panel-head.compact {
-  padding: 0.55rem 0.8rem;
-}
-
-.panel-no {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 22px;
-  height: 18px;
-  padding: 0 0.3rem;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  line-height: 1;
-  color: var(--color-primary);
-  border: 1px solid color-mix(in oklab, var(--color-primary) 40%, transparent);
-}
-
-.panel-head h2 {
+.hvac-page .breakdown-panel summary h2 {
   margin: 0;
   font-size: 13px;
   font-weight: 600;
 }
 
-.panel-hint {
+.hvac-page .breakdown-total {
   margin-left: auto;
   font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  color: var(--text-faint);
-}
-
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.8rem;
-  padding: 0.85rem;
-}
-
-.field {
-  display: block;
-  min-width: 0;
-}
-
-.field-wide {
-  grid-column: 1 / -1;
-}
-
-.field-label {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.3rem;
-  font-size: 12px;
-  line-height: 1.3;
-  color: var(--text-muted);
-}
-
-.field-hint {
-  flex: 0 0 auto;
-  font-size: 10px;
-  color: var(--text-faint);
-}
-
-.field-note {
-  margin: 0;
-  padding: 0 0.85rem 0.8rem;
-  font-size: 11px;
-  line-height: 1.55;
-  color: var(--text-faint);
-}
-
-.segmented {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  border: 1px solid var(--color-base-300);
-}
-
-.segmented button {
-  padding: 0.34rem 0.5rem;
-  font-size: 12px;
-  color: var(--text-muted);
-  background-color: var(--color-base-100);
-}
-
-.segmented button + button {
-  border-left: 1px solid var(--color-base-300);
-}
-
-.segmented button.active {
-  color: var(--color-primary);
-  background-color: color-mix(in oklab, var(--color-primary) 8%, var(--color-base-100));
-  box-shadow: inset 0 -2px 0 var(--color-primary);
-}
-
-.verdict {
-  position: relative;
-  border: 1px solid var(--color-base-300);
-  border-left-width: 3px;
-  background-color: var(--color-base-100);
-  padding: 0.8rem 0.9rem 0.9rem;
-}
-
-.verdict.is-pass {
-  border-left-color: var(--color-success);
-  background-image: linear-gradient(
-    135deg,
-    color-mix(in oklab, var(--color-success) 6%, transparent),
-    transparent 45%
-  );
-}
-
-.verdict.is-review {
-  border-left-color: var(--color-warning);
-  background-image: linear-gradient(
-    135deg,
-    color-mix(in oklab, var(--color-warning) 8%, transparent),
-    transparent 45%
-  );
-}
-
-.verdict-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.verdict-kicker {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  color: var(--text-faint);
-}
-
-.verdict-stamp {
-  padding: 0.1rem 0.4rem;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  border: 1px solid currentColor;
-  transform: rotate(-2deg);
-}
-
-.is-pass .verdict-stamp {
-  color: var(--color-success);
-}
-
-.is-review .verdict-stamp {
-  color: var(--color-warning);
-}
-
-.verdict-main {
-  display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
-  margin-top: 0.45rem;
-}
-
-.verdict-section {
-  font-family: var(--font-mono);
-  font-size: 40px;
-  line-height: 1;
-  font-weight: 500;
-  letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums;
-}
-
-.verdict-unit {
-  font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-muted);
 }
 
-.verdict-spec {
-  margin-top: 0.35rem;
-  font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--color-base-content);
-  word-break: break-all;
-}
-
-.verdict-sub {
-  margin-top: 0.2rem;
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.verdict-metrics {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.45rem;
-  margin-top: 0.7rem;
-  padding-top: 0.65rem;
-  border-top: 1px solid var(--color-base-300);
-}
-
-.verdict-metrics div {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-}
-
-.verdict-metrics span {
-  font-size: 10px;
-  color: var(--text-faint);
-}
-
-.verdict-metrics strong {
-  font-family: var(--font-mono);
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
-  word-break: break-word;
-}
-
-.empty-result {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-  padding: 0.9rem;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--text-muted);
-}
-
-.empty-result svg {
-  flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-  margin-top: 0.1rem;
-  color: var(--color-warning);
-}
-
-.table-wrap {
-  overflow-x: auto;
-}
-
-.check-table {
+.hvac-page .check-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 11px;
 }
 
-.check-table th {
+.hvac-page .check-table th {
   padding: 0.45rem 0.55rem;
   font-size: 10px;
   font-weight: 500;
@@ -1133,28 +941,28 @@ async function copyReport() {
   white-space: nowrap;
 }
 
-.check-table td {
+.hvac-page .check-table td {
   padding: 0.5rem 0.55rem;
   vertical-align: top;
   border-bottom: 1px solid color-mix(in oklab, var(--color-base-300) 60%, transparent);
 }
 
-.check-table tr:last-child td {
+.hvac-page .check-table tr:last-child td {
   border-bottom: 0;
 }
 
-.check-table tfoot td {
+.hvac-page .check-table tfoot td {
   padding: 0.5rem 0.55rem;
   font-weight: 600;
   border-top: 1px solid var(--color-base-300);
 }
 
-.check-label {
+.hvac-page .check-label {
   display: block;
   font-weight: 600;
 }
 
-.check-note {
+.hvac-page .check-note {
   display: block;
   margin-top: 0.15rem;
   font-size: 9.5px;
@@ -1162,148 +970,9 @@ async function copyReport() {
   color: var(--text-faint);
 }
 
-.selection-body {
-  padding: 0.8rem;
-}
-
-.selection-main {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  margin-bottom: 0.4rem;
-}
-
-.selection-count {
-  font-family: var(--font-mono);
-  font-size: 24px;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.selection-spec {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--text-muted);
-  word-break: break-word;
-}
-
-.selection-body .calc-list {
-  padding-right: 0;
-  padding-bottom: 0;
-  padding-left: 0;
-}
-
-.calc-panel,
-.source-panel {
-  padding: 0;
-}
-
-.calc-panel summary,
-.source-panel summary {
-  padding: 0.55rem 0.8rem;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  border-bottom: 1px solid var(--color-base-300);
-  background-color: var(--color-base-200);
-}
-
-.calc-list {
-  margin: 0;
-  padding: 0.3rem 0.8rem 0.7rem;
-}
-
-.calc-list div {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.8rem;
-  padding: 0.38rem 0;
-  border-bottom: 1px dashed color-mix(in oklab, var(--color-base-300) 70%, transparent);
-}
-
-.calc-list div:last-child {
-  border-bottom: 0;
-}
-
-.calc-list dt {
-  flex: 0 0 auto;
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.calc-list dd {
-  margin: 0;
-  font-size: 11px;
-  text-align: right;
-}
-
-.warning-box {
-  border: 1px solid color-mix(in oklab, var(--color-warning) 40%, var(--color-base-300));
-  background-color: color-mix(in oklab, var(--color-warning) 7%, var(--color-base-100));
-  padding: 0.65rem 0.8rem;
-}
-
-.warning-title {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-warning);
-}
-
-.warning-title svg {
-  width: 15px;
-  height: 15px;
-}
-
-.warning-box ul {
-  margin: 0.4rem 0 0;
-  padding-left: 1.1rem;
-  font-size: 11px;
-  line-height: 1.65;
-  color: var(--text-muted);
-}
-
-.source-panel p,
-.source-panel ul {
-  padding: 0 0.8rem;
-  font-size: 11px;
-  line-height: 1.7;
-  color: var(--text-muted);
-}
-
-.source-panel p {
-  padding-top: 0.6rem;
-}
-
-.source-panel ul {
-  padding-bottom: 0.7rem;
-  padding-left: 1.6rem;
-}
-
-@media (max-width: 1080px) {
-  .workbench {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 @media (max-width: 640px) {
   .hvac-page {
     padding: 0.75rem;
-  }
-
-  .field-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .page-actions {
-    width: 100%;
-  }
-
-  .verdict-section {
-    font-size: 34px;
   }
 }
 </style>
