@@ -95,6 +95,8 @@ export interface DcCabinetResult {
   acInputPowerKw: number
   acInputCurrentA: number
   acBreakerA: number
+  /** 控制最终选型的约束，如 ['整流容量', '冗余配置', '满架容量'] */
+  drivers: string[]
   checks: CheckResult[]
   warnings: string[]
   overallPass: boolean
@@ -350,6 +352,17 @@ export function calculateDcCabinet(input: DcCabinetInput): DcCabinetResult | nul
       : (acInputPowerKw * 1000) / (acVoltage * acPowerFactor)
   const acBreakerA = nextStandardBreaker(acInputCurrentA * breakerMargin)
 
+  // 记录哪些约束决定了最终配置：模块数由近期容量决定，备用由冗余方式决定，
+  // 远期增长会抬高满架，柜数由 U 位或单柜模块上限中的较大者决定。
+  const drivers: string[] = ['整流容量']
+  if (redundantModules > 0) drivers.push('冗余配置')
+  if (frameModules > totalModules) drivers.push('满架容量')
+  const unitsByU = Math.ceil(requiredU / usableU)
+  const unitsBySlots = Math.ceil(Math.max(totalModules, frameModules) / maxModulesPerCabinet)
+  if (Math.max(unitsByU, unitsBySlots) > 1) {
+    drivers.push(unitsByU >= unitsBySlots ? '柜内 U 位' : '模块槽位')
+  }
+
   const checks: CheckResult[] = [
     {
       key: 'capacity',
@@ -486,6 +499,7 @@ export function calculateDcCabinet(input: DcCabinetInput): DcCabinetResult | nul
     acInputPowerKw,
     acInputCurrentA,
     acBreakerA,
+    drivers,
     checks,
     warnings,
     overallPass,

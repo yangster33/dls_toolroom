@@ -1,5 +1,5 @@
 <template>
-  <div class="cabinet-page">
+  <div class="cabinet-page calc-trace selection-tool">
     <header class="page-head">
       <div class="page-title">
         <p class="eyebrow">
@@ -15,11 +15,12 @@
         </p>
       </div>
       <div class="page-actions">
-        <button type="button" class="btn btn-sm btn-ghost" @click="resetForm">
+        <ModeSwitch :model-value="uiMode" @update:model-value="setUiMode" />
+        <button type="button" class="btn btn-sm btn-ghost" @click="reset">
           <PhArrowCounterClockwise aria-hidden="true" />
           重置
         </button>
-        <button type="button" class="btn btn-sm btn-primary" @click="copyReport">
+        <button type="button" class="btn btn-sm btn-primary" @click="copy(buildReport())">
           <PhCopy aria-hidden="true" />
           {{ copied ? '已复制' : '复制计算书' }}
         </button>
@@ -36,6 +37,14 @@
       </p>
     </div>
 
+    <div v-if="isSimple" class="notice notice-simple">
+      <PhInfo weight="fill" aria-hidden="true" />
+      <p>
+        简易模式按 0.9 模块降额、2000×600×600 柜体、三相 380 V
+        进线计算；模块降额、柜体尺寸与交流进线需按厂家型谱和机房条件复核时请切「专业」。
+      </p>
+    </div>
+
     <div class="workbench">
       <div class="input-column">
         <section class="panel">
@@ -46,7 +55,11 @@
           </div>
 
           <div class="field-grid">
-            <div class="field field-wide">
+            <div
+              class="field field-wide"
+              data-symbol="U_dc"
+              :class="{ 'is-symbol-active': isActive('U_dc') }"
+            >
               <span class="field-label">
                 直流电压等级
                 <span class="field-hint">-48V 最常用</span>
@@ -95,6 +108,8 @@
               :min="0"
               :step="1"
               hint="通信设备额定电流"
+              data-symbol="I_load"
+              :class="{ 'is-symbol-active': isActive('I_load') }"
             />
             <UnitField
               v-else
@@ -104,6 +119,8 @@
               :min="0"
               :step="0.1"
               hint="按设备铭牌统计"
+              data-symbol="P_load"
+              :class="{ 'is-symbol-active': isActive('P_load') }"
             />
             <UnitField
               v-model="form.futureGrowth"
@@ -112,6 +129,8 @@
               :max="3"
               :step="0.05"
               hint="1.3 = 预留 30%"
+              data-symbol="futureGrowth"
+              :class="{ 'is-symbol-active': isActive('futureGrowth') }"
             />
           </div>
 
@@ -135,14 +154,19 @@
               :min="0"
               :step="10"
               hint="来自蓄电池计算工具"
+              data-symbol="C10"
+              :class="{ 'is-symbol-active': isActive('C10') }"
             />
             <UnitField
+              v-if="!isSimple"
               v-model="form.chargeRate"
               label="均充倍率"
               :min="0"
               :max="0.3"
               :step="0.01"
               hint="0.1 = 0.1C10"
+              data-symbol="k_charge"
+              :class="{ 'is-symbol-active': isActive('k_charge') }"
             />
           </div>
 
@@ -168,17 +192,26 @@
               :min="1"
               :step="1"
               hint="常见 50/75/100/150/200"
+              data-symbol="I_module"
+              :class="{ 'is-symbol-active': isActive('I_module') }"
             />
             <UnitField
+              v-if="!isSimple"
               v-model="form.moduleDerating"
               label="模块降额系数"
               :min="0.1"
               :max="1.2"
               :step="0.01"
               hint="高温/高海拔取小"
+              data-symbol="derating"
+              :class="{ 'is-symbol-active': isActive('derating') }"
             />
 
-            <div class="field field-wide">
+            <div
+              class="field field-wide"
+              data-symbol="redundancy"
+              :class="{ 'is-symbol-active': isActive('redundancy') }"
+            >
               <span class="field-label">
                 冗余方式
                 <span class="field-hint">常用 N+1</span>
@@ -209,29 +242,37 @@
             </div>
 
             <UnitField
+              v-if="!isSimple"
               v-model="form.moduleU"
               label="单模块占用 U"
               unit="U"
               :min="0.5"
               :step="0.5"
               hint="1U/2U 按厂家"
+              data-symbol="moduleU"
+              :class="{ 'is-symbol-active': isActive('moduleU') }"
             />
             <UnitField
+              v-if="!isSimple"
               v-model="form.reserveU"
               label="监控/配电/备用 U"
               unit="U"
               :min="0"
               :step="1"
               hint="常取 6~10U"
+              data-symbol="reserveU"
+              :class="{ 'is-symbol-active': isActive('reserveU') }"
             />
           </div>
 
           <p class="field-note">
             主用模块数 N = ⌈(近期负荷 + 均充) / (模块额定 × 降额)⌉；N+1 即再加 1 个备用模块。
           </p>
+
+          <AssumptionCard v-if="isSimple" :items="simpleAssumptions" />
         </section>
 
-        <section class="panel">
+        <section v-if="!isSimple" class="panel">
           <div class="panel-head">
             <span class="panel-no">04</span>
             <h2>柜体与交流进线</h2>
@@ -239,7 +280,11 @@
           </div>
 
           <div class="field-grid">
-            <label class="field">
+            <label
+              class="field"
+              data-symbol="cabinetHeightMm"
+              :class="{ 'is-symbol-active': isActive('cabinetHeightMm') }"
+            >
               <span class="field-label">
                 拟用柜高
                 <span class="field-hint">按机房净高</span>
@@ -265,6 +310,8 @@
               :min="1"
               :step="1"
               hint="按厂家型谱"
+              data-symbol="maxModulesPerCabinet"
+              :class="{ 'is-symbol-active': isActive('maxModulesPerCabinet') }"
             />
             <UnitField
               v-model="form.cabinetWidthMm"
@@ -273,6 +320,8 @@
               :min="400"
               :step="50"
               hint="常用 600/800"
+              data-symbol="cabinetWidthMm"
+              :class="{ 'is-symbol-active': isActive('cabinetWidthMm') }"
             />
             <UnitField
               v-model="form.cabinetDepthMm"
@@ -281,9 +330,15 @@
               :min="400"
               :step="50"
               hint="常用 600/800"
+              data-symbol="cabinetDepthMm"
+              :class="{ 'is-symbol-active': isActive('cabinetDepthMm') }"
             />
 
-            <div class="field field-wide">
+            <div
+              class="field field-wide"
+              data-symbol="U_ac"
+              :class="{ 'is-symbol-active': isActive('U_ac') }"
+            >
               <span class="field-label">
                 交流进线
                 <span class="field-hint">三相 380V / 单相 220V</span>
@@ -313,6 +368,8 @@
               :max="1"
               :step="0.01"
               hint="高频机约 0.92~0.96"
+              data-symbol="η_rect"
+              :class="{ 'is-symbol-active': isActive('η_rect') }"
             />
             <UnitField
               v-model="form.acPowerFactor"
@@ -321,6 +378,8 @@
               :max="1"
               :step="0.01"
               hint="约 0.99"
+              data-symbol="PF"
+              :class="{ 'is-symbol-active': isActive('PF') }"
             />
             <UnitField
               v-model="form.breakerMargin"
@@ -329,6 +388,8 @@
               :max="2"
               :step="0.05"
               hint="常取 1.25"
+              data-symbol="breakerMargin"
+              :class="{ 'is-symbol-active': isActive('breakerMargin') }"
             />
           </div>
 
@@ -339,7 +400,31 @@
       </div>
 
       <aside class="output-column">
-        <div v-if="result" class="verdict" :class="result.overallPass ? 'is-pass' : 'is-review'">
+        <ResultStrip
+          v-if="result"
+          :value="result.installedNameplateA.toFixed(0)"
+          unit="A 标称"
+          :badge="isSimple ? '简易' : ''"
+          :pass="result.overallPass"
+          :drivers="result.drivers"
+        />
+
+        <CalcBook
+          v-if="result"
+          ref="calcBookRef"
+          :steps="calcSteps"
+          :mode-note="isSimple ? '模式：简易（固定值见“简易模式假定”）' : ''"
+          :active-symbol="activeSymbol"
+          @activate="activateSymbol"
+          @deactivate="deactivate"
+        />
+
+        <div
+          v-if="result"
+          id="verdict"
+          class="verdict"
+          :class="result.overallPass ? 'is-pass' : 'is-review'"
+        >
           <div class="verdict-top">
             <span class="verdict-kicker">RECTIFIER + DC DISTRIBUTION</span>
             <span class="verdict-stamp">{{ result.overallPass ? 'PASS' : 'REVIEW' }}</span>
@@ -355,6 +440,7 @@
             {{ result.overallPass ? '各项校核通过' : '存在需要复核的项' }} · 降额后可用
             {{ result.installedEffectiveA.toFixed(0) }} A
           </p>
+          <p v-if="isSimple" class="verdict-mode">{{ simpleModeNote }}</p>
 
           <div class="verdict-metrics">
             <div>
@@ -382,176 +468,79 @@
         </div>
 
         <div v-if="result" class="panel cabinet-panel">
-          <div class="panel-head compact">
-            <span class="panel-no">▣</span>
-            <h2>柜体与配电建议</h2>
-            <span class="panel-hint">CABINET</span>
-          </div>
+          <details>
+            <summary>
+              <span class="panel-no">▣</span>
+              <h2>柜体与配电建议</h2>
+              <span class="panel-hint">CABINET</span>
+            </summary>
 
-          <dl class="spec-list">
-            <div>
-              <dt>推荐柜体</dt>
-              <dd class="readout">
-                {{ result.recommendedWidthMm }}×{{ result.recommendedDepthMm }}×{{
-                  result.recommendedHeightMm
-                }}
-                mm × {{ result.recommendedCount }}
-              </dd>
-            </div>
-            <div>
-              <dt>拟用柜体</dt>
-              <dd class="readout">
-                {{ result.selectedWidthMm }}×{{ result.selectedDepthMm }}×{{
-                  result.selectedHeightMm
-                }}
-                mm × {{ result.cabinetCount }}
-              </dd>
-            </div>
-            <div>
-              <dt>U 位占用</dt>
-              <dd class="readout">
-                {{ result.requiredU }}U / {{ result.usableU * result.cabinetCount }}U（余
-                {{ result.usableU * result.cabinetCount - result.requiredU }}U）
-              </dd>
-            </div>
-            <div>
-              <dt>模块槽位</dt>
-              <dd class="readout">
-                {{ result.moduleSlots }} / {{ form.maxModulesPerCabinet * result.cabinetCount }}
-              </dd>
-            </div>
-            <div>
-              <dt>直流主断路器</dt>
-              <dd class="readout">{{ result.mainBreakerA }} A</dd>
-            </div>
-            <div>
-              <dt>交流输入</dt>
-              <dd class="readout">
-                {{ result.acInputPowerKw.toFixed(1) }} kW /
-                {{ result.acInputCurrentA.toFixed(1) }} A / {{ result.acBreakerA }} A
-              </dd>
-            </div>
-          </dl>
+            <dl class="spec-list">
+              <div>
+                <dt>推荐柜体</dt>
+                <dd class="readout">
+                  {{ result.recommendedWidthMm }}×{{ result.recommendedDepthMm }}×{{
+                    result.recommendedHeightMm
+                  }}
+                  mm × {{ result.recommendedCount }}
+                </dd>
+              </div>
+              <div>
+                <dt>拟用柜体</dt>
+                <dd class="readout">
+                  {{ result.selectedWidthMm }}×{{ result.selectedDepthMm }}×{{
+                    result.selectedHeightMm
+                  }}
+                  mm × {{ result.cabinetCount }}
+                </dd>
+              </div>
+              <div>
+                <dt>U 位占用</dt>
+                <dd class="readout">
+                  {{ result.requiredU }}U / {{ result.usableU * result.cabinetCount }}U（余
+                  {{ result.usableU * result.cabinetCount - result.requiredU }}U）
+                </dd>
+              </div>
+              <div>
+                <dt>模块槽位</dt>
+                <dd class="readout">
+                  {{ result.moduleSlots }} / {{ form.maxModulesPerCabinet * result.cabinetCount }}
+                </dd>
+              </div>
+              <div>
+                <dt>直流主断路器</dt>
+                <dd class="readout">{{ result.mainBreakerA }} A</dd>
+              </div>
+              <div>
+                <dt>交流输入</dt>
+                <dd class="readout">
+                  {{ result.acInputPowerKw.toFixed(1) }} kW /
+                  {{ result.acInputCurrentA.toFixed(1) }} A / {{ result.acBreakerA }} A
+                </dd>
+              </div>
+            </dl>
+          </details>
         </div>
 
-        <div v-if="result" class="panel check-panel">
-          <div class="panel-head compact">
-            <span class="panel-no">✓</span>
-            <h2>校核明细</h2>
-            <span class="panel-hint">CHECKS</span>
-          </div>
-
-          <div class="table-wrap">
-            <table class="check-table">
-              <thead>
-                <tr>
-                  <th>项目</th>
-                  <th>要求</th>
-                  <th>实际</th>
-                  <th>结论</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="check in result.checks" :key="check.key">
-                  <td>
-                    <span class="check-label">{{ check.label }}</span>
-                    <span class="check-note">{{ check.note }}</span>
-                  </td>
-                  <td class="readout">{{ check.required }}</td>
-                  <td class="readout">{{ check.actual }}</td>
-                  <td>
-                    <span
-                      class="badge badge-sm"
-                      :class="check.pass ? 'badge-success' : 'badge-error'"
-                    >
-                      {{ check.pass ? '通过' : '复核' }}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <details v-if="result" class="panel calc-panel" open>
-          <summary>计算过程</summary>
-          <dl class="calc-list">
-            <div>
-              <dt>近期负荷电流</dt>
-              <dd class="readout">I_L = {{ result.loadCurrentA.toFixed(2) }} A</dd>
-            </div>
-            <div>
-              <dt>均充电流</dt>
-              <dd class="readout">
-                I_c = Q × k = {{ form.batteryAh }} × {{ form.chargeRate }} =
-                {{ result.chargeCurrentA.toFixed(2) }} A
-              </dd>
-            </div>
-            <div>
-              <dt>近期设计电流</dt>
-              <dd class="readout">I_d = I_L + I_c = {{ result.designCurrentA.toFixed(2) }} A</dd>
-            </div>
-            <div>
-              <dt>远期电流</dt>
-              <dd class="readout">
-                I_f = I_d × {{ form.futureGrowth }} = {{ result.frameCurrentA.toFixed(2) }} A
-              </dd>
-            </div>
-            <div>
-              <dt>模块有效电流</dt>
-              <dd class="readout">
-                I_m = {{ form.moduleCurrentA }} × {{ form.moduleDerating }} =
-                {{ result.moduleEffectiveA.toFixed(1) }} A
-              </dd>
-            </div>
-            <div>
-              <dt>主用模块数</dt>
-              <dd class="readout">
-                N = ⌈{{ result.designCurrentA.toFixed(1) }} /
-                {{ result.moduleEffectiveA.toFixed(1) }} ⌉ = {{ result.mainModules }}
-              </dd>
-            </div>
-            <div>
-              <dt>满架模块数</dt>
-              <dd class="readout">
-                ⌈{{ result.frameCurrentA.toFixed(1) }} / {{ result.moduleEffectiveA.toFixed(1) }}⌉ +
-                {{ result.redundantModules }} = {{ result.frameModules }}
-              </dd>
-            </div>
-            <div>
-              <dt>柜体 U 位</dt>
-              <dd class="readout">
-                {{ result.frameModules }} × {{ form.moduleU }} + {{ form.reserveU }} =
-                {{ result.requiredU }}U
-              </dd>
-            </div>
-            <div>
-              <dt>直流主断路器</dt>
-              <dd class="readout">
-                {{ result.designCurrentA.toFixed(1) }} × {{ form.breakerMargin }} →
-                {{ result.mainBreakerA }} A
-              </dd>
-            </div>
-            <div>
-              <dt>交流输入</dt>
-              <dd class="readout">
-                P_ac = {{ result.dcOutputPowerKw.toFixed(2) }} / {{ form.rectifierEfficiency }} =
-                {{ result.acInputPowerKw.toFixed(2) }} kW；I_ac =
-                {{ result.acInputCurrentA.toFixed(2) }} A
-              </dd>
-            </div>
-          </dl>
-        </details>
-
-        <div v-if="result && result.warnings.length" class="warning-box">
-          <p class="warning-title">
+        <details v-if="result && result.warnings.length" class="warning-box">
+          <summary class="warning-title">
             <PhWarningCircle weight="fill" aria-hidden="true" />
-            需要注意
-          </p>
+            需要注意（{{ result.warnings.length }} 条，点击展开）
+          </summary>
           <ul>
             <li v-for="(warning, index) in result.warnings" :key="index">{{ warning }}</li>
           </ul>
-        </div>
+        </details>
+
+        <CheckList
+          v-if="result"
+          :details="checkDetails"
+          hint="CHECKS"
+          :active-symbol="activeSymbol"
+          @activate="activateSymbol"
+          @deactivate="deactivate"
+          @open-step="openCalcStep"
+        />
 
         <details class="panel source-panel">
           <summary>数据与依据</summary>
@@ -586,6 +575,8 @@
         </details>
       </aside>
     </div>
+
+    <ParamDocs :docs="parameterDocs" />
   </div>
 </template>
 
@@ -598,25 +589,111 @@ import {
   PhPlugs,
   PhWarningCircle,
 } from '@phosphor-icons/vue'
-import { useToast } from '@/composables/useToast'
 import { getToolById } from '../toolData'
+import AssumptionCard from '@/tools/shared/components/AssumptionCard.vue'
+import CalcBook from '@/tools/shared/components/CalcBook.vue'
+import CheckList from '@/tools/shared/components/CheckList.vue'
+import ModeSwitch from '@/tools/shared/components/ModeSwitch.vue'
+import ParamDocs from '@/tools/shared/components/ParamDocs.vue'
+import ResultStrip from '@/tools/shared/components/ResultStrip.vue'
 import UnitField from '@/tools/shared/components/UnitField.vue'
+import { formatCheckLines, formatStepLines } from '@/tools/shared/report'
+import { useCopyText } from '@/tools/shared/useCopyText'
+import { useSymbolLink } from '@/tools/shared/useSymbolLink'
+import { useUiMode } from '@/tools/shared/useUiMode'
+import '@/assets/selection-tool.css'
 import {
   CABINET_HEIGHTS,
+  SIMPLE_MODE_FIXED,
   calculateDcCabinet,
   createDefaultInput,
+  createSimpleInput,
   voltageLabelFor,
   type AcPhase,
   type DcCabinetInput,
 } from './dcPowerCabinet'
+import { buildDcCabinetSteps, buildParameterDocs } from './calculationSteps'
+import { buildDcCabinetCheckDetails } from './checkDetails'
+import '@/assets/calc-trace.css'
 
 const toolConfig = getToolById('dc_power_cabinet')
-const toast = useToast()
 
-const form = reactive<DcCabinetInput>(createDefaultInput())
-const copied = ref(false)
+const form = reactive<DcCabinetInput>(createSimpleInput())
+const { uiMode, isSimple, setUiMode, reset } = useUiMode<DcCabinetInput>({
+  storageKey: 'dls.dc-power-cabinet.ui-mode.v1',
+  createSimple: createSimpleInput,
+  createDefault: createDefaultInput,
+  getForm: () => ({ ...form }),
+  setForm: (next) => Object.assign(form, next),
+})
+const { activeSymbol, isActive, activateSymbol, deactivate } = useSymbolLink()
+const { copied, copy } = useCopyText()
 
 const result = computed(() => calculateDcCabinet({ ...form }))
+
+interface AssumptionItem {
+  label: string
+  value: string
+  note: string
+}
+
+const simpleAssumptions = computed<AssumptionItem[]>(() => [
+  {
+    label: '均充倍率',
+    value: `${SIMPLE_MODE_FIXED.chargeRate}C10`,
+    note: 'GB 51194 常用值',
+  },
+  {
+    label: '模块降额系数',
+    value: SIMPLE_MODE_FIXED.moduleDerating.toFixed(2),
+    note: '高温 / 高海拔按厂家曲线取',
+  },
+  {
+    label: '模块占用 U / 备用 U',
+    value: `${SIMPLE_MODE_FIXED.moduleU} U / ${SIMPLE_MODE_FIXED.reserveU} U`,
+    note: '常见模块与监控配电占位',
+  },
+  {
+    label: '柜体 高×宽×深',
+    value: `${SIMPLE_MODE_FIXED.cabinetHeightMm}×${SIMPLE_MODE_FIXED.cabinetWidthMm}×${SIMPLE_MODE_FIXED.cabinetDepthMm} mm`,
+    note: 'GB/T 3047.1 建议系列',
+  },
+  {
+    label: '单柜最大模块数',
+    value: `${SIMPLE_MODE_FIXED.maxModulesPerCabinet} 个`,
+    note: '常见 2 m 柜',
+  },
+  {
+    label: '交流相数 / 电压',
+    value: `${SIMPLE_MODE_FIXED.acPhase === 3 ? '三相' : '单相'} / ${SIMPLE_MODE_FIXED.acVoltage} V`,
+    note: '机房常规进线',
+  },
+  {
+    label: '交流功率因数',
+    value: SIMPLE_MODE_FIXED.acPowerFactor.toFixed(2),
+    note: '整流模块典型值',
+  },
+  {
+    label: '整流效率',
+    value: SIMPLE_MODE_FIXED.rectifierEfficiency.toFixed(2),
+    note: '高频模块典型效率',
+  },
+  {
+    label: '断路器余量',
+    value: SIMPLE_MODE_FIXED.breakerMargin.toFixed(2),
+    note: '常用整定余量',
+  },
+])
+
+const simpleModeNote = computed(
+  () =>
+    `固定值：${SIMPLE_MODE_FIXED.chargeRate}C10 · 降额 ${SIMPLE_MODE_FIXED.moduleDerating.toFixed(2)} · 柜体 ${SIMPLE_MODE_FIXED.cabinetHeightMm}×${SIMPLE_MODE_FIXED.cabinetWidthMm}×${SIMPLE_MODE_FIXED.cabinetDepthMm} · 三相 ${SIMPLE_MODE_FIXED.acVoltage} V · PF ${SIMPLE_MODE_FIXED.acPowerFactor} · η ${SIMPLE_MODE_FIXED.rectifierEfficiency} · 余量 ${SIMPLE_MODE_FIXED.breakerMargin}`,
+)
+
+const simpleReportNote = computed(
+  () =>
+    `${SIMPLE_MODE_FIXED.chargeRate}C10 均充、降额 ${SIMPLE_MODE_FIXED.moduleDerating.toFixed(2)}、柜体 ${SIMPLE_MODE_FIXED.cabinetHeightMm}×${SIMPLE_MODE_FIXED.cabinetWidthMm}×${SIMPLE_MODE_FIXED.cabinetDepthMm}、三相 ${SIMPLE_MODE_FIXED.acVoltage} V、PF ${SIMPLE_MODE_FIXED.acPowerFactor}、η ${SIMPLE_MODE_FIXED.rectifierEfficiency}、断路器余量 ${SIMPLE_MODE_FIXED.breakerMargin}`,
+)
 
 const specLabel = computed(() => {
   const value = result.value
@@ -624,14 +701,24 @@ const specLabel = computed(() => {
   return `${value.voltageLabel} · ${form.moduleCurrentA}A × ${value.totalModules}（${value.mainModules}+${value.redundantModules}）· ${value.recommendedWidthMm}×${value.recommendedDepthMm}×${value.recommendedHeightMm} mm`
 })
 
+const parameterDocs = buildParameterDocs()
+const calcSteps = computed(() =>
+  result.value ? buildDcCabinetSteps({ ...form }, result.value) : [],
+)
+const checkDetails = computed(() => {
+  const value = result.value
+  if (!value) return []
+  return buildDcCabinetCheckDetails({ ...form }, value)
+})
+const calcBookRef = ref<InstanceType<typeof CalcBook> | null>(null)
+
+function openCalcStep(key?: string) {
+  if (key) calcBookRef.value?.openStep(key)
+}
+
 function setAcPhase(phase: AcPhase) {
   form.acPhase = phase
   form.acVoltage = phase === 3 ? 380 : 220
-}
-
-function resetForm() {
-  Object.assign(form, createDefaultInput())
-  toast.info('已恢复默认参数')
 }
 
 function buildReport(): string {
@@ -640,6 +727,7 @@ function buildReport(): string {
 
   const lines = [
     '通信直流电源柜选型计算书（方案初选）',
+    ...(isSimple.value ? [`模式：简易（${simpleReportNote.value}）`] : []),
     `系统电压：${value.voltageLabel}；负荷输入：${form.loadMode === 'current' ? `${value.loadCurrentA.toFixed(2)} A` : `${form.loadPowerKw} kW`}`,
     `蓄电池：${form.batteryAh} Ah；均充倍率：${form.chargeRate}；均充电流：${value.chargeCurrentA.toFixed(2)} A`,
     `近期设计电流：${value.designCurrentA.toFixed(2)} A；远期电流：${value.frameCurrentA.toFixed(2)} A`,
@@ -650,35 +738,18 @@ function buildReport(): string {
     `拟用柜体：${value.selectedWidthMm}×${value.selectedDepthMm}×${value.selectedHeightMm} mm × ${value.cabinetCount}`,
     `U 位：${value.requiredU}U / ${value.usableU * value.cabinetCount}U；模块槽位：${value.moduleSlots} / ${form.maxModulesPerCabinet * value.cabinetCount}`,
     `直流主断路器：${value.mainBreakerA} A；交流输入：${value.acInputPowerKw.toFixed(2)} kW / ${value.acInputCurrentA.toFixed(2)} A / ${value.acBreakerA} A`,
+    `控制项：${value.drivers.join(' / ') || '—'}`,
     `结论：${value.overallPass ? '各项校核通过' : '存在需要复核的项'}`,
     '',
+    '计算书：',
+    ...formatStepLines(calcSteps.value),
+    '',
     '校核明细：',
-    ...value.checks.map(
-      (check) =>
-        `- ${check.label}：${check.pass ? '通过' : '复核'}；要求 ${check.required}；实际 ${check.actual}`,
-    ),
+    ...formatCheckLines(value.checks, { fail: '复核' }),
     '',
     '注：柜体宽×深×高为工程建议，GB 51194 不规定柜体外形尺寸；正式设计应按现行标准、厂家型谱和注册电气工程师意见复核。',
   ]
   return lines.join('\n')
-}
-
-async function copyReport() {
-  const report = buildReport()
-  if (!report) {
-    toast.error('暂无可复制的计算结果')
-    return
-  }
-  try {
-    await navigator.clipboard.writeText(report)
-    copied.value = true
-    toast.success('计算书已复制到剪贴板')
-    window.setTimeout(() => {
-      copied.value = false
-    }, 1600)
-  } catch {
-    toast.error('复制失败，请检查浏览器剪贴板权限')
-  }
 }
 </script>
 
@@ -687,176 +758,52 @@ async function copyReport() {
   padding: 1rem 1.25rem 1.5rem;
 }
 
-.page-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
+/* 结论卡：四项指标并排放，给首屏的校核摘要留出空间 */
+.cabinet-page .verdict-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 0.35rem;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  color: var(--text-faint);
-}
-
-.eyebrow svg {
-  width: 13px;
-  height: 13px;
-  color: var(--color-primary);
-}
-
-.page-desc {
-  max-width: 62ch;
-  margin-top: 0.3rem;
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-.page-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.page-actions svg {
-  width: 15px;
-  height: 15px;
-}
-
-.notice {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-  margin-top: 1rem;
-  padding: 0.65rem 0.8rem;
-  border: 1px solid color-mix(in oklab, var(--color-primary) 28%, var(--color-base-300));
-  background-color: color-mix(in oklab, var(--color-primary) 6%, var(--color-base-100));
-  color: var(--text-muted);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.notice svg {
-  flex: 0 0 auto;
-  width: 15px;
-  height: 15px;
-  margin-top: 0.15rem;
-  color: var(--color-primary);
-}
-
-.workbench {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
-  gap: 1rem;
-  align-items: start;
-  margin-top: 1rem;
-}
-
-.input-column,
-.output-column {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  min-width: 0;
-}
-
-.panel {
-  border: 1px solid var(--color-base-300);
-  background-color: var(--color-base-100);
-}
-
-.panel-head {
+.cabinet-page .cabinet-panel summary {
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
-  padding: 0.65rem 0.8rem;
-  border-bottom: 1px solid var(--color-base-300);
+  padding: 0.55rem 0.8rem;
+  font-size: 12px;
+  cursor: pointer;
+  list-style: none;
   background-color: var(--color-base-200);
 }
 
-.panel-head.compact {
-  padding: 0.55rem 0.8rem;
+.cabinet-page .cabinet-panel summary::-webkit-details-marker {
+  display: none;
 }
 
-.panel-no {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 22px;
-  height: 18px;
-  padding: 0 0.3rem;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  line-height: 1;
-  color: var(--color-primary);
-  border: 1px solid color-mix(in oklab, var(--color-primary) 40%, transparent);
-}
-
-.panel-head h2 {
+.cabinet-page .cabinet-panel summary h2 {
   margin: 0;
   font-size: 13px;
   font-weight: 600;
 }
 
-.panel-hint {
-  margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  color: var(--text-faint);
-}
-
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.8rem;
-  padding: 0.85rem;
-}
-
-.field {
-  display: block;
-  min-width: 0;
-}
-
-.field-wide {
-  grid-column: 1 / -1;
-}
-
-.field-label {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.3rem;
-  font-size: 12px;
-  line-height: 1.3;
-  color: var(--text-muted);
-}
-
-.field-hint {
+.cabinet-page .cabinet-panel summary::before,
+.cabinet-page .warning-box summary::before {
+  content: '▸';
   flex: 0 0 auto;
   font-size: 10px;
   color: var(--text-faint);
 }
 
-.field-note {
-  margin: 0;
-  padding: 0 0.85rem 0.8rem;
-  font-size: 11px;
-  line-height: 1.55;
-  color: var(--text-faint);
+.cabinet-page .cabinet-panel details[open] > summary::before,
+.cabinet-page .warning-box[open] > summary::before {
+  content: '▾';
 }
 
-.segmented {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  border: 1px solid var(--color-base-300);
+.cabinet-page .warning-box summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.cabinet-page .warning-box summary::-webkit-details-marker {
+  display: none;
 }
 
 .segmented.three {
@@ -865,160 +812,6 @@ async function copyReport() {
 
 .segmented.four {
   grid-template-columns: repeat(4, 1fr);
-}
-
-.segmented button {
-  padding: 0.34rem 0.5rem;
-  font-size: 12px;
-  color: var(--text-muted);
-  background-color: var(--color-base-100);
-}
-
-.segmented button + button {
-  border-left: 1px solid var(--color-base-300);
-}
-
-.segmented button.active {
-  color: var(--color-primary);
-  background-color: color-mix(in oklab, var(--color-primary) 8%, var(--color-base-100));
-  box-shadow: inset 0 -2px 0 var(--color-primary);
-}
-
-.verdict {
-  position: relative;
-  border: 1px solid var(--color-base-300);
-  border-left-width: 3px;
-  background-color: var(--color-base-100);
-  padding: 0.8rem 0.9rem 0.9rem;
-}
-
-.verdict.is-pass {
-  border-left-color: var(--color-success);
-  background-image: linear-gradient(
-    135deg,
-    color-mix(in oklab, var(--color-success) 6%, transparent),
-    transparent 45%
-  );
-}
-
-.verdict.is-review {
-  border-left-color: var(--color-warning);
-  background-image: linear-gradient(
-    135deg,
-    color-mix(in oklab, var(--color-warning) 8%, transparent),
-    transparent 45%
-  );
-}
-
-.verdict-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.verdict-kicker {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  color: var(--text-faint);
-}
-
-.verdict-stamp {
-  padding: 0.1rem 0.4rem;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  border: 1px solid currentColor;
-  transform: rotate(-2deg);
-}
-
-.is-pass .verdict-stamp {
-  color: var(--color-success);
-}
-
-.is-review .verdict-stamp {
-  color: var(--color-warning);
-}
-
-.verdict-main {
-  display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
-  margin-top: 0.45rem;
-}
-
-.verdict-section {
-  font-family: var(--font-mono);
-  font-size: 40px;
-  line-height: 1;
-  font-weight: 500;
-  letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums;
-}
-
-.verdict-unit {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.verdict-spec {
-  margin-top: 0.35rem;
-  font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--color-base-content);
-  word-break: break-all;
-}
-
-.verdict-sub {
-  margin-top: 0.2rem;
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.verdict-metrics {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.45rem;
-  margin-top: 0.7rem;
-  padding-top: 0.65rem;
-  border-top: 1px solid var(--color-base-300);
-}
-
-.verdict-metrics div {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-}
-
-.verdict-metrics span {
-  font-size: 10px;
-  color: var(--text-faint);
-}
-
-.verdict-metrics strong {
-  font-family: var(--font-mono);
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
-}
-
-.empty-result {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-  padding: 0.9rem;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--text-muted);
-}
-
-.empty-result svg {
-  flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-  margin-top: 0.1rem;
-  color: var(--color-warning);
 }
 
 .spec-list {
@@ -1051,160 +844,13 @@ async function copyReport() {
   text-align: right;
 }
 
-.table-wrap {
-  overflow-x: auto;
-}
-
-.check-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 11px;
-}
-
-.check-table th {
-  padding: 0.45rem 0.55rem;
-  font-size: 10px;
-  font-weight: 500;
-  text-align: left;
-  color: var(--text-faint);
-  border-bottom: 1px solid var(--color-base-300);
-  white-space: nowrap;
-}
-
-.check-table td {
-  padding: 0.5rem 0.55rem;
-  vertical-align: top;
-  border-bottom: 1px solid color-mix(in oklab, var(--color-base-300) 60%, transparent);
-}
-
-.check-table tr:last-child td {
-  border-bottom: 0;
-}
-
-.check-label {
-  display: block;
-  font-weight: 600;
-}
-
-.check-note {
-  display: block;
-  margin-top: 0.15rem;
-  font-size: 9.5px;
-  line-height: 1.4;
-  color: var(--text-faint);
-}
-
-.calc-panel,
-.source-panel {
-  padding: 0;
-}
-
-.calc-panel summary,
-.source-panel summary {
-  padding: 0.55rem 0.8rem;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  border-bottom: 1px solid var(--color-base-300);
-  background-color: var(--color-base-200);
-}
-
-.calc-list {
-  margin: 0;
-  padding: 0.3rem 0.8rem 0.7rem;
-}
-
-.calc-list div {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.8rem;
-  padding: 0.38rem 0;
-  border-bottom: 1px dashed color-mix(in oklab, var(--color-base-300) 70%, transparent);
-}
-
-.calc-list div:last-child {
-  border-bottom: 0;
-}
-
-.calc-list dt {
-  flex: 0 0 auto;
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.calc-list dd {
-  margin: 0;
-  font-size: 11px;
-  text-align: right;
-}
-
-.warning-box {
-  border: 1px solid color-mix(in oklab, var(--color-warning) 40%, var(--color-base-300));
-  background-color: color-mix(in oklab, var(--color-warning) 7%, var(--color-base-100));
-  padding: 0.65rem 0.8rem;
-}
-
-.warning-title {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-warning);
-}
-
-.warning-title svg {
-  width: 15px;
-  height: 15px;
-}
-
-.warning-box ul {
-  margin: 0.4rem 0 0;
-  padding-left: 1.1rem;
-  font-size: 11px;
-  line-height: 1.65;
-  color: var(--text-muted);
-}
-
-.source-panel p,
-.source-panel ul {
-  padding: 0 0.8rem;
-  font-size: 11px;
-  line-height: 1.7;
-  color: var(--text-muted);
-}
-
-.source-panel p {
-  padding-top: 0.6rem;
-}
-
-.source-panel ul {
-  padding-bottom: 0.7rem;
-  padding-left: 1.6rem;
-}
-
-@media (max-width: 1080px) {
-  .workbench {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 @media (max-width: 640px) {
   .cabinet-page {
     padding: 0.75rem;
   }
 
-  .field-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .page-actions {
-    width: 100%;
-  }
-
-  .verdict-section {
-    font-size: 34px;
+  .cabinet-page .verdict-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>
