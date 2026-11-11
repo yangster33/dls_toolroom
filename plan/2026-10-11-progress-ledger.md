@@ -7,15 +7,28 @@
 | 属性 | 值 |
 |---|---|
 | 审查基线 | `c096944`（2026-10-09 审计） |
-| 台账更新 | 2026-11-11（tool-24 简易/专业双模式） |
-| 当前 HEAD | `83cee3c`（工具 24 简易模式测试提交；本台账回填提交见 git log） |
+| 台账更新 | 2026-11-11（选型工具共用模块抽取：类型/组件/组合式/页面壳样式） |
+| 当前 HEAD | `9e6fb6c`（共用模块测试提交；本台账回填提交见 git log） |
 | 工具数 | 32 个路由（含 5 个选型工具、sheet_template、room_layout） |
-| 测试 | **1043 passed / 84 files** |
-| 最近更新 | 2026-11-11 · **tool-24 简易/专业双模式完成**；tool-23/24 的透明度与公共样式已完成；D4 / D5 / E2 / E3 / E4 / F1 / F2 / F3 / F4 / D4-e2e / room_layout MVP 已完成；剩余 E1、F5、tool-25~28 |
+| 测试 | **1058 passed / 87 files** |
+| 最近更新 | 2026-11-11 · **选型工具共用模块抽取完成**（23/24 页面 −40%/−50%）；tool-23/24 的透明度、公共样式与简易模式已完成；剩余 E1、F5、tool-25~28 |
 
 ---
 
 ## 一、已完成台账
+
+### 2026-11-11 · 选型工具共用模块抽取（`1ec718e` / `bda2e9f` / `948a080` / `9e6fb6c`）
+
+| # | 项 | 结果 |
+|---|---|---|
+| 1 | 类型与工具 | `src/tools/shared/calcTrace.ts` + `report.ts`；两工具 calculationSteps / checkDetails 去重 290 / 115 行 |
+| 2 | 组件 | SymbolChip / CalcBook / CheckList / ResultStrip / ParamDocs / AssumptionCard / ModeSwitch + 统一 UnitField |
+| 3 | 组合式 | useSymbolLink（chip ↔ 输入高亮）、useUiMode（快照/持久化/重置）、useCopyText |
+| 4 | 页面壳样式 | `src/assets/selection-tool.css`（473 行）；两页 scoped 样式 442 / 394 → 20 / 57 行 |
+| 5 | 页面规模 | cable 1860 → 1118、battery 1456 → 730 行；dc / hvac 的 UnitField 统一并修复空值 bug |
+| 6 | 测试 | 1058 / 87 files（shared 20） |
+
+文档：`plan/2026-11-11-selection-tool-shared-modules-plan.md`（§8 实施记录）。
 
 ### 2026-11-11 · 工具 24 蓄电池选型简易 / 专业双模式（`d1b49ec` / `8ab25f0` / `83cee3c`）
 
